@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import cycles, article_card %}
+{% block content %}
+<main class="shell report-main fold-cover-tight fold-inner-layout" id="main">
+  <div id="report-content">
+  <section class="report-intro">
+    <div class="intro-meta"><span class="digest-badge"><svg class="icon small"><use href="#i-ai"/></svg>GEMINI INTELLIGENCE DIGEST</span><span class="small-text"><svg class="icon small"><use href="#i-clock"/></svg>갱신 {{ day.updated_at|kst('%H:%M') }} KST</span></div>
+    <h1>{{ day.date_label }}<br class="narrow-break"> 데일리 리포트</h1>
+    <p class="intro-description">국내외 AI·보안·신기술을 한국어로 정리합니다.<br>하루 세 번, 같은 보고서에 새로운 이슈를 더합니다.</p>
+    {{ cycles(day, slots) }}
+    <div class="intro-stats"><span><strong>{{ day.count }}</strong>개 이슈</span><span><strong>{{ day.hot_cards|length }}</strong>개 HOT</span><span>요약 보류 <strong>{{ day.pending_count }}</strong>건</span></div>
+  </section>
+  <nav class="category-nav" aria-label="보고서 분야">
+    <div class="category-track">
+      <a class="nav-tab active" href="#sec-hot"><svg class="icon small"><use href="#i-hot"/></svg>HOT <span>{{ day.hot_cards|length }}</span></a>
+      <a class="nav-tab" href="#sec-ai"><svg class="icon small"><use href="#i-ai"/></svg>AI <span>{{ day.counts.ai }}</span></a>
+      <a class="nav-tab" href="#sec-security"><svg class="icon small"><use href="#i-shield"/></svg>보안 <span>{{ day.counts.security }}</span></a>
+      <a class="nav-tab" href="#sec-tech"><svg class="icon small"><use href="#i-tech"/></svg>신기술·논문 <span>{{ day.counts.tech }}</span></a>
+      <a class="nav-tab" href="#sec-github"><svg class="icon small"><use href="#i-star"/></svg>인기 <span>{{ day.counts.github }}</span></a>
+    </div>
+  </nav>
+  <div class="report-body">
+    <div class="report-tools" data-js-only hidden><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><span class="sr-only">보고서 안에서 검색</span><input id="issue-search" type="search" placeholder="이 보고서에서 검색" autocomplete="off"></label><span class="small-text" id="search-status" role="status"></span></div>
+    {% if day.warnings %}<details class="notice-block warning"><summary>수집 안내 · {{ day.warnings|length }}건 확인</summary><ul>{% for warning in day.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
+    <section class="issue-section hot-section" id="sec-hot" data-section>
+      <div class="section-heading"><h2><span class="section-marker hot-marker"></span><svg class="icon"><use href="#i-hot"/></svg>HOT 핵심 이슈 <span class="heading-count">{{ day.hot_cards|length }}</span></h2><span class="section-kicker">필독 브리핑</span></div>
+      <p class="section-description">분야별 이슈에서 Gemini가 고른 추천 목록입니다. 아래 분야별 카드와 중복될 수 있습니다.</p>
+      {% if day.hot_status == 'stale' %}<p class="inline-warning">HOT 재선정에 실패하여 {{ day.hot_at|kst }} KST 선정 결과를 유지합니다.</p>{% endif %}
+      {% if day.hot_shortfall %}<p class="inline-warning">{{ day.hot_shortfall }}</p>{% endif %}
+      {% if day.hot_cards %}<div class="report-grid">{% for a in day.hot_cards %}{{ article_card(a, true) }}{% endfor %}</div>
+      {% else %}<div class="section-empty">{% if day.hot_status == 'unavailable' %}HOT 선정을 아직 완료하지 못했습니다.{% else %}선정할 이슈가 없습니다.{% endif %}</div>{% endif %}
+      <p class="search-empty" hidden>이 분야에서 검색어와 일치하는 이슈가 없습니다.</p>
+    </section>
+    {% set icons = {'ai':'ai','security':'shield','tech':'tech','github':'star'} %}
+    {% set kickers = {'ai':'MODEL · AGENT','security':'SECURITY','tech':'RESEARCH · TECHNOLOGY','github':'DAILY STARS'} %}
+    {% for key, name in categories.items() %}
+    <section class="issue-section" id="sec-{{ key }}" data-section>
+      <div class="section-heading"><h2><span class="section-marker {{ key }}-marker"></span><svg class="icon"><use href="#i-{{ icons[key] }}"/></svg>{{ name }} <span class="heading-count">{{ day.counts[key] }}</span></h2><span class="section-kicker">{{ kickers[key] }}</span></div>
+      {% if key == 'github' %}<p class="section-description">GitHub Trending에 표시된 <strong>stars today</strong> 내림차순입니다. 전체 GitHub의 전수 순위나 한국시간 00시 기준 증가량은 아닙니다.</p>{% endif %}
+      {% if day.sections[key] %}<div class="report-grid">{% for a in day.sections[key] %}{{ article_card(a) }}{% endfor %}</div>
+      {% else %}<div class="section-empty">아직 수집·요약이 완료된 이슈가 없습니다.</div>{% endif %}
+      <p class="search-empty" hidden>이 분야에서 검색어와 일치하는 이슈가 없습니다.</p>
+    </section>
+    {% endfor %}
+    {% if day.sources %}<details class="collection-status"><summary><span>수집원별 상태</span><span class="muted">{{ day.sources|length }}개</span></summary><ul class="source-status-list">{% for s in day.sources %}<li><span>{{ s.name }}</span><span class="{{ 'status-ok' if s.status == 'ok' else 'status-error' }}">{{ s.message }}</span></li>{% endfor %}</ul><p>수집 시도 {{ day.updated_at|kst }} KST. RSS 제공문·논문 초록만 확보된 경우 해당 근거 범위를 카드에 표시합니다.</p></details>{% endif %}
+    <footer class="page-footer report-end"><div class="end-mark"></div><span>END OF DAILY INTELLIGENCE REPORT</span><p>Gemini가 자동 작성한 요약입니다. 사람의 검수나 별도의 교차 검증을 거쳤다는 의미가 아닙니다. 중요한 수치·패치·정책은 원문을 확인하세요.</p><a class="text-link" href="../index.html">보고서 목록으로 돌아가기</a></footer>
+  </div>
+  </div>
+  <section class="empty-state" id="expired-report" hidden><svg class="icon empty-icon"><use href="#i-archive"/></svg><h1>보관 기간이 지난 보고서입니다</h1><p>최근 {{ keep_days }}일의 보고서만 제공됩니다.</p><a class="primary-link" href="../index.html">목록으로 돌아가기</a></section>
+</main>
+{% endblock %}

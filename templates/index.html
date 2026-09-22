@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import cycles %}
+{% block content %}
+<main class="shell archive-main fold-cover-tight fold-inner-layout" id="main">
+  <section class="archive-heading" aria-label="수집 안내">
+    <div class="section-title-line"><span class="section-dot"></span><h2>수집 리포트 <span class="muted">최근 {{ keep_days }}일</span></h2><span class="count-label">{{ days|length }}개</span></div>
+    <p class="schedule-caption">매일 06:00 / 13:00 / 19:00 KST 갱신</p>
+  </section>
+  {% if last_run.warnings %}<div class="notice warning" role="status"><svg class="icon"><use href="#i-info"/></svg><div><strong>마지막 수집에서 일부 항목이 보류되었습니다.</strong><p>완료된 보고서는 그대로 유지됩니다. 보고서 하단의 수집 상태를 확인하세요.</p></div></div>{% endif %}
+  {% if days %}
+  <div class="archive-toolbar" data-js-only hidden>
+    <div class="segmented" role="group" aria-label="보고서 필터"><button type="button" data-archive-filter="all" aria-pressed="true">전체 보고서</button><button type="button" data-archive-filter="saved" aria-pressed="false">저장한 보고서</button></div>
+    <span class="small-text">최신순</span>
+  </div>
+  <div class="card-grid" id="report-grid">
+    {% for report in days %}
+    <a class="report-card" href="reports/{{ report.date }}.html" data-report-card data-date="{{ report.date }}">
+      <div class="report-card-header">
+        <div><div class="date-line"><h3>{{ report.date_label }} <span class="weekday">{{ report.weekday }}</span></h3>{% if report.is_today %}<span class="badge today-badge">오늘</span>{% endif %}<span class="saved-indicator" data-saved-icon hidden>저장됨</span></div><p class="report-subtitle">데일리 인텔리전스 · {{ report.count }}개 이슈</p></div>
+        <svg class="icon arrow"><use href="#i-arrow"/></svg>
+      </div>
+      {{ cycles(report, slots) }}
+      <div class="report-counts"><span class="badge hot-badge">HOT {{ report.hot_cards|length }}</span>{% for key, name in categories.items() %}<span class="badge">{{ 'GitHub' if key == 'github' else name }} {{ report.counts[key] }}</span>{% endfor %}</div>
+      <div class="key-headlines"><span class="eyebrow">KEY HEADLINES</span>
+        {% if report.hot_cards %}<ul>{% for article in report.hot_cards[:3] %}<li>{{ article.title_ko }}</li>{% endfor %}</ul>
+        {% else %}<p class="muted small-text">HOT 선정 대기 · 수집된 이슈를 확인하세요.</p>{% endif %}
+      </div>
+      <div class="report-card-footer"><span>마지막 갱신 {{ report.updated_at|kst }} KST</span><span>보고서 읽기</span></div>
+    </a>
+    {% endfor %}
+  </div>
+  <div class="empty-state compact" id="filter-empty" hidden><svg class="icon empty-icon"><use href="#i-bookmark"/></svg><h2>저장한 보고서가 없습니다</h2><p>보고서 상단의 저장 버튼을 누르면 이 기기에서 모아 볼 수 있습니다.</p></div>
+  {% else %}
+  <section class="empty-state" id="no-reports">
+    <div class="empty-icon-box"><svg class="icon empty-icon"><use href="#i-report"/></svg></div>
+    <span class="eyebrow">DAILY INTELLIGENCE</span>
+    <h2>아직 생성된 보고서가 없습니다</h2>
+    <p>첫 수집이 완료되면 날짜별 보고서가 표시됩니다.<br>샘플 뉴스는 포함하지 않았습니다.</p>
+    <div class="empty-schedule"><span>06:00</span><span>13:00</span><span>19:00 <small>KST</small></span></div>
+    <details class="setup-hint"><summary>처음 설정 중이신가요?</summary><p>저장소에 GEMINI_API_KEY를 등록하고 Pages의 배포 소스를 GitHub Actions로 지정한 뒤, Actions에서 <strong>Update news &amp; deploy</strong>를 수동 실행하세요. 자세한 절차는 프로젝트의 SETUP.md에 있습니다.</p></details>
+  </section>
+  {% endif %}
+  <div class="notice retention-note"><svg class="icon"><use href="#i-clock"/></svg><p>한국시간 오늘을 포함해 {{ keep_days }}일 보관합니다. 만료된 보고서는 다음 갱신 시 사이트에서 제거됩니다.</p></div>
+  <details class="collection-status">
+    <summary><span>수집 및 서비스 안내</span><span class="muted">확인</span></summary>
+    <p>한 날짜에 보고서 한 개를 누적 갱신합니다. 실행 예약 시각과 실제 갱신 시각은 다를 수 있습니다. HOT은 각 분야와 중복 표시되는 추천 목록입니다.</p>
+    <p>AI 요약에는 오류가 있을 수 있으므로 중요한 내용은 원문을 확인하세요. 저장 기능은 이 브라우저에만 적용되며 보관 기간을 연장하지 않습니다.</p>
+    {% if last_run.at %}<p>마지막 실행 {{ last_run.at|kst }} KST · 요약 보류 {{ last_run.pending_count }}건</p>{% endif %}
+    {% if last_run.sources %}<ul class="source-status-list">{% for s in last_run.sources %}<li><span>{{ s.name }}</span><span class="{{ 'status-ok' if s.status == 'ok' else 'status-error' }}">{{ s.message }}</span></li>{% endfor %}</ul>{% endif %}
+  </details>
+  <footer class="page-footer"><span>AI &amp; SECURITY · DAILY BRIEFING</span><p>정보를 모으고, 중요한 변화에 집중합니다.</p></footer>
+</main>
+{% endblock %}

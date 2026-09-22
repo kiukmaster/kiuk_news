@@ -1,0 +1,16 @@
+[
+  {"id":"aitimes","name":"AI타임스","region":"KR","language":"ko","category":"ai","url":"https://www.aitimes.com/rss/allArticle.xml","type":"rss","enabled":true,"hosts":["aitimes.com"],"body_selector":"#article-view-content-div"},
+  {"id":"dailysecu","name":"데일리시큐","region":"KR","language":"ko","category":"security","url":"https://www.dailysecu.com/rss/allArticle.xml","type":"rss","enabled":true,"hosts":["dailysecu.com"],"body_selector":"#article-view-content-div"},
+  {"id":"etnews","name":"전자신문","region":"KR","language":"ko","category":"tech","url":"https://rss.etnews.com/Section901.xml","type":"rss","enabled":true,"hosts":["etnews.com"],"body_selector":".article_txt"},
+  {"id":"geeknews","name":"GeekNews","region":"KR","language":"ko","category":"tech","url":"https://news.hada.io/rss/news","type":"rss","enabled":true,"hosts":["news.hada.io"],"fetch_body":false},
+  {"id":"boannews","name":"보안뉴스","region":"KR","language":"ko","category":"security","url":"https://www.boannews.com/media/t_list.asp","type":"html","enabled":true,"hosts":["boannews.com"],"link_selector":"a[href*='view.asp?idx=']","body_selector":"#news_content","max_items":30},
+  {"id":"openai","name":"OpenAI","region":"GLOBAL","language":"en","category":"ai","url":"https://openai.com/news/rss.xml","type":"rss","enabled":true,"hosts":["openai.com"],"fetch_body":false},
+  {"id":"googleai","name":"Google AI","region":"GLOBAL","language":"en","category":"ai","url":"https://blog.google/technology/ai/rss/","type":"rss","enabled":true,"hosts":["blog.google"],"body_selector":".article-container"},
+  {"id":"huggingface","name":"Hugging Face","region":"GLOBAL","language":"en","category":"ai","url":"https://huggingface.co/blog/feed.xml","type":"rss","enabled":true,"hosts":["huggingface.co"],"body_selector":"article"},
+  {"id":"hackernews","name":"The Hacker News","region":"GLOBAL","language":"en","category":"security","url":"https://feeds.feedburner.com/TheHackersNews","type":"rss","enabled":true,"hosts":["feeds.feedburner.com","feedproxy.google.com","thehackernews.com"],"body_selector":".articlebody"},
+  {"id":"bleeping","name":"BleepingComputer","region":"GLOBAL","language":"en","category":"security","url":"https://www.bleepingcomputer.com/feed/","type":"rss","enabled":true,"hosts":["bleepingcomputer.com"],"body_selector":".articleBody"},
+  {"id":"securityweek","name":"SecurityWeek","region":"GLOBAL","language":"en","category":"security","url":"https://www.securityweek.com/feed/","type":"rss","enabled":true,"hosts":["securityweek.com"],"body_selector":".zox-post-body"},
+  {"id":"krebs","name":"Krebs on Security","region":"GLOBAL","language":"en","category":"security","url":"https://krebsonsecurity.com/feed/","type":"rss","enabled":true,"hosts":["krebsonsecurity.com"],"body_selector":".entry-content"},
+  {"id":"arxiv-ai","name":"arXiv · AI","region":"GLOBAL","language":"en","category":"tech","url":"https://rss.arxiv.org/rss/cs.AI","type":"rss","enabled":true,"hosts":["arxiv.org"],"fetch_body":false,"paper":true},
+  {"id":"arxiv-security","name":"arXiv · 보안","region":"GLOBAL","language":"en","category":"tech","url":"https://rss.arxiv.org/rss/cs.CR","type":"rss","enabled":true,"hosts":["arxiv.org"],"fetch_body":false,"paper":true}
+]

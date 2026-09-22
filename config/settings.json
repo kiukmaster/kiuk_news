@@ -1,0 +1,19 @@
+{
+  "site_name": "데일리 브리핑",
+  "timezone": "Asia/Seoul",
+  "keep_days": 5,
+  "lookback_hours": 48,
+  "summary_model": "gemini-3.5-flash-lite",
+  "hot_model": "gemini-3.8-flash",
+  "batch_size": 6,
+  "max_new_articles_per_run": 0,
+  "max_api_calls_per_run": 80,
+  "api_interval_seconds": 5,
+  "max_input_chars_per_article": 6000,
+  "http_timeout_seconds": 18,
+  "per_host_delay_seconds": 0.7,
+  "fetch_article_body": true,
+  "user_agent": "DailySecurityDigest/1.0 (public RSS reader)",
+  "github_trending_url": "https://github.com/trending?since=daily",
+  "github_max_items": 25
+}

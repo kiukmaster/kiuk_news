@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#111317">
+  <meta name="description" content="한국과 해외의 AI·보안·신기술 소식을 한국어로 모은 일간 브리핑. 매일 세 차례 같은 보고서를 갱신합니다.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>{{ page_title }} · {{ site_name }}</title>
+  <link rel="icon" href="{{ prefix }}assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ prefix }}assets/style.css">
+  <script src="{{ prefix }}assets/app.js" defer></script>
+</head>
+<body data-page="{{ page_type }}" data-keep-days="{{ keep_days }}"{% if day is defined %} data-report-date="{{ day.date }}"{% endif %}>
+<a class="skip-link" href="#main">본문으로 이동</a>
+{% include 'icons.html' %}
+<header class="topbar">
+  <div class="shell topbar-inner fold-cover-tight fold-inner-layout">
+    {% if page_type == 'report' %}
+    <a class="icon-button back-button" href="{{ prefix }}index.html" aria-label="보고서 목록으로 돌아가기"><svg class="icon"><use href="#i-back"/></svg></a>
+    {% endif %}
+    <div class="header-brand">
+      {% if page_type == 'report' %}<span class="eyebrow">SECURITY DOSSIER</span><p class="header-title">데일리 리포트</p>
+      {% else %}<h1 class="header-title">데일리 브리핑 목록</h1><p class="header-caption">최근 {{ keep_days }}일의 AI · 보안 · 신기술</p>{% endif %}
+    </div>
+    {% if page_type == 'report' %}
+    <div class="header-actions" data-js-only hidden>
+      <button class="icon-button" type="button" data-bookmark aria-label="보고서 저장" aria-pressed="false"><svg class="icon"><use href="#i-bookmark"/></svg></button>
+      <button class="icon-button" type="button" data-share aria-label="보고서 공유"><svg class="icon"><use href="#i-share"/></svg></button>
+    </div>
+    {% else %}<span class="retention-label"><svg class="icon small"><use href="#i-clock"/></svg>{{ keep_days }}일 보관</span>{% endif %}
+  </div>
+</header>
+{% if page_type == 'report' %}<div class="reading-progress" aria-hidden="true"><span id="reading-progress"></span></div>{% endif %}
+{% block content %}{% endblock %}
+<nav class="bottom-bar" aria-label="주요 메뉴">
+  <div class="bottom-inner">
+    {% if today_url %}<a href="{{ prefix }}{{ today_url }}"{% if page_type == 'report' and day.is_today %} aria-current="page"{% endif %}><svg class="icon"><use href="#i-report"/></svg><span>오늘의 보고서</span></a>
+    {% else %}<span class="disabled" aria-disabled="true"><svg class="icon"><use href="#i-report"/></svg><span>오늘 수집 대기</span></span>{% endif %}
+    <a href="{{ prefix }}index.html"{% if page_type == 'archive' %} aria-current="page"{% endif %}><svg class="icon"><use href="#i-archive"/></svg><span>보고서 목록</span></a>
+    {% if latest_url %}<a href="{{ prefix }}{{ latest_url }}#sec-hot"><svg class="icon"><use href="#i-hot"/></svg><span>최근 HOT</span></a>
+    {% else %}<span class="disabled" aria-disabled="true"><svg class="icon"><use href="#i-hot"/></svg><span>HOT 수집 대기</span></span>{% endif %}
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

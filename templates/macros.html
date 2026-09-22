@@ -1,0 +1,46 @@
+{% macro cycles(day, slots) %}
+<div class="update-cycle">
+  <div class="cycle-heading"><span>배치 갱신 현황</span><span>{{ day.slots|length }}/3회 실행{% if day.manual_runs %} · 수동 {{ day.manual_runs }}회{% endif %}</span></div>
+  <div class="cycle-grid">
+  {% for slot in slots %}
+    {% set cycle = day.slots.get(slot) %}
+    <div class="cycle-chip{% if cycle %} {{ 'done' if cycle.status == 'ok' else 'partial' }}{% endif %}"{% if cycle %} title="실제 처리 시각: {{ cycle.at|kst }} KST"{% endif %}>
+      <span class="status-dot"></span><span>{{ slot }}</span><span>{{ ('완료' if cycle.status == 'ok' else '부분') if cycle else ('대기' if day.is_today else '미실행') }}</span>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro article_card(a, hot=false) %}
+<article class="issue-card {{ a.category }}{% if hot %} hot-card{% endif %}" id="{{ 'hot-' if hot else 'item-' }}{{ a.id }}" data-issue-card>
+  <div class="card-content">
+    <div class="issue-meta">
+      <div class="badges">
+        {% if hot %}<span class="badge hot-badge">{{ '%02d'|format(a.rank) }} · Gemini Pick</span>{% endif %}
+        {% if a.region == 'KR' %}<span class="badge domestic">국내</span>{% endif %}
+        {% if a.translation %}<span class="badge">번역 요약</span>{% else %}<span class="badge">한국어 요약</span>{% endif %}
+        {% if a.kind == 'paper' %}<span class="badge">논문 · 초록 기반</span>{% elif a.evidence_kind == 'rss' %}<span class="badge">RSS 제공문 기반</span>{% endif %}
+      </div>
+      <span class="source-name">{{ a.source }}</span>
+    </div>
+    {% if a.kind == 'github' %}
+    <div class="repo-label"><span>{{ a.repo_name }}</span><span class="star-gain">+{{ '{:,}'.format(a.stars_today) }} <svg class="icon small"><use href="#i-star"/></svg></span></div>
+    {% endif %}
+    <h3 class="issue-title"><a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.title_ko }}</a></h3>
+    <p class="issue-summary">{{ a.summary_ko }}</p>
+    {% if hot %}<p class="pick-reason"><span>선정 이유</span>{{ a.reason_ko }}</p>{% endif %}
+    {% if a.kind == 'github' %}<div class="repo-stats">
+      {% if a.programming_language %}<span>{{ a.programming_language }}</span>{% endif %}
+      {% if a.total_stars is not none %}<span>총 ★ {{ '{:,}'.format(a.total_stars) }}</span>{% endif %}
+      <span>GitHub 일간 증가 표시값</span>
+    </div>{% endif %}
+  </div>
+  <div class="card-footer">
+    {% if a.kind == 'github' %}<span>확인 {{ a.observed_at|kst }} KST</span>
+    {% elif a.published_at %}<time datetime="{{ a.published_at }}">발행 {{ a.published_at|kst }} KST</time>
+    {% else %}<span>발행 시각 미제공</span>{% endif %}
+    <a class="original-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ '저장소' if a.kind == 'github' else '원문' }} 보기<svg class="icon small"><use href="#i-external"/></svg></a>
+  </div>
+</article>
+{% endmacro %}

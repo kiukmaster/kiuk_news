@@ -1,3 +1,13 @@
+# v2 검증 결과
+
+Python 단위·통합 테스트 91개 통과. `node --check assets/app.js`, `python -m compileall -q digest tests`, 빈 상태의 `--build-only` HTML 생성 통과.
+
+`python tests/browser_check.py --in-memory`로 12개 화면 크기 × 목록·보고서 24개 배치 검사와 CVE 더 보기·숨겨진 카드 검색·열 수·넘침·세부정보 동작을 확인했습니다. 결과는 `v2-ui-results.json`에 있습니다. 이는 메모리 주입 시험이며 로컬 스토리지는 모의 객체입니다.
+
+원본 HTTP·DNS·실제 API·GitHub 배포·실기기 검증은 수행하지 못했습니다. localhost 브라우저 탐색은 환경의 `ERR_BLOCKED_BY_ADMINISTRATOR`로 막혔습니다. 실제 네트워크/CSP/스토리지 영속성/JS 비활성 모드 검증 성공으로 해석하지 마세요.
+
+아래는 v1 검증 기록입니다.
+
 # 전달 전 검증 기록
 
 검증 날짜: **2026-09-22**.

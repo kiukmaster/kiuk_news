@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT))
 from digest.common import now_kst, load_config, SLOTS
 from digest.pipeline import empty_state, new_day
 from digest.render import render_site
+from digest.cves import normalize_cve
 from playwright.sync_api import sync_playwright
 
 SIZES = [(320,800),(344,882),(360,900),(390,844),(412,915),(600,700),
@@ -51,6 +52,19 @@ def fixture_state(now):
                 'summary_model':'offline-ui-test'}
             day['articles'][key] = a
         day['hot'] = [{'id':key, 'reason_ko':'실제 선정이 아닌 화면 검증용 항목입니다.'} for key in list(day['articles'])[:10]]
+        for cve_index in range(45 if offset == 0 else 3):
+            raw_cve = {'id':f'CVE-2099-{90000+cve_index}', 'published':dt.isoformat(),
+                       'lastModified':dt.isoformat(), 'vulnStatus':'SYNTHETIC UI TEST ONLY',
+                       'descriptions':[{'lang':'en','value':'SYNTHETIC TEST DATA, NOT A REAL CVE. '+ 'Long description for a test layout. '*20}],
+                       'metrics':{} if cve_index == 0 else {'cvssMetricV31':[
+                         {'source':'synthetic-provider-'+'long-name-'*12+'@example.invalid','type':'Primary',
+                          'cvssData':{'version':'3.1','baseScore':7.5,'baseSeverity':'HIGH',
+                                      'vectorString':'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H'}}]}}
+            row = normalize_cve(raw_cve, now)
+            if cve_index % 2:
+                row['summary_ko'] = '실제 CVE가 아닌 화면 검증용 데이터입니다. 점수 제공기관 이름과 설명이 긴 경우에도 좁은 화면에서 잘리지 않는지 확인합니다.'
+            day['cves'][row['id']] = row
+        day['cve_meta'] = {'status':'ok','at':now.isoformat(),'last_success_at':now.isoformat(),'message':'오프라인 시험 데이터'}
         state['days'][date] = day
     return state
 
@@ -123,6 +137,9 @@ def main():
                         if kind == 'report':
                             assert page.locator('#sec-hot [data-issue-card]').count() == 10
                             assert page.locator('#report-content').is_visible()
+                            assert page.locator('[data-cve-card]:visible').count() == 20
+                            assert page.locator('#cve-grid').evaluate('e => getComputedStyle(e).gridTemplateColumns.split(" ").length') == expected
+
                         if screenshots and width in (390,768):
                             page.screenshot(path=str(screenshots / f'{kind}-{width}.png'), full_page=(kind=='archive'))
                         results.append({'page':kind,'width':width,'height':height,'columns':columns,'overflow':False})
@@ -153,7 +170,25 @@ def main():
                 page.locator('#issue-search').fill('존재하지않는검색어123456789')
                 assert page.locator('[data-issue-card]:visible').count() == 0
                 page.locator('#issue-search').fill('')
-                assert page.locator('[data-issue-card]:visible').count() == 22
+                assert page.locator('[data-issue-card]:visible').count() == 42
+                page.locator('[data-cve-more]').click()
+                assert page.locator('[data-cve-card]:visible').count() == 40
+                page.locator('#issue-search').fill('CVE-2099-90044')
+                assert page.locator('[data-cve-card]:visible').count() == 1
+                assert page.locator('[data-cve-more]').is_hidden()
+                page.locator('#issue-search').fill('')
+                assert page.locator('[data-cve-card]:visible').count() == 40
+                page.locator('[data-cve-more]').click()
+                assert page.locator('[data-cve-card]:visible').count() == 45
+                assert page.locator('[data-cve-more]').is_hidden()
+                page.locator('.cve-details summary').first.click()
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+                if screenshots:
+                    for width, height in ((390,844),(768,900)):
+                        page.set_viewport_size({'width':width,'height':height})
+                        page.locator('#sec-cve').evaluate('e => e.scrollIntoView()')
+                        page.screenshot(path=str(screenshots/f'cve-{width}.png'))
+                page.set_viewport_size({'width':390,'height':844})
                 if args.in_memory:
                     page.locator('#sec-security').evaluate('e => e.scrollIntoView()')
                 else:
@@ -174,7 +209,7 @@ def main():
                     no_js = browser.new_context(java_script_enabled=False)
                     no_js_page = no_js.new_page()
                     no_js_page.goto(base+f'reports/{now.date().isoformat()}.html')
-                    assert no_js_page.locator('[data-issue-card]').count() == 22
+                    assert no_js_page.locator('[data-issue-card]').count() == 67
                     no_js.close()
                 assert not errors, errors
                 browser.close()
@@ -184,7 +219,7 @@ def main():
     report = {'tested_at':now.isoformat(),'browser':'headless Chromium','physical_device_test':False, 'http_navigation_test':not args.in_memory,
               'local_storage_mocked':args.in_memory,
               'viewport_page_checks':len(results),'functional_checks':'bookmark/search/share/resize and static navigation links' if args.in_memory else 'navigation/bookmark/search/anchors/share/resize/no-JS',
-              'page_errors':errors, 'viewports':results}
+              'cve_checks':'12 viewport column/overflow checks; more20/search beyond hidden cards/details', 'page_errors':errors, 'viewports':results}
     if screenshots:
         (screenshots/'results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False,indent=2))

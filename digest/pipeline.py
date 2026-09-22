@@ -10,6 +10,7 @@ from .common import (ROOT, CRON_SLOTS, read_json, write_json, retention_cutoff,
 from .gemini import Gemini, GeminiError, PROMPT_VERSION
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_window
+from .cves import collect_cves, merge_cves, translate_cves
 
 
 def empty_state() -> dict:
@@ -34,7 +35,7 @@ def prune(state: dict, now: datetime, keep: int) -> None:
 def new_day(day: str) -> dict:
     return {'date': day, 'articles': {}, 'hot': [], 'hot_status': 'unavailable', 'hot_at': None,
             'hot_shortfall': '', 'slots': {}, 'manual_runs': 0, 'updated_at': None,
-            'sources': [], 'warnings': [], 'pending_count': 0}
+            'sources': [], 'warnings': [], 'pending_count': 0, 'cves': {}, 'cve_meta': {}}
 
 
 def fair_queue(pending: dict) -> list[dict]:
@@ -74,11 +75,15 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
 
 
 def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedule: str = '',
-                 web=None, gemini=None, source_loader=None, github_loader=None) -> dict:
+                 web=None, gemini=None, source_loader=None, github_loader=None, cve_loader=None) -> dict:
     prune(state, now, cfg['keep_days'])
     daykey = now.date().isoformat()
     day = state['days'].get(daykey, new_day(daykey))
     day['warnings'] = []
+    cve_status = None
+    cve_summary = {'translated': 0, 'pending': 0, 'error': ''}
+    cve_enabled = cfg.get('cve_enabled', False)
+    reserved_calls = 4 + (max(0, int(cfg.get('cve_summary_max_calls_per_run', 12))) if cve_enabled else 0)
     client = gemini or Gemini(cfg)
     fetcher = web or PublicWeb(cfg['user_agent'], cfg['http_timeout_seconds'], cfg['per_host_delay_seconds'])
     sources = read_json(ROOT / 'config/sources.json', [])
@@ -86,6 +91,10 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     articles, statuses = (source_loader or collect_sources)(fetcher, sources, now, cfg)
     repos, repo_status = (github_loader or collect_github)(fetcher, now, cfg)
     day['sources'] = statuses + [repo_status]
+    if cve_enabled:
+        cve_rows, cve_status = (cve_loader or collect_cves)(now, cfg)
+        merge_cves(state, day, cve_rows, cve_status, now, new_day)
+        day['sources'].append(cve_status)
     known_titles = {v.get('title_key') for v in state['seen'].values()}
     for item in articles:
         if item['id'] in state['seen']:
@@ -111,12 +120,16 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             state['pending'][item['id']] = item
 
     def checkpoint():
-        if day['articles']:
+        if day['articles'] or day.get('cves') or day.get('cve_meta', {}).get('status') == 'ok':
             state['days'][daykey] = day
         write_json(directory / 'state.json', state)
 
+    # Persist completed CVE data even if later news/API work is interrupted.
+    checkpoint()
+
     def apply_batch(batch):
         nonlocal new_count
+        print(f'[뉴스 요약] {len(batch)}건 · Gemini 요청 누적 {client.calls}회', flush=True)
         summaries = client.summarize(batch)
         for item in batch:
             summary = summaries[item['id']]
@@ -141,7 +154,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
         if item['kind'] == 'github' and item.get('observed_at', '')[:10] != daykey:
             state['pending'].pop(item['id'], None)
             continue
-        if client.remaining <= 4 or (max_new > 0 and prepared_count >= max_new):
+        if client.remaining <= reserved_calls or (max_new > 0 and prepared_count >= max_new):
             limit_reached = True
             break
         if item['kind'] != 'github' and not in_window(item, now, cfg['lookback_hours']):
@@ -182,7 +195,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                 day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
                 batch = []
                 break
-    if batch and client.remaining > 3:
+    if batch and client.remaining > reserved_calls - 1:
         try:
             apply_batch(batch)
         except GeminiError as exc:
@@ -198,6 +211,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
         day['warnings'].append('이번 실행의 처리 상한에 도달했습니다. 남은 기사는 다음 실행에서 처리합니다.')
     if day['articles']:
         try:
+            print(f"[HOT 선정] 뉴스·논문·저장소 후보 {len(day['articles'])}건", flush=True)
             hot = client.select_hot(list(day['articles'].values()))
             day['hot'] = hot['picks']
             day['hot_shortfall'] = hot['shortfall_reason_ko']
@@ -207,6 +221,12 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             # Never disguise a local ranking as a Gemini selection.
             day['hot_status'] = 'stale' if day['hot'] else 'unavailable'
             day['warnings'].append('HOT 재선정 실패: ' + str(exc))
+    if cve_enabled:
+        cve_summary = translate_cves(state, day, now, cfg, client, checkpoint)
+        if cve_summary['error']:
+            day['warnings'].append('CVE 요약 보류: ' + cve_summary['error'])
+        if cve_summary['pending']:
+            day['warnings'].append(f"보관 중 CVE {cve_summary['pending']}건은 한국어 요약 대기입니다. 점수와 원문 설명은 표시합니다.")
     failed_sources = sum(x['status'] != 'ok' for x in day['sources'])
     if failed_sources:
         day['warnings'].append(f'{failed_sources}개 수집원이 응답하지 않거나 수집을 제한했습니다. 수집 상태를 확인하세요.')
@@ -224,6 +244,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                          'api_calls': client.calls, 'api_tokens': client.tokens,
                          'pending_count': len(state['pending']), 'sources': day['sources'],
                          'warnings': day['warnings'], 'slot': slot or '수동',
-                         'summary_model': client.summary_model, 'hot_model': client.hot_model}
+                         'summary_model': client.summary_model, 'hot_model': client.hot_model,
+                         'cve_count': len(day.get('cves', {})), 'cve_summary': cve_summary}
     checkpoint()
     return state['last_run']

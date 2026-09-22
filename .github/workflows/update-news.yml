@@ -60,11 +60,12 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
-        run: python -m digest --state-dir state --output public
+        run: python -u -m digest --state-dir state --output public
       - name: Rebuild without API calls
         if: inputs.mode == 'rebuild'
-        run: python -m digest --build-only --state-dir state --output public
+        run: python -u -m digest --build-only --state-dir state --output public
       - name: Save persistent data
         if: always() && steps.restore.outcome == 'success'
         run: python scripts/state_branch.py save --dir state

@@ -16,11 +16,11 @@
     {% for report in days %}
     <a class="report-card" href="reports/{{ report.date }}.html" data-report-card data-date="{{ report.date }}">
       <div class="report-card-header">
-        <div><div class="date-line"><h3>{{ report.date_label }} <span class="weekday">{{ report.weekday }}</span></h3>{% if report.is_today %}<span class="badge today-badge">오늘</span>{% endif %}<span class="saved-indicator" data-saved-icon hidden>저장됨</span></div><p class="report-subtitle">데일리 인텔리전스 · {{ report.count }}개 이슈</p></div>
+        <div><div class="date-line"><h3>{{ report.date_label }} <span class="weekday">{{ report.weekday }}</span></h3>{% if report.is_today %}<span class="badge today-badge">오늘</span>{% endif %}<span class="saved-indicator" data-saved-icon hidden>저장됨</span></div><p class="report-subtitle">데일리 인텔리전스 · {{ report.count }}개 이슈 · CVE {{ report.cve_count }}건</p></div>
         <svg class="icon arrow"><use href="#i-arrow"/></svg>
       </div>
       {{ cycles(report, slots) }}
-      <div class="report-counts"><span class="badge hot-badge">HOT {{ report.hot_cards|length }}</span>{% for key, name in categories.items() %}<span class="badge">{{ 'GitHub' if key == 'github' else name }} {{ report.counts[key] }}</span>{% endfor %}</div>
+      <div class="report-counts"><span class="badge hot-badge">HOT {{ report.hot_cards|length }}</span>{% for key, name in categories.items() %}<span class="badge">{{ 'GitHub' if key == 'github' else name }} {{ report.counts[key] }}</span>{% endfor %}<span class="badge">CVE {{ report.cve_count }}</span></div>
       <div class="key-headlines"><span class="eyebrow">KEY HEADLINES</span>
         {% if report.hot_cards %}<ul>{% for article in report.hot_cards[:3] %}<li>{{ article.title_ko }}</li>{% endfor %}</ul>
         {% else %}<p class="muted small-text">HOT 선정 대기 · 수집된 이슈를 확인하세요.</p>{% endif %}

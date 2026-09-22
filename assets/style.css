@@ -265,3 +265,21 @@ svg.empty-icon { width: 34px; height: 34px; color: var(--primary); stroke-width:
   .shell { max-width: none; padding: 0; }
   .issue-card { break-inside: avoid; }
 }
+
+/* CVE cards reuse the existing cover/inner Fold grid; no device pixel guess. */
+.cve-title-row { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.cve-title-row .issue-title { flex:1 1 180px; min-width:0; }
+.cve-score { flex:0 1 auto; display:inline-flex; flex-direction:column; gap:3px; padding:8px 10px; border:1px solid var(--outline-variant, #434653); border-radius:6px; font-size:16px; font-weight:700; }
+.cve-score small { font-size:11px; line-height:1.5; font-weight:500; }
+.severity-critical, .severity-high { color:var(--error, #ffb4ab); }
+.severity-medium { color:var(--secondary, #ffb77d); }
+.cve-provider, .cve-details, .cve-metric { overflow-wrap:anywhere; word-break:normal; }
+.cve-details { margin-top:12px; font-size:12px; line-height:1.8; }
+.cve-details summary { cursor:pointer; min-height:44px; display:flex; align-items:center; text-decoration:underline; text-underline-offset:3px; }
+.cve-metric { padding:12px 0; border-top:1px solid var(--outline-variant, #434653); }
+.cve-metric p { margin:4px 0; }
+.cve-metric code { display:block; white-space:normal; overflow-wrap:anywhere; font-size:11px; }
+.cve-more { width:100%; min-height:48px; padding:12px; border:1px solid var(--outline-variant, #434653); border-radius:6px; background:var(--surface-container, #1e2024); color:inherit; font:inherit; cursor:pointer; }
+.cve-more:hover { text-decoration:underline; }
+.nvd-attribution { font-size:11px; line-height:1.7; opacity:.75; margin-top:16px; overflow-wrap:anywhere; }
+@media (max-width:599px) { .cve-title-row { gap:10px; } .cve-title-row .issue-title { flex-basis:100%; } }

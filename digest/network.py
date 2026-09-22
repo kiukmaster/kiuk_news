@@ -27,6 +27,7 @@ class PublicWeb:
         self.session.headers.update({'User-Agent': user_agent, 'Accept-Language': 'ko,en;q=0.8'})
         self.robots: dict[str, RobotFileParser | bool] = {}
         self.last_access: dict[str, float] = {}
+        self.robot_errors: dict[str, str] = {}
 
     @staticmethod
     def validate(url: str, allowed_hosts: list[str]) -> str:
@@ -56,8 +57,12 @@ class PublicWeb:
             crawl_delay = None
             if check_robots:
                 policy = self._policy(url, allowed_hosts)
-                if policy is False or (not isinstance(policy, bool) and not policy.can_fetch(self.user_agent, url)):
-                    raise FetchError('robots.txt에서 수집 제한')
+                if policy is False:
+                    origin = f'{urlsplit(url).scheme}://{urlsplit(url).netloc}'
+                    reason = self.robot_errors.get(origin, '정책을 확인할 수 없음')
+                    raise FetchError(f'robots.txt 확인 실패: {origin} — {reason}')
+                if not isinstance(policy, bool) and not policy.can_fetch(self.user_agent, url):
+                    raise FetchError(f'robots.txt 규칙에 따른 수집 금지: {host}{urlsplit(url).path}')
                 if not isinstance(policy, bool):
                     crawl_delay = policy.crawl_delay(self.user_agent) or policy.crawl_delay('*')
                     if crawl_delay and crawl_delay > 60:
@@ -97,6 +102,7 @@ class PublicWeb:
                 # An HTML error/landing page is not a valid robots response.
                 if '<html' in text[:1000].lower():
                     self.robots[origin] = False
+                    self.robot_errors[origin] = 'robots 응답이 HTML 페이지임'
                 else:
                     robot = RobotFileParser()
                     robot.parse(text.splitlines())
@@ -104,6 +110,8 @@ class PublicWeb:
             except FetchError as e:
                 # 404/410 mean robots.txt is absent; inaccessible policy is fail-closed.
                 self.robots[origin] = getattr(e, 'status_code', None) in (404, 410)
+                if not self.robots[origin]:
+                    self.robot_errors[origin] = str(e)
         return self.robots[origin]
 
     def get(self, url: str, allowed_hosts: list[str], max_bytes: int = 6_000_000):

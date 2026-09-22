@@ -1,0 +1,181 @@
+{
+  "tested_at": "2026-09-22T13:19:30.748502+09:00",
+  "browser": "headless Chromium",
+  "physical_device_test": false,
+  "http_navigation_test": false,
+  "local_storage_mocked": true,
+  "viewport_page_checks": 24,
+  "functional_checks": "bookmark/search/share/resize and static navigation links",
+  "cve_checks": "12 viewport column/overflow checks; more20/search beyond hidden cards/details",
+  "page_errors": [],
+  "viewports": [
+    {
+      "page": "archive",
+      "width": 320,
+      "height": 800,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 320,
+      "height": 800,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 344,
+      "height": 882,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 344,
+      "height": 882,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 360,
+      "height": 900,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 360,
+      "height": 900,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 390,
+      "height": 844,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 390,
+      "height": 844,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 412,
+      "height": 915,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 412,
+      "height": 915,
+      "columns": 1,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 600,
+      "height": 700,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 600,
+      "height": 700,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 690,
+      "height": 829,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 690,
+      "height": 829,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 768,
+      "height": 900,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 768,
+      "height": 900,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 840,
+      "height": 980,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 840,
+      "height": 980,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 900,
+      "height": 700,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 900,
+      "height": 700,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 1024,
+      "height": 768,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 1024,
+      "height": 768,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "archive",
+      "width": 1440,
+      "height": 1000,
+      "columns": 2,
+      "overflow": false
+    },
+    {
+      "page": "report",
+      "width": 1440,
+      "height": 1000,
+      "columns": 2,
+      "overflow": false
+    }
+  ]
+}

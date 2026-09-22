@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .common import ROOT, load_config, now_kst, read_json, write_json
 from .gemini import Gemini, GeminiError
+from .cves import collect_cves
 from .network import PublicWeb
 from .pipeline import load_state, prune, run_pipeline
 from .render import render_site
@@ -20,7 +21,7 @@ def main():
     parser.add_argument('--schedule', default=os.getenv('SCHEDULE_CRON', ''))
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--build-only', action='store_true', help='API/수집 없이 현재 상태로 HTML만 생성')
-    mode.add_argument('--check-sources', action='store_true', help='수집원만 확인; API 호출·상태 변경 없음')
+    mode.add_argument('--check-sources', action='store_true', help='수집원·NVD 확인; Gemini 호출·상태 변경 없음')
     mode.add_argument('--check-api', action='store_true', help='설정한 Gemini 모델 2개 연결 확인')
     args = parser.parse_args()
     cfg, now = load_config(), now_kst()
@@ -29,6 +30,9 @@ def main():
         _, statuses = collect_sources(web, read_json(ROOT / 'config/sources.json', []), now, cfg)
         _, gh_status = collect_github(web, now, cfg)
         statuses.append(gh_status)
+        if cfg.get('cve_enabled'):
+            _, cve_status = collect_cves(now, cfg)
+            statuses.append(cve_status)
         print(json.dumps(statuses, ensure_ascii=False, indent=2))
         return 0 if any(s['status'] == 'ok' for s in statuses) else 1
     if args.check_api:
@@ -47,7 +51,9 @@ def main():
         if summary_path:
             text = (f'## 수집 결과\n\nKST {report["at"]}\n\n'
                     f'신규 {report["new_count"]}건 · 보류 {report["pending_count"]}건 · '
-                    f'Gemini 요청 {report["api_calls"]}회 · API 보고 토큰 {report["api_tokens"]}\n\n')
+                    f'Gemini 요청 {report["api_calls"]}회 · API 보고 토큰 {report["api_tokens"]}\n\n'
+                    f'당일 NVD 공개 CVE {report.get("cve_count", 0)}건 · CVE 번역 대기 '
+                    f'{report.get("cve_summary", {}).get("pending", 0)}건(보관 기간 전체)\n\n')
             text += '\n'.join('- ' + message for message in report['warnings'])
             Path(summary_path).write_text(text + '\n', encoding='utf-8')
     if args.build_only and (args.state_dir / 'state.json').exists():

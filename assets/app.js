@@ -100,12 +100,23 @@
   const search = document.getElementById('issue-search');
   const issueCards = [...document.querySelectorAll('[data-issue-card]')];
   const searchable = issueCards.map(card => ({ card, text: card.textContent.toLocaleLowerCase('ko-KR') }));
-  search?.addEventListener('input', () => {
-    const query = search.value.trim().toLocaleLowerCase('ko-KR');
-    let count = 0;
+  const cveMore = document.querySelector('[data-cve-more]');
+  let cveLimit = 20;
+  function filterIssues() {
+    const query = (search?.value || '').trim().toLocaleLowerCase('ko-KR');
+    let count = 0, cveCount = 0;
     for (const {card, text} of searchable) {
-      card.hidden = !!query && !text.includes(query);
+      const matches = !query || text.includes(query);
+      const isCve = card.hasAttribute('data-cve-card');
+      if (isCve && matches) cveCount += 1;
+      // Search always covers ALL CVEs, including cards not yet expanded.
+      card.hidden = !matches || (isCve && !query && cveCount > cveLimit);
       count += Number(!card.hidden);
+    }
+    if (cveMore) {
+      const remaining = Math.max(0, cveCount - cveLimit);
+      cveMore.hidden = !!query || remaining === 0;
+      cveMore.textContent = `다음 CVE ${Math.min(20, remaining)}건 보기 · 남은 ${remaining}건`;
     }
     document.querySelectorAll('[data-section]').forEach(section => {
       const hasVisible = [...section.querySelectorAll('[data-issue-card]')].some(card => !card.hidden);
@@ -114,9 +125,12 @@
       const originalEmpty = section.querySelector('.section-empty');
       if (originalEmpty) originalEmpty.hidden = !!query;
     });
-    document.getElementById('search-status').textContent = query ? `${count}개 카드` : '';
+    const searchStatus = document.getElementById('search-status');
+    if (searchStatus) searchStatus.textContent = query ? `${count}개 카드` : '';
     updateReading();
-  });
+  }
+  search?.addEventListener('input', filterIssues);
+  cveMore?.addEventListener('click', () => { cveLimit += 20; filterIssues(); });
   const tabs = [...document.querySelectorAll('.nav-tab')];
   const sections = [...document.querySelectorAll('[data-section]')];
   const bar = document.getElementById('reading-progress');
@@ -155,5 +169,5 @@
   };
   window.addEventListener('scroll', requestReading, {passive: true});
   window.addEventListener('resize', requestReading, {passive: true});
-  updateReading();
+  filterIssues();
 })();

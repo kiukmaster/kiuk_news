@@ -1,0 +1,33 @@
+<section class="issue-section cve-section" id="sec-cve" data-section>
+  <div class="section-heading"><h2><span class="section-marker security-marker"></span><svg class="icon"><use href="#i-shield"/></svg>당일 공개 CVE <span class="heading-count">{{ day.cve_count }}</span></h2><span class="section-kicker">NVD · CVSS</span></div>
+  <p class="section-description"><strong>{{ day.date_label }} 한국시간 00:00부터 {% if day.is_today %}수집 시각까지{% else %}23:59까지{% endif %}</strong> NVD에 공개된 CVE입니다. 발견일·예약일·수정일 또는 CVE Program 최초 공개일과는 다를 수 있습니다. NVD 반영 지연으로 아직 포함되지 않은 CVE가 있을 수 있습니다.</p>
+  <p class="section-description">대표 CVSS 기본 점수 내림차순 · 점수 미제공 {{ day.cve_unscored }}건 · 한국어 요약 대기 {{ day.cve_pending }}건. 점수는 Gemini가 생성하지 않으며, CVSS 버전이 다른 점수의 단순 비교는 제한적입니다.</p>
+  {% if day.cve_meta.status in ['error', 'partial'] %}<p class="inline-warning">이번 NVD 갱신은 {{ '실패' if day.cve_meta.status == 'error' else '일부 완료' }}했습니다. 기존 수집 결과를 유지합니다. 마지막 전체 조회: {{ day.cve_meta.last_success_at|kst }} KST. {{ day.cve_meta.message }}</p>
+  {% elif day.cve_meta.at %}<p class="small-text">NVD 조회 {{ day.cve_meta.at|kst }} KST · 최근 보관 기간을 재조회해 늦게 반영된 항목과 점수 변경도 갱신합니다.</p>{% endif %}
+  {% if day.cve_cards %}
+  <div class="report-grid" id="cve-grid">
+  {% for c in day.cve_cards %}
+    <article class="issue-card cve-card" id="cve-{{ c.id }}" data-issue-card data-cve-card>
+      <div class="card-content">
+        <div class="issue-meta"><div class="badges"><span class="badge">NVD 공개 데이터</span><span class="badge">{{ '한국어 요약' if c.summary_ko else '한국어 요약 대기' }}</span></div></div>
+        <div class="cve-title-row"><h3 class="issue-title"><a href="{{ c.url }}" target="_blank" rel="noopener noreferrer">{{ c.id }}</a></h3>
+          {% if c.cvss %}<span class="cve-score severity-{{ c.cvss.severity|lower }}">CVSS {{ '%.1f'|format(c.cvss.score) }}<small>v{{ c.cvss.version }} · {{ c.cvss.severity }}</small></span>{% else %}<span class="cve-score severity-unknown">점수 미제공<small>0점이라는 뜻이 아닙니다</small></span>{% endif %}
+        </div>
+        {% if c.summary_ko %}<p class="issue-summary">{{ c.summary_ko }}</p>{% else %}<p class="small-text">번역 대기 중 · API 원문 설명</p><p class="issue-summary" lang="{{ c.description_language }}">{{ c.description[:500] }}{{ '…' if c.description|length > 500 else '' }}{% if not c.description %}원문 설명 미제공{% endif %}</p>{% endif %}
+        {% if c.cvss %}<p class="small-text cve-provider">점수 제공: {{ c.cvss.source }}{% if c.cvss.type %} · {{ c.cvss.type }}{% endif %}</p>{% endif %}
+        <details class="cve-details"><summary>평가 근거 · 다른 CVSS 보기</summary>
+          <p class="small-text">NVD 처리 상태: {{ c.vuln_status or '미제공' }}<br>정보 수정: {{ c.last_modified_at|kst }} KST<br>데이터 확인: {{ c.observed_at|kst }} KST</p>
+          {% for m in c.cvss_all %}<div class="cve-metric"><strong>CVSS v{{ m.version }} · {{ '%.1f'|format(m.score) }} · {{ m.severity }}</strong><p>{{ m.source }} · {{ m.type }}</p>{% if m.vector %}<code>{{ m.vector }}</code>{% endif %}</div>{% endfor %}
+          {% if not c.cvss_all %}<p>API에서 유효한 CVSS 점수가 제공되지 않았습니다. 추정 점수를 붙이지 않습니다.</p>{% endif %}
+          <p class="small-text">대표 점수 선택: v4.0 → v3.1 → v3.0 → v2.0. 같은 버전에서는 Primary 우선, 같은 유형이면 NVD 우선. 제공기관별 점수는 다를 수 있습니다. CVSS는 실제 악용 여부를 뜻하지 않습니다.</p>
+        </details>
+      </div>
+      <div class="card-footer"><time datetime="{{ c.published_at }}">NVD 공개 {{ c.published_at|kst }} KST</time><a class="original-link" href="{{ c.url }}" target="_blank" rel="noopener noreferrer">NVD 보기<svg class="icon small"><use href="#i-external"/></svg></a></div>
+    </article>
+  {% endfor %}
+  </div>
+  <button class="cve-more" type="button" data-cve-more hidden>다음 CVE 20건 보기</button>
+  {% else %}<div class="section-empty">{% if day.cve_meta.status == 'ok' %}해당 날짜로 수집된 CVE가 없습니다.{% else %}CVE 수집을 아직 완료하지 못했습니다. 수집원별 상태를 확인하세요.{% endif %}</div>{% endif %}
+  <p class="search-empty" hidden>이 분야에서 검색어와 일치하는 CVE가 없습니다.</p>
+  <p class="nvd-attribution">This product uses data from the NVD API but is not endorsed or certified by the NVD.</p>
+</section>

@@ -30,6 +30,12 @@ def render_context(day: dict, today: str) -> dict:
             out['hot_cards'].append(card)
     out['count'] = len(articles)
     out['counts'] = {k: len(v) for k, v in out['sections'].items()}
+    cves = list(day.get('cves', {}).values())
+    out['cve_cards'] = sorted(cves, key=lambda x: ((x.get('cvss') or {}).get('score', -1), x['published_at']), reverse=True)
+    out['cve_count'] = len(cves)
+    out['cve_unscored'] = sum(x.get('cvss') is None for x in cves)
+    out['cve_pending'] = sum(not x.get('summary_ko') for x in cves)
+    out['cve_meta'] = day.get('cve_meta', {})
     out['is_today'] = day['date'] == today
     date = datetime.fromisoformat(day['date'])
     out['date_label'] = date.strftime('%Y. %m. %d')
@@ -72,5 +78,5 @@ def render_site(state: dict, output: Path, now: datetime, cfg: dict) -> None:
     # Minimal metadata only; no original article bodies or API secrets.
     write_json(output / 'reports.json', {'generated_at': now.isoformat(), 'keep_days': cfg['keep_days'],
                'reports': [{'date': d['date'], 'url': 'reports/' + d['date'] + '.html',
-                            'count': d['count'], 'hot_count': len(d['hot_cards']), 'updated_at': d['updated_at']}
+                            'count': d['count'], 'cve_count': d['cve_count'], 'hot_count': len(d['hot_cards']), 'updated_at': d['updated_at']}
                            for d in days]})

@@ -60,6 +60,7 @@ class FakeGemini:
 def run(state, tmp_path, items, now=NOW, schedule='', client=None):
     cfg = load_config()
     cfg['fetch_article_body'] = False
+    cfg['cve_enabled'] = False  # News-only regression tests never call external APIs.
     client = client or FakeGemini()
     run_pipeline(state, tmp_path, now, cfg, schedule=schedule, web=object(), gemini=client,
         source_loader=lambda *a: (deepcopy(items), [{'name': '테스트', 'status': 'ok', 'count': len(items), 'message': '테스트'}]),

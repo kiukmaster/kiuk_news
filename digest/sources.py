@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import json
+from html import unescape
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlsplit
 
@@ -12,6 +14,9 @@ from .network import FetchError, PublicWeb
 
 
 def plain(html: str) -> str:
+    # Plain titles/URLs/filenames are text, not markup; avoid false locator warnings.
+    if not re.search(r'<[A-Za-z/!?]', html or ''):
+        return re.sub(r'\s+', ' ', unescape(html or '')).strip()
     soup = BeautifulSoup(html or '', 'html.parser')
     for tag in soup(['script', 'style', 'iframe', 'form', 'noscript']):
         tag.decompose()
@@ -72,7 +77,8 @@ def parse_html_listing(data: bytes, source: dict) -> list[dict]:
     soup = BeautifulSoup(data, 'html.parser')
     found = {}
     for a in soup.select(source['link_selector']):
-        title = plain(a.get_text(' ', strip=True))
+        node = a.select_one(source['title_selector']) if source.get('title_selector') else None
+        title = plain((node or a).get_text(' ', strip=True))[:300]
         if len(title) < 10:
             continue
         try:
@@ -94,35 +100,129 @@ def in_window(item: dict, now: datetime, hours: int) -> bool:
     return published is None or now - timedelta(hours=hours) <= published <= now + timedelta(minutes=15)
 
 
+def parse_news_sitemap(data: bytes, source: dict) -> list[dict]:
+    """Read a publisher's news sitemap, not an invented third-party feed."""
+    root = SafeET.fromstring(data)
+    if local_name(root.tag) != 'urlset':
+        raise FetchError('뉴스 사이트맵이 아닌 응답')
+    rows = []
+    for node in root:
+        if local_name(node.tag) != 'url':
+            continue
+        link = child_text(node, 'loc')
+        news = next((child for child in node if local_name(child.tag) == 'news'), None)
+        if news is None:
+            continue
+        title = plain(child_text(news, 'title'))
+        date = parse_date(child_text(news, 'publication_date'))
+        try:
+            link = canonical_url(link)
+        except ValueError:
+            continue
+        if title:
+            rows.append({'title_original': title, 'url': link, 'excerpt': '',
+                         'published_at': date.isoformat() if date else None})
+    if not rows:
+        raise FetchError('뉴스 사이트맵에 기사 제목/발행 시각 항목 없음')
+    return rows
+
+
+def source_entries(web: PublicWeb, source: dict):
+    errors = []
+    parsers = {'rss': parse_feed, 'html': parse_html_listing, 'news_sitemap': parse_news_sitemap}
+    routes = [source] + [{**source, **route} for route in source.get('fallbacks', [])]
+    for index, route in enumerate(routes):
+        try:
+            print(f"[수집] {source['name']} · {route['type']} · 경로 {index + 1}", flush=True)
+            data, _, final_url = web.get(route['url'], source['hosts'])
+            route = {**route, 'url': final_url}
+            entries = parsers[route['type']](data, route)
+            note = ('대체 경로 사용 · ' if index else '') + route['type'] + ' · ' + final_url
+            return entries, route['type'], note, errors
+        except Exception as exc:
+            error = str(exc) if isinstance(exc, FetchError) else type(exc).__name__
+            errors.append(f"{route['type']}: {error}")
+            print(f"[수집 경로 실패] {source['name']} · {error}", flush=True)
+    raise FetchError(' / '.join(errors))
+
+
 def collect_sources(web: PublicWeb, sources: list[dict], now: datetime, cfg: dict):
     collected, statuses = [], []
     for source in sources:
         if not source.get('enabled', True):
             continue
         try:
-            data, _, _ = web.get(source['url'], source['hosts'])
-            entries = (parse_feed(data, source) if source['type'] == 'rss'
-                       else parse_html_listing(data, source))
+            entries, route_type, note, attempts = source_entries(web, source)
             count = 0
             for item in entries:
                 if not in_window(item, now, cfg['lookback_hours']):
+                    continue
+                # Do not accept off-publisher links/sponsors as article candidates.
+                host = urlsplit(item['url']).hostname or ''
+                if not any(host == h or host.endswith('.' + h) for h in source['hosts']):
                     continue
                 item.update({'id': item_id(item['url']), 'source_id': source['id'],
                              'source': source['name'], 'region': source['region'],
                              'language_hint': source['language'], 'category_hint': source['category'],
                              'kind': 'paper' if source.get('paper') else 'article',
-                             'evidence_kind': 'abstract' if source.get('paper') else 'rss',
+                             'evidence_kind': 'abstract' if source.get('paper') else
+                                 ('rss' if route_type == 'rss' else 'listing'),
                              'first_seen_at': now.isoformat()})
                 item['excerpt'] = item['excerpt'][:cfg['max_input_chars_per_article']]
                 collected.append(item)
                 count += 1
-            statuses.append({'name': source['name'], 'status': 'ok', 'count': count,
-                             'message': f'최근 기사 {count}건 / 피드 항목 {len(entries)}건'})
+            message = f'최근 기사 {count}건 / 목록 {len(entries)}건 · {note}'
+            if attempts:
+                message += ' · 앞선 실패: ' + ' / '.join(attempts)
+            statuses.append({'name': source['name'], 'status': 'ok', 'count': count, 'message': message})
+            print(f"[수집 완료] {source['name']} · {count}건", flush=True)
         except Exception as exc:
-            # A broken external source must not discard successful sources.
             message = str(exc) if isinstance(exc, FetchError) else type(exc).__name__
             statuses.append({'name': source['name'], 'status': 'error', 'count': 0, 'message': message})
     return collected, statuses
+
+
+def page_publication_date(soup, region: str):
+    tz = KST if region == 'KR' else None
+    for selector in ('meta[property="article:published_time"]', 'meta[name="date"]',
+                     'meta[name="pubdate"]', 'meta[name="pub_date"]',
+                     'meta[itemprop="datePublished"]', 'time[datetime]'):
+        tag = soup.select_one(selector)
+        if tag:
+            dt = parse_date(tag.get('content') or tag.get('datetime'), tz)
+            if dt:
+                return dt
+    # The datePublished field, never dateModified, determines first publication.
+    def walk(node, depth=0):
+        if depth > 12:
+            return None
+        if isinstance(node, dict):
+            dt = parse_date(node.get('datePublished'), tz)
+            if dt:
+                return dt
+            children = node.values()
+        elif isinstance(node, list):
+            children = node
+        else:
+            return None
+        for value in children:
+            dt = walk(value, depth + 1)
+            if dt:
+                return dt
+        return None
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            dt = walk(json.loads(script.get_text()))
+            if dt:
+                return dt
+        except (ValueError, TypeError, RecursionError):
+            pass
+    if region == 'KR':
+        match = re.search(r'(?:기사입력|입력)\s*(\d{4}[.-]\d{1,2}[.-]\d{1,2})\s+(\d{2}:\d{2}(?::\d{2})?)',
+                          soup.get_text(' ', strip=True)[:15000])
+        if match:
+            return parse_date(match[1].replace('.', '-') + 'T' + match[2], KST)
+    return None
 
 
 def prepare_article(web: PublicWeb, item: dict, source: dict, cfg: dict) -> dict:
@@ -136,15 +236,9 @@ def prepare_article(web: PublicWeb, item: dict, source: dict, cfg: dict) -> dict
                 raise FetchError('HTML 본문이 아닌 응답')
             soup = BeautifulSoup(data, 'html.parser')
             if not result.get('published_at'):
-                for selector in ('meta[property="article:published_time"]', 'meta[name="date"]',
-                                 'meta[name="pubdate"]', 'time[datetime]'):
-                    tag = soup.select_one(selector)
-                    if tag:
-                        dt = parse_date(tag.get('content') or tag.get('datetime'),
-                                        KST if source['region'] == 'KR' else None)
-                        if dt:
-                            result['published_at'] = dt.isoformat()
-                            break
+                dt = page_publication_date(soup, source['region'])
+                if dt:
+                    result['published_at'] = dt.isoformat()
             for tag in soup(['script', 'style', 'iframe', 'nav', 'aside', 'form', 'footer', 'header']):
                 tag.decompose()
             selector = source.get('body_selector')

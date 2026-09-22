@@ -15,5 +15,11 @@
   "fetch_article_body": true,
   "user_agent": "DailySecurityDigest/1.0 (public RSS reader)",
   "github_trending_url": "https://github.com/trending?since=daily",
-  "github_max_items": 25
+  "github_max_items": 25,
+  "cve_enabled": true,
+  "nvd_timeout_seconds": 35,
+  "nvd_interval_seconds": 6.2,
+  "nvd_max_pages_per_run": 20,
+  "cve_summary_batch_size": 12,
+  "cve_summary_max_calls_per_run": 12
 }

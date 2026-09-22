@@ -1,3 +1,5 @@
+> **v2 업데이트:** 수집 오류 수정과 NVD 당일 CVE·CVSS 기능이 추가되었습니다. 기존 설치자는 [UPGRADE.md](UPGRADE.md) 또는 `UPGRADE.html`을 먼저 확인하세요.
+
 # AI · Security Daily Digest
 
 국내외 AI·보안·신기술 기사를 모아 Gemini로 한국어 요약을 작성하고, GitHub Pages에 날짜별 HTML 보고서로 게시합니다. 화면은 HTML·CSS·JavaScript, 수집·생성은 Python, 예약 실행은 GitHub Actions입니다.

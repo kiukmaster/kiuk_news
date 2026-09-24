@@ -78,6 +78,68 @@
     ]
   },
   {
+    "id": "dacon-events",
+    "name": "데이콘 대회",
+    "region": "KR",
+    "language": "ko",
+    "category": "ai",
+    "event": true,
+    "url": "https://www.dacon.io/",
+    "type": "html",
+    "enabled": true,
+    "hosts": [
+      "dacon.io"
+    ],
+    "link_selector": ".swiper-wrapper a[href^='/competitions/official/'][href$='/overview/description']",
+    "title_selector": "div.truncate.font-bold",
+    "listing_text_regex": "종료까지\\s+D-\\d+",
+    "body_selector": ".description .ql-editor",
+    "max_items": 12,
+    "allow_empty": true
+  },
+  {
+    "id": "wevity-university",
+    "name": "위비티 대학생 SW 공모전",
+    "region": "KR",
+    "language": "ko",
+    "category": "tech",
+    "event": true,
+    "url": "https://www.wevity.com/?c=find&s=_university&gub=1&cidx=21&classonof7=on&classonof=off",
+    "type": "html",
+    "enabled": true,
+    "hosts": [
+      "wevity.com"
+    ],
+    "link_selector": ".ms-list ul.list li .tit a[href*='gbn=view'][href*='ix=']",
+    "body_selector": "#viewContents",
+    "canonical_id_param": "ix",
+    "canonical_url_template": "https://www.wevity.com/?c=find&gbn=view&ix={id}",
+    "max_items": 12,
+    "title_direct_text": true
+  },
+  {
+    "id": "contestkorea-it",
+    "name": "콘테스트코리아 과학·IT",
+    "region": "KR",
+    "language": "ko",
+    "category": "tech",
+    "event": true,
+    "url": "https://www.contestkorea.com/sub/list.php?int_gbn=1&Txt_bcode=030310001&displayrow=48",
+    "type": "html",
+    "enabled": true,
+    "hosts": [
+      "contestkorea.com"
+    ],
+    "link_selector": ".list_style_2 .title a[href*='str_no=']",
+    "title_selector": "span.txt",
+    "body_selector": ".view_detail_area .txt",
+    "body_exclude_selector": ".tip2, .tip_box2, .tip3, .tip_box3",
+    "canonical_id_param": "str_no",
+    "canonical_url_template": "https://www.contestkorea.com/sub/view.php?str_no={id}",
+    "date_id_param": "str_no",
+    "max_items": 48
+  },
+  {
     "id": "openai",
     "name": "OpenAI",
     "region": "GLOBAL",

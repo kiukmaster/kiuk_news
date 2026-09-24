@@ -37,11 +37,11 @@ def fixture_state(now):
         day['slots'] = {slot: {'at': dt.isoformat(), 'status': 'ok', 'new_count': 4} for slot in SLOTS}
         day['sources'] = [{'name': 'UI 검증 데이터 · 실제 뉴스 아님', 'status':'ok', 'message':'오프라인 시험'}]
         for i in range(12):
-            category = ['ai', 'security', 'tech', 'github'][i % 4]
+            category = ['ai', 'security', 'tech', 'event', 'github'][i % 5]
             key = f'test-{date}-{i}'
             a = {'id':key, 'url':'https://example.invalid/ui-test', 'source':'UI 검증 · 실제 뉴스 아님',
                 'source_id':'ui-test', 'region':'KR' if i%2==0 else 'GLOBAL',
-                'kind':'github' if category=='github' else ('paper' if category=='tech' else 'article'),
+                'kind':'github' if category=='github' else ('paper' if category=='tech' else ('event' if category=='event' else 'article')),
                 'published_at':None if category=='github' else dt.isoformat(), 'evidence_kind':'rss',
                 'collected_at':dt.isoformat(), 'observed_at':dt.isoformat(),
                 'category':category, 'language':'ko', 'translation':bool(i%2), 'body_note':'',

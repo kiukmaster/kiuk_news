@@ -2,24 +2,24 @@
 
 # AI · Security Daily Digest
 
-국내외 AI·보안·신기술 기사를 모아 Gemini로 한국어 요약을 작성하고, GitHub Pages에 날짜별 HTML 보고서로 게시합니다. 화면은 HTML·CSS·JavaScript, 수집·생성은 Python, 예약 실행은 GitHub Actions입니다.
+국내외 AI·보안·신기술 기사와 국내 대학생 대상 해커톤·대회·행사 공고를 모아 Gemini로 한국어 요약을 작성하고, GitHub Pages에 날짜별 HTML 보고서로 게시합니다. 화면은 HTML·CSS·JavaScript, 수집·생성은 Python, 예약 실행은 GitHub Actions입니다.
 
 **처음 설치하시면 [SETUP.md](SETUP.md)를 순서대로 따라 하세요. 브라우저용 안내서는 [SETUP.html](SETUP.html)입니다.**
 
 ## 동작
 
 ```text
-KST 06:00 / 13:00 / 19:00 예약 또는 수동 실행
+KST 05:07 / 12:07 / 18:07 예약 수집 시작(목표 공개 06:00 / 13:00 / 19:00) 또는 수동 실행
   → news-state 브랜치에서 이전 데이터 복구
-  → 국내외 RSS·허용된 기사 목록·GitHub Trending 수집
+  → 국내외 RSS·허용된 기사/행사 목록·GitHub Trending 수집
   → URL/제목 중복 제거 + 원문 근거 확보
   → Gemini 한국어 요약·번역·분류
-  → 오늘 누적된 전체 요약에서 Gemini HOT 10 선정
+  → 오늘 누적된 전체 요약을 분할 평가해 Gemini HOT 10 선정
   → 최근 5일 HTML 재생성
-  → news-state 저장 + public/만 GitHub Pages 배포
+  → news-state 저장 + public/만 목표 시각 이후 GitHub Pages 배포
 ```
 
-HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON만 반환하고 Python 템플릿이 이를 안전하게 HTML로 바꿉니다. 따라서 HOT은 **최종 HTML 작성 직전**에 오늘의 전체 누적 내용을 보고 선정합니다.
+HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON만 반환하고 Python 템플릿이 이를 안전하게 HTML로 바꿉니다. 따라서 HOT은 **최종 HTML 작성 직전**에 오늘의 전체 누적 후보를 Gemini가 분할 평가한 뒤 선정합니다.
 
 ## 구현한 기능
 
@@ -27,7 +27,7 @@ HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON�
 |---|---|
 | 첫 화면 | 최근 5일 보고서를 최신순으로 표시 |
 | 일별 보고서 | `reports/YYYY-MM-DD.html` 한 개를 하루 세 번 누적 갱신 |
-| 분류 | HOT / AI / 보안 / 신기술·논문 / GitHub 인기 |
+| 분류 | HOT / AI / 보안 / 신기술·논문 / 대회·행사 / GitHub 인기 |
 | 카드 | 한국어 제목·요약·출처·시각·원문 링크·요약 근거 범위 |
 | HOT | 모든 누적 후보에서 Gemini가 중요도순 최대 10개 선정. 분야별 카드와 중복 표시 |
 | GitHub | Trending의 `stars today` 내림차순. 총 스타로 대체하지 않음 |
@@ -42,11 +42,12 @@ HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON�
 
 ## 포함한 수집원
 
-`config/sources.json`의 14개 뉴스·논문 수집원과 GitHub Trending 1개입니다.
+`config/sources.json`의 14개 뉴스·논문 수집원, 국내 대회·행사 3개 수집원, GitHub Trending 1개입니다.
 
 | 지역 | 수집원 |
 |---|---|
-| 국내 | AI타임스, 데일리시큐, 전자신문, GeekNews, 보안뉴스 |
+| 국내 뉴스 | AI타임스, 데일리시큐, 전자신문, GeekNews, 보안뉴스 |
+| 국내 대회·행사 | 데이콘, 위비티 대학생 SW 공모전, 콘테스트코리아 과학·IT |
 | 해외 AI | OpenAI, Google AI, Hugging Face |
 | 해외 보안 | The Hacker News, BleepingComputer, SecurityWeek, Krebs on Security |
 | 논문 | arXiv cs.AI, arXiv cs.CR |
@@ -74,7 +75,7 @@ HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON�
 | `fetch_article_body` | true | 허용된 경우 본문 일부 확보 |
 | `github_max_items` | 25 | Trending 화면에서 읽는 최대 저장소 수 |
 
-API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
+API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 401 인증 실패는 게시를 중단하므로 AI Studio의 인증 키와 저장소 `GEMINI_API_KEY` Secret을 확인하세요. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
 
 보류된 기사는 다음 실행에서 다시 시도하지만, 발행 후 48시간을 넘기거나 5일 보관 범위를 벗어나면 처리 대상에서 빠집니다. API 할당량이 계속 부족하면 모든 수집 기사를 요약할 수 없습니다.
 
@@ -148,6 +149,6 @@ python tests/browser_check.py
 
 ## 운영 전 확인할 사항
 
-GitHub 예약 실행은 지연·누락될 수 있습니다. 5일이 지난 콘텐츠는 다음 성공한 생성·배포에서 서버에서 제거됩니다. **Git 커밋 이력, 과거 아티팩트, 별도 백업까지 영구 삭제하는 기능은 아닙니다.** 공개 저장소의 `news-state` 브랜치도 공개됩니다. 웹페이지 전체 HTML은 저장하지 않지만, 보류 항목의 RSS 제공문(기본 최대 6,000자)·URL과 완료된 요약은 저장됩니다.
+예약 수집은 공개 목표보다 53분 먼저 시작하고 배포 작업은 목표 시각까지 대기합니다. 관측된 GitHub 예약 지연이 수 시간에 달해, 정시성이 필요하면 [외부 예약 호출 설정](SETUP.md#10-하루-세-번-자동화-확인하기)을 사용하세요. 자료 기준 시각은 실제 수집 시각입니다. GitHub 예약 실행·배포·Pages 반영이 지연되거나 누락될 수 있어 정확한 정시 공개는 보장하지 않습니다. 5일이 지난 콘텐츠는 다음 성공한 생성·배포에서 서버에서 제거됩니다. **Git 커밋 이력, 과거 아티팩트, 별도 백업까지 영구 삭제하는 기능은 아닙니다.** 공개 저장소의 `news-state` 브랜치도 공개됩니다. 웹페이지 전체 HTML은 저장하지 않지만, 보류 항목의 RSS 제공문(기본 최대 6,000자)·URL과 완료된 요약은 저장됩니다.
 
 출처의 지시문을 신뢰하지 않는 데이터로 취급하고 모델 출력은 검증·이스케이프합니다. 그렇더라도 번역·요약의 오류를 완전히 제거하지 못합니다. 보안 패치·정책·수치 등 중요한 판단은 원문으로 확인해야 합니다.

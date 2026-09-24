@@ -19,6 +19,7 @@
       <div class="badges">
         {% if hot %}<span class="badge hot-badge">{{ '%02d'|format(a.rank) }} · Gemini Pick</span>{% endif %}
         {% if a.region == 'KR' %}<span class="badge domestic">국내</span>{% endif %}
+        {% if a.kind == 'event' %}<span class="badge event-badge">대회·행사</span>{% endif %}
         {% if a.translation %}<span class="badge">번역 요약</span>{% else %}<span class="badge">한국어 요약</span>{% endif %}
         {% if a.kind == 'paper' %}<span class="badge">논문 · 초록 기반</span>{% elif a.evidence_kind == 'rss' %}<span class="badge">RSS 제공문 기반</span>{% endif %}
       </div>
@@ -39,8 +40,8 @@
   <div class="card-footer">
     {% if a.kind == 'github' %}<span>확인 {{ a.observed_at|kst }} KST</span>
     {% elif a.published_at %}<time datetime="{{ a.published_at }}">발행 {{ a.published_at|kst }} KST</time>
-    {% else %}<span>발행 시각 미제공</span>{% endif %}
-    <a class="original-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ '저장소' if a.kind == 'github' else '원문' }} 보기<svg class="icon small"><use href="#i-external"/></svg></a>
+    {% else %}<span>{{ '공고' if a.kind == 'event' else '발행' }} 시각 미제공</span>{% endif %}
+    <a class="original-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ '저장소' if a.kind == 'github' else ('행사 공고' if a.kind == 'event' else '원문') }} 보기<svg class="icon small"><use href="#i-external"/></svg></a>
   </div>
 </article>
 {% endmacro %}

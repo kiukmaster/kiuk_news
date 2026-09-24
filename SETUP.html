@@ -131,6 +131,7 @@ git config user.email "본인의 커밋용 이메일"
 <pre><code class="language-yaml">env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 </code></pre>
+<p>2026년 9월부터 Gemini의 기존 표준 키 요청이 거부됩니다. AI Studio에서 키 유형이 <strong>Auth</strong>인지 확인하고, 401 오류가 나면 새 인증 키를 만들어 <code>GEMINI_API_KEY</code> Secret을 교체한 뒤 수동 collect로 검증하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.</p>
 <p>키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.</p>
 <p>참고: <a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets" rel="noopener noreferrer" target="_blank">GitHub Actions Secret 사용</a>.</p>
 <h2 id="step-5">5. 모델 설정 확인하기</h2>
@@ -178,7 +179,7 @@ git config user.email "본인의 커밋용 이메일"
 <p>저장소 <strong>Settings → Actions → General</strong>로 이동합니다.</p>
 <p><strong>Actions permissions</strong>에서 GitHub 공식 Actions를 실행할 수 있어야 합니다. 개인 저장소에서는 기본 허용 설정으로 진행할 수 있습니다. 조직 정책이 제한 중이면 필요한 공식 Actions를 허용하도록 관리자와 확인하세요. 임의의 외부 Action은 사용하지 않습니다.</p>
 <p>페이지 아래쪽 <strong>Workflow permissions</strong>에서 기본 쓰기 권한을 허용할 수 있는 환경인지 확인합니다. 제공된 YAML은 빌드 작업에 <code>contents: write</code>, 배포 작업에 <code>pages: write</code>, <code>id-token: write</code>를 필요한 범위로 명시합니다. 개인 저장소에서 <code>news-state</code> 쓰기가 거절된다면 <strong>Read and write permissions</strong> 설정과 저장소 Rulesets를 확인하세요.</p>
-<p>별도의 <code>GH_TOKEN</code>, 개인 액세스 토큰(PAT), GitHub API 키를 만들 필요는 없습니다. 실행마다 제공되는 <code>GITHUB_TOKEN</code>과 체크아웃 자격증명을 사용합니다. <strong>Allow GitHub Actions to create and approve pull requests</strong>는 이 프로젝트에 필요하지 않습니다.</p>
+<p>GitHub 자체 예약 실행만 쓰는 경우 별도의 <code>GH_TOKEN</code>, 개인 액세스 토큰(PAT), GitHub API 키를 만들 필요는 없습니다. 외부 예약 서비스에서 <code>workflow_dispatch</code>를 호출하려면 아래 10절의 제한된 권한 토큰이 필요합니다. 실행마다 제공되는 <code>GITHUB_TOKEN</code>과 체크아웃 자격증명을 사용합니다. <strong>Allow GitHub Actions to create and approve pull requests</strong>는 이 프로젝트에 필요하지 않습니다.</p>
 <p>브랜치 보호 규칙이 모든 브랜치 쓰기를 막고 있다면 <code>news-state</code>에 대한 허용 범위를 검토하세요. 코드가 보호 규칙을 우회하거나 강제 푸시하지는 않습니다.</p>
 <p>참고: <a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication" rel="noopener noreferrer" target="_blank">GITHUB_TOKEN 권한</a>, <a href="https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository" rel="noopener noreferrer" target="_blank">저장소 Actions 설정</a>.</p>
 <h2 id="step-7">7. GitHub Pages 설정하기</h2>
@@ -203,17 +204,18 @@ git config user.email "본인의 커밋용 이메일"
 <pre><code class="language-text">Checkout source
 Set up Python
 Install dependencies
-Run tests
 Check secret configuration
 Restore persistent data
 Collect, summarize, select HOT, generate HTML
 Save persistent data
 Configure Pages
 Upload generated site only
+Wait for scheduled publication time (예약 실행만)
 Deploy Pages
 </code></pre>
 <p><strong>Save persistent data</strong>가 처음 성공하면 <code>news-state</code> 브랜치가 자동으로 생깁니다. 직접 만들거나 빈 파일을 넣을 필요가 없습니다. 이 브랜치를 삭제하면 보고서 누적·중복 판별 상태가 사라집니다.</p>
 <p>일부 수집원이나 요약이 실패해도, 완료한 기사로 사이트를 게시할 수 있습니다. 따라서 Actions가 초록색이라는 것만으로 모든 기사가 성공한 것은 아닙니다. 실행의 <strong>Summary</strong>, 보고서의 <strong>수집 안내</strong>, <strong>수집원별 상태</strong>, <strong>요약 보류</strong>도 확인하세요.</p>
+<p>배포 워크플로에서 테스트 실행은 생략하고, 별도 <strong>Tests</strong> 워크플로가 main 푸시와 PR에서 테스트합니다.</p>
 <p>수동 실행은 <code>수동 1회</code>처럼 별도로 표시됩니다. 오전 예약을 기다리지 않고 실행했다고 해서 <code>06:00 완료</code>로 가짜 표시하지 않습니다.</p>
 <h2 id="step-9">9. 사이트 열기</h2>
 <p><code>deploy</code>가 성공하면 배포 작업의 URL을 클릭하거나 <strong>Settings → Pages → Visit site</strong>에서 접속합니다.</p>
@@ -261,30 +263,50 @@ Deploy Pages
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>한국시간(KST)</th>
+<th>목표 공개 시각(KST)</th><th>수집 시작(KST)</th>
 <th>워크플로의 UTC cron</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>06:00</td>
-<td><code>0 21 * * *</code> — UTC 전날 21시</td>
+<td>05:07</td><td><code>7 20 * * *</code> — UTC 전날 20:07</td>
 </tr>
 <tr>
 <td>13:00</td>
-<td><code>0 4 * * *</code></td>
+<td>12:07</td><td><code>7 3 * * *</code></td>
 </tr>
 <tr>
 <td>19:00</td>
-<td><code>0 10 * * *</code></td>
+<td>18:07</td><td><code>7 9 * * *</code></td>
 </tr>
 </tbody>
 </table></div>
 <p>각 실행은 같은 KST 날짜의 <code>reports/YYYY-MM-DD.html</code>을 갱신합니다. 오전 기사를 지우고 오후 기사로만 교체하는 방식이 아니라, 이미 요약한 기사에 새 기사를 추가하고 HOT을 다시 선정합니다.</p>
-<p><strong>예약 시각은 정확한 게시 시각을 보장하지 않습니다.</strong> GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.</p>
-<p>시간을 변경할 때는 <code>update-news.yml</code>의 cron뿐 아니라 <code>digest/common.py</code>의 <code>SLOTS</code>, <code>CRON_SLOTS</code>, <code>templates/index.html</code>의 시간 안내도 함께 변경해야 표시가 일치합니다. 처음에는 기본값을 유지하세요.</p>
+<p>수집·요약·HTML 생성은 목표 시각보다 53분 전에 시작하며, 예약 실행의 Pages 배포는 목표 시각까지 대기합니다. 수동 실행은 바로 배포합니다. <strong>정확한 게시 시각은 보장하지 않습니다.</strong> GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.</p>
+<p>시간을 변경할 때는 <code>update-news.yml</code>의 cron·배포 게이트·외부 예약 호출 시각뿐 아니라 <code>digest/common.py</code>의 <code>SLOTS</code>, <code>CRON_SLOTS</code>, <code>templates/index.html</code>의 시간 안내도 함께 변경해야 표시가 일치합니다. 처음에는 기본값을 유지하세요.</p>
 <p>참고: <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule" rel="noopener noreferrer" target="_blank">GitHub schedule 이벤트</a>.</p>
-<h2 id="step-11">11. API 호출 없이 다시 배포하기</h2>
+<h3>정시성이 중요할 때: 외부 예약 호출</h3>
+<p>이 저장소의 최근 GitHub 기본 예약 실행은 예정 시각보다 수 시간 늦게 시작했습니다. 비정각 선행 예약은 지연 가능성을 낮추지만, 정시성이 중요하면 비밀 헤더를 보관할 수 있는 별도 HTTPS 예약 서비스에서 GitHub의 <code>workflow_dispatch</code> API를 호출하세요. 외부 서비스도 지연될 수 있고 Pages 반영까지 정확히 보장하지는 않습니다.</p>
+<ol>
+<li>GitHub에서 <strong>이 저장소만 선택</strong>하고 <strong>Actions: write</strong>만 허용한 fine-grained 개인 액세스 토큰을 만듭니다. 토큰은 외부 예약 서비스의 비밀 저장소에 보관하고 URL·웹페이지·저장소에 넣지 않습니다.</li>
+<li>외부 예약 서비스에 다음 HTTPS POST 요청을 세 개 등록합니다. <code>OWNER/REPO</code>와 <code>ref</code>는 실제 저장소·기본 브랜치로 바꿉니다. 각 요청은 <strong>05:07, 12:07, 18:07 KST</strong>에 보냅니다.</li>
+</ol>
+<pre><code class="language-text">POST https://api.github.com/repos/OWNER/REPO/actions/workflows/update-news.yml/dispatches
+Authorization: Bearer TOKEN
+Accept: application/vnd.github+json
+Content-Type: application/json
+</code></pre>
+<p>요청 본문은 순서대로 다음과 같습니다.</p>
+<pre><code class="language-json">{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"06:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"13:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"19:00"}}
+</code></pre>
+<ol start="3">
+<li>한 슬롯을 먼저 시험하고 Actions의 <code>build</code>와 <code>deploy</code>가 완료되는지 확인합니다. 배포는 목표 시각 전이면 대기하고, 목표가 지났으면 즉시 진행합니다. 목표보다 1시간 넘게 이른 호출은 게시를 막습니다.</li>
+<li>외부 예약이 정상 동작하면 저장소 <strong>Settings → Secrets and variables → Actions → Variables</strong>에 <code>EXTERNAL_SCHEDULER_ENABLED=true</code>를 추가해 GitHub 기본 예약 실행을 건너뛸 수 있습니다. 설정 전에는 같은 슬롯에 수집·배포가 중복될 수 있습니다.</li>
+</ol>
+<p>참고: <a href="https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event">GitHub workflow dispatch API</a>, <a href="https://docs.github.com/en/actions/how-tos/troubleshoot-workflows">GitHub 예약 실행 지연</a>, <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site">GitHub Pages 반영 시간</a>.</p><h2 id="step-11">11. API 호출 없이 다시 배포하기</h2>
 <p>디자인을 수정했거나 기존 데이터로 HTML만 다시 만들 때 사용합니다.</p>
 <p><strong>Actions → Update news &amp; deploy → Run workflow → mode: rebuild → Run workflow</strong></p>
 <p>이 모드는 <code>news-state</code>에서 기존 데이터를 읽고 최근 5일 범위로 HTML을 재생성합니다. 새 기사를 수집하거나 Gemini를 부르지 않습니다. 초기 데이터가 없다면 빈 목록만 게시됩니다.</p>
@@ -332,7 +354,8 @@ Deploy Pages
 </tr>
 <tr>
 <td>HOT 실패 / 이전 선정 결과</td>
-<td>요약은 성공해도 HOT 모델 호출이 실패할 수 있음. 모델 권한·할당량 확인</td>
+<td>HOT 후보가 많으면 단계별 Gemini 선정. 429·5xx는 대체 모델 재시도, 계속 실패하면 할당량 확인</td>
+</tr><tr><td>Gemini HTTP 401</td><td>AI Studio에서 Auth 키 상태 확인 및 GEMINI_API_KEY Secret 교체. 인증 오류에서는 배포 중단</td>
 </tr>
 <tr>
 <td><code>git push ... 403</code></td>

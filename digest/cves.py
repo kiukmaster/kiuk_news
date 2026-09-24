@@ -17,7 +17,7 @@ from typing import Callable
 import requests
 
 from .common import KST, parse_date
-from .gemini import GeminiError
+from .gemini import GeminiError, GeminiAuthenticationError
 
 ENDPOINT = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 CVE_ID = re.compile(r'CVE-\d{4}-\d{4,}')
@@ -295,6 +295,8 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
                 row['summary_ko'], row['summary_model'] = summaries[row['id']], client.summary_model
                 translated += 1
             checkpoint()
+        except GeminiAuthenticationError:
+            raise
         except (GeminiError, KeyError, TypeError, ValueError) as exc:
             error = str(exc) if isinstance(exc, GeminiError) else f'CVE 요약 응답 오류: {type(exc).__name__}'
             break

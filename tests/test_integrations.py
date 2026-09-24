@@ -8,7 +8,8 @@ from unittest.mock import Mock
 import pytest
 
 from digest.common import load_config
-from digest.gemini import Gemini, GeminiError, BudgetExceeded, ENDPOINT
+from digest.gemini import Gemini, GeminiError, GeminiHTTPError, GeminiAuthenticationError, BudgetExceeded, ENDPOINT, HOT_CHUNK_SIZE
+from digest.pipeline import hot_round_calls
 
 
 def make_client(monkeypatch):
@@ -60,6 +61,15 @@ def test_fatal_error_does_not_leak_secret(monkeypatch):
     assert client.calls == 1
 
 
+def test_401_identifies_auth_key_without_leaking_secret(monkeypatch):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(return_value=api_response({}, 401))
+    with pytest.raises(GeminiAuthenticationError, match='GEMINI_API_KEY') as exc:
+        client.request('test', {}, {'type': 'object'}, client.summary_model)
+    assert client.key not in str(exc.value)
+    assert client.calls == 1
+
+
 def test_schema_failure_retries(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({'ok': 'not a boolean'}))
@@ -104,6 +114,56 @@ def test_hot_shortfall_requires_reason(monkeypatch):
     client.request = Mock(return_value={'picks': [{'id': '1', 'reason_ko': '테스트'}], 'shortfall_reason_ko': ''})
     with pytest.raises(GeminiError, match='개수'):
         client.select_hot([{'id': '1'}, {'id': '2'}])
+
+
+def test_hot_ranks_every_candidate_in_bounded_gemini_rounds(monkeypatch):
+    client = make_client(monkeypatch)
+    articles = [{'id': str(index), 'title_ko': f'테스트 {index}', 'summary_ko': '테스트 요약'} for index in range(170)]
+    calls = []
+
+    def choose(_instruction, data, _schema, model, attempts=3):
+        calls.append((model, attempts, [row['id'] for row in data['candidates']]))
+        return {'picks': [{'id': row['id'], 'reason_ko': '테스트 이유'}
+                          for row in data['candidates'][:10]], 'shortfall_reason_ko': ''}
+
+    client.request = choose
+    result = client.select_hot(articles)
+    assert len(result['picks']) == 10
+    assert result['model_used'] == client.hot_model
+    assert all(len(ids) <= HOT_CHUNK_SIZE for _, _, ids in calls)
+    assert set().union(*(set(ids) for _, _, ids in calls[:-1])) == {row['id'] for row in articles}
+    assert [model for model, _, _ in calls] == [client.summary_model] * 3 + [client.hot_model]
+    assert len(calls[-1][2]) == 30
+    assert hot_round_calls(80) == 1
+    assert hot_round_calls(170) == 4
+    assert hot_round_calls(530) == 8
+
+
+@pytest.mark.parametrize('status', [429, 503])
+def test_hot_transient_error_falls_back_to_other_gemini_model(monkeypatch, status):
+    client = make_client(monkeypatch)
+    calls = []
+
+    def choose(_instruction, data, _schema, model, attempts=3):
+        calls.append((model, attempts))
+        if model == client.hot_model:
+            raise GeminiHTTPError(status)
+        return {'picks': [{'id': row['id'], 'reason_ko': '테스트 이유'}
+                          for row in data['candidates']], 'shortfall_reason_ko': ''}
+
+    client.request = choose
+    result = client.select_hot([{'id': 'real'}])
+    assert result['picks'][0]['id'] == 'real'
+    assert result['model_used'] == client.summary_model
+    assert calls == [(client.hot_model, 1), (client.summary_model, 2)]
+
+
+def test_hot_auth_error_does_not_retry_another_model(monkeypatch):
+    client = make_client(monkeypatch)
+    client.request = Mock(side_effect=GeminiHTTPError(401))
+    with pytest.raises(GeminiHTTPError, match='GEMINI_API_KEY'):
+        client.select_hot([{'id': 'real'}])
+    assert client.request.call_count == 1
 
 
 def test_state_branch_across_two_runners(tmp_path, monkeypatch):

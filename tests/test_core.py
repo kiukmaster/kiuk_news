@@ -1,5 +1,7 @@
 from __future__ import annotations
+import ast
 import json
+import re
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,10 +11,10 @@ import pytest
 from bs4 import BeautifulSoup
 from defusedxml.common import DefusedXmlException
 
-from digest.common import (KST, canonical_url, item_id, parse_date, retention_cutoff, load_config, text_key)
-from digest.gemini import Gemini, GeminiError, response_text
+from digest.common import (KST, ROOT, CRON_SLOTS, canonical_url, item_id, parse_date, retention_cutoff, load_config, text_key)
+from digest.gemini import Gemini, GeminiError, GeminiAuthenticationError, response_text
 from digest.network import PublicWeb, FetchError
-from digest.pipeline import empty_state, load_state, new_day, prune, run_pipeline, fair_queue
+from digest.pipeline import empty_state, load_state, new_day, prune, run_pipeline, fair_queue, public_article
 from digest.render import render_site
 from digest.sources import parse_feed, parse_html_listing, parse_trending, parse_number, in_window
 
@@ -154,11 +156,11 @@ def test_response_parser_only_model_output():
 def test_three_runs_one_report(tmp_path):
     state = empty_state()
     initial = [article(i) for i in range(11)]
-    first = run(state, tmp_path, initial, schedule='0 21 * * *')
+    first = run(state, tmp_path, initial, schedule='7 20 * * *')
     assert len(first.summarized) == 11
-    second = run(state, tmp_path, initial + [article(12)], now=NOW.replace(hour=13), schedule='0 4 * * *')
+    second = run(state, tmp_path, initial + [article(12)], now=NOW.replace(hour=13), schedule='7 3 * * *')
     assert len(second.summarized) == 1
-    third = run(state, tmp_path, initial + [article(12)], now=NOW.replace(hour=19), schedule='0 10 * * *')
+    third = run(state, tmp_path, initial + [article(12)], now=NOW.replace(hour=19), schedule='7 9 * * *')
     assert third.summarized == []
     assert len(state['days']) == 1
     day = state['days']['2026-09-22']
@@ -166,6 +168,38 @@ def test_three_runs_one_report(tmp_path):
     assert set(day['slots']) == {'06:00', '13:00', '19:00'}
     assert len(load_state(tmp_path)['days']) == 1
 
+
+def test_scheduled_slots_match_workflow_and_lead_time():
+    workflow = (ROOT / '.github/workflows/update-news.yml').read_text(encoding='utf-8')
+    gate = re.search(r"cron_slots = (\{[^\n]+\})", workflow)
+    assert gate is not None
+    assert ast.literal_eval(gate.group(1)) == CRON_SLOTS
+    for cron, slot in CRON_SLOTS.items():
+        assert f"- cron: '{cron}'" in workflow
+        assert f"'{slot}') slot_cron='{cron}'" in workflow
+        minute, hour = map(int, cron.split()[:2])
+        started = datetime(2026, 9, 24, hour, minute, tzinfo=timezone.utc).astimezone(KST)
+        target = started.replace(hour=int(slot[:2]), minute=0)
+        assert target - started == timedelta(minutes=53)
+
+
+def test_event_card_has_own_section(tmp_path):
+    item = article(777)
+    item['kind'] = 'event'
+    summary = FakeGemini().summarize([item])[item['id']]
+    summary['category'] = 'tech'
+    card = public_article(item, summary, NOW, 'offline-test')
+    assert card['category'] == 'event'
+    state = empty_state()
+    day = new_day(NOW.date().isoformat())
+    day['articles'][item['id']] = card
+    day['updated_at'] = NOW.isoformat()
+    state['days'][day['date']] = day
+    output = tmp_path / 'site'
+    render_site(state, output, NOW, load_config())
+    html = BeautifulSoup((output / 'reports' / (day['date'] + '.html')).read_text(encoding='utf-8'), 'html.parser')
+    assert html.select_one('#sec-event .issue-card .event-badge').get_text(strip=True) == '대회·행사'
+    assert not html.select('#sec-tech .issue-card')
 
 def test_manual_not_fake_scheduled_completion(tmp_path):
     state = empty_state()
@@ -190,6 +224,29 @@ def test_hot_failure_retains_prior_selection(tmp_path):
     day = state['days']['2026-09-22']
     assert day['hot_status'] == 'stale' and day['hot'] == old_hot
     assert len(day['articles']) == 2
+
+
+@pytest.mark.parametrize('count', [1, 6])
+def test_summary_auth_error_aborts_publication(tmp_path, count):
+    class AuthFailure(FakeGemini):
+        def summarize(self, items):
+            raise GeminiAuthenticationError()
+
+    with pytest.raises(GeminiAuthenticationError, match='GEMINI_API_KEY'):
+        run(empty_state(), tmp_path, [article(index) for index in range(count)], client=AuthFailure())
+
+
+def test_hot_auth_error_aborts_publication(tmp_path):
+    state = empty_state()
+    run(state, tmp_path, [article(1)])
+
+    class AuthFailure(FakeGemini):
+        def select_hot(self, items):
+            raise GeminiAuthenticationError()
+
+    with pytest.raises(GeminiAuthenticationError, match='GEMINI_API_KEY'):
+        run(state, tmp_path, [article(1)], now=NOW.replace(hour=13), client=AuthFailure())
+    assert state['days']['2026-09-22']['hot_status'] == 'fresh'
 
 
 def test_budget_queues_unfinished(tmp_path):

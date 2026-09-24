@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .common import (ROOT, CRON_SLOTS, read_json, write_json, retention_cutoff,
                      text_key, parse_date)
-from .gemini import Gemini, GeminiError, PROMPT_VERSION
+from .gemini import Gemini, GeminiError, GeminiAuthenticationError, HOT_CHUNK_SIZE, PROMPT_VERSION
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_window
 from .cves import collect_cves, merge_cves, translate_cves
@@ -52,6 +52,15 @@ def fair_queue(pending: dict) -> list[dict]:
     return result
 
 
+def hot_round_calls(candidate_count: int) -> int:
+    calls = 1
+    while candidate_count > HOT_CHUNK_SIZE:
+        groups = (candidate_count + HOT_CHUNK_SIZE - 1) // HOT_CHUNK_SIZE
+        calls += groups
+        candidate_count = groups * 10
+    return calls
+
+
 def repo_cache_key(item: dict, model: str) -> str:
     return sha256((PROMPT_VERSION + model + item['url'] + item['excerpt']).encode()).hexdigest()
 
@@ -64,6 +73,8 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
     output.update({k: summary[k] for k in ('category', 'language', 'title_ko', 'summary_ko')})
     if item['kind'] == 'github':
         output['category'] = 'github'
+    elif item['kind'] == 'event':
+        output['category'] = 'event'
     elif item['kind'] == 'paper':
         output['category'] = 'tech'
     elif output['category'] == 'github':
@@ -83,7 +94,6 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     cve_status = None
     cve_summary = {'translated': 0, 'pending': 0, 'error': ''}
     cve_enabled = cfg.get('cve_enabled', False)
-    reserved_calls = 4 + (max(0, int(cfg.get('cve_summary_max_calls_per_run', 12))) if cve_enabled else 0)
     client = gemini or Gemini(cfg)
     fetcher = web or PublicWeb(cfg['user_agent'], cfg['http_timeout_seconds'], cfg['per_host_delay_seconds'])
     sources = read_json(ROOT / 'config/sources.json', [])
@@ -91,6 +101,12 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     articles, statuses = (source_loader or collect_sources)(fetcher, sources, now, cfg)
     repos, repo_status = (github_loader or collect_github)(fetcher, now, cfg)
     day['sources'] = statuses + [repo_status]
+    # Leave enough calls to rank all candidates in bounded Gemini groups,
+    # including possible alternate-model retries and the separate CVE budget.
+    possible_candidates = len(day['articles']) + len(state['pending']) + len(articles) + len(repos)
+    hot_calls = max(4, hot_round_calls(possible_candidates) * 3)
+    cve_calls = max(0, int(cfg.get('cve_summary_max_calls_per_run', 12))) if cve_enabled else 0
+    reserved_calls = min(cfg['max_api_calls_per_run'], hot_calls + cve_calls)
     if cve_enabled:
         cve_rows, cve_status = (cve_loader or collect_cves)(now, cfg)
         merge_cves(state, day, cve_rows, cve_status, now, new_day)
@@ -191,6 +207,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             try:
                 apply_batch(batch)
                 batch = []
+            except GeminiAuthenticationError:
+                raise
             except GeminiError as exc:
                 day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
                 batch = []
@@ -198,6 +216,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     if batch and client.remaining > reserved_calls - 1:
         try:
             apply_batch(batch)
+        except GeminiAuthenticationError:
+            raise
         except GeminiError as exc:
             day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
     # Remove same-title pending copies only AFTER their first summary succeeded.
@@ -214,9 +234,12 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             print(f"[HOT 선정] 뉴스·논문·저장소 후보 {len(day['articles'])}건", flush=True)
             hot = client.select_hot(list(day['articles'].values()))
             day['hot'] = hot['picks']
+            day['hot_model_used'] = hot.get('model_used', client.hot_model)
             day['hot_shortfall'] = hot['shortfall_reason_ko']
             day['hot_status'] = 'fresh'
             day['hot_at'] = now.isoformat()
+        except GeminiAuthenticationError:
+            raise
         except GeminiError as exc:
             # Never disguise a local ranking as a Gemini selection.
             day['hot_status'] = 'stale' if day['hot'] else 'unavailable'
@@ -245,6 +268,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                          'pending_count': len(state['pending']), 'sources': day['sources'],
                          'warnings': day['warnings'], 'slot': slot or '수동',
                          'summary_model': client.summary_model, 'hot_model': client.hot_model,
+                         'hot_model_used': day.get('hot_model_used'),
                          'cve_count': len(day.get('cves', {})), 'cve_summary': cve_summary}
     checkpoint()
     return state['last_run']

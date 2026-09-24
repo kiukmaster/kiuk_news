@@ -1,3 +1,10 @@
+# 2026-09-25 변경 검증
+
+Windows Python 3.14.6의 프로젝트 전용 환경에서 `PYTHONUTF8=1`로 오프라인 테스트 **105개 통과**. 워크플로 YAML 파싱, `compileall`, `git diff --check`도 통과했습니다.
+
+Headless Chromium 메모리 주입 방식으로 12개 화면 크기 × 목록·보고서 **24개 배치 검사**와 검색·저장·공유·CVE 동작을 다시 확인했습니다. 행사 카드가 포함됐으며 가로 넘침과 페이지 오류가 없었습니다. 이 방식은 HTTP 탐색과 실제 GitHub Pages 배포를 검증하지 않습니다.
+
+데이콘·위비티·콘테스트코리아의 실제 목록과 상세 페이지·robots 정책·본문 추출을 확인했습니다. 원격 Actions 실행 기록은 읽었으나 변경된 워크플로의 실제 예약 실행, 현재 Gemini 키 인증, 실제 Pages 게시 시각은 아직 확인하지 못했습니다.
 # v2 검증 결과
 
 Python 단위·통합 테스트 91개 통과. `node --check assets/app.js`, `python -m compileall -q digest tests`, 빈 상태의 `--build-only` HTML 생성 통과.

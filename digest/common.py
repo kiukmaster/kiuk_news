@@ -11,9 +11,11 @@ from zoneinfo import ZoneInfo
 
 KST = ZoneInfo('Asia/Seoul')
 ROOT = Path(__file__).resolve().parents[1]
-CATEGORIES = {'ai': 'AI', 'security': '보안', 'tech': '신기술·논문', 'github': 'GitHub 인기'}
+CATEGORIES = {'ai': 'AI', 'security': '보안', 'tech': '신기술·논문', 'event': '대회·행사', 'github': 'GitHub 인기'}
 SLOTS = ('06:00', '13:00', '19:00')
-CRON_SLOTS = {'0 21 * * *': '06:00', '0 4 * * *': '13:00', '0 10 * * *': '19:00'}
+# Each cron starts 53 minutes before the publication slot. GitHub Actions
+# publishes the prepared artifact no earlier than the matching UTC hour.
+CRON_SLOTS = {'7 20 * * *': '06:00', '7 3 * * *': '13:00', '7 9 * * *': '19:00'}
 
 
 def now_kst() -> datetime:

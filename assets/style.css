@@ -83,6 +83,7 @@ svg.small { width: 16px; height: 16px; }
 .cycle-chip.partial .status-dot { background: var(--orange); }
 .badge { display: inline-flex; align-items: center; max-width: 100%; padding: 3px 7px; border-radius: 4px; background: var(--high); color: var(--muted); font-size: 10px; line-height: 16px; white-space: normal; overflow-wrap: anywhere; }
 .hot-badge { background: #36291e; color: var(--orange); }
+.event-badge { background: #234035; color: #8ed9ac; }
 .today-badge { background: var(--primary); color: #162b58; font-weight: 700; }
 .domestic { background: #25304b; color: var(--primary); }
 .saved-indicator { color: var(--primary); font-size: 10px; }
@@ -174,6 +175,7 @@ svg.empty-icon { width: 34px; height: 34px; color: var(--primary); stroke-width:
 .section-marker { width: 3px; height: 15px; border-radius: 1px; background: var(--primary); display: inline-block; margin-right: 1px; }
 .hot-marker, .github-marker { background: var(--orange); }
 .security-marker { background: var(--error); }
+.event-marker { background: #8ed9ac; }
 .heading-count { color: var(--outline); font-size: 12px; font-weight: 400; padding-left: 3px; }
 .section-kicker { color: var(--outline); font-size: 9px; letter-spacing: .05em; text-align: right; }
 .hot-section .section-kicker { color: var(--orange); }

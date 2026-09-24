@@ -4,7 +4,7 @@ import re
 import json
 from html import unescape
 from datetime import datetime, timedelta
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 from defusedxml import ElementTree as SafeET
@@ -75,22 +75,49 @@ def parse_feed(data: bytes, source: dict) -> list[dict]:
 
 def parse_html_listing(data: bytes, source: dict) -> list[dict]:
     soup = BeautifulSoup(data, 'html.parser')
+    links = soup.select(source['link_selector'])
+    if not links:
+        raise FetchError('기사 목록 선택자와 일치하는 링크 없음')
     found = {}
-    for a in soup.select(source['link_selector']):
+    for a in links:
+        listing_text = a.get_text(' ', strip=True)
+        required = source.get('listing_text_regex')
+        if required and not re.search(required, listing_text):
+            continue
         node = a.select_one(source['title_selector']) if source.get('title_selector') else None
-        title = plain((node or a).get_text(' ', strip=True))[:300]
+        if source.get('title_direct_text'):
+            title = plain(' '.join(a.find_all(string=True, recursive=False)))[:300]
+        else:
+            title = plain((node or a).get_text(' ', strip=True))[:300]
         if len(title) < 10:
             continue
         try:
             link = canonical_url(urljoin(source['url'], a.get('href', '')))
+            # Listing filter/page parameters can change while the event stays the same.
+            id_param = source.get('canonical_id_param')
+            if id_param:
+                values = parse_qs(urlsplit(link).query).get(id_param, [])
+                if len(values) != 1 or not re.fullmatch(r'\d+', values[0]):
+                    continue
+                link = canonical_url(source['canonical_url_template'].format(id=values[0]))
         except ValueError:
             continue
+        published = None
+        date_param = source.get('date_id_param')
+        if date_param:
+            values = parse_qs(urlsplit(link).query).get(date_param, [])
+            if len(values) == 1 and re.match(r'^\d{8}', values[0]):
+                stamp = values[0][:8]
+                date = parse_date(f'{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]}',
+                                  KST if source['region'] == 'KR' else None)
+                published = date.isoformat() if date else None
         key = item_id(link)
         if key not in found:
-            found[key] = {'title_original': title, 'url': link, 'excerpt': '', 'published_at': None}
+            found[key] = {'title_original': title, 'url': link, 'excerpt': '',
+                          'published_at': published}
         if len(found) >= source.get('max_items', 30):
             break
-    if not found:
+    if not found and not source.get('allow_empty', False):
         raise FetchError('기사 목록 선택자와 일치하는 링크 없음')
     return list(found.values())
 
@@ -164,7 +191,8 @@ def collect_sources(web: PublicWeb, sources: list[dict], now: datetime, cfg: dic
                 item.update({'id': item_id(item['url']), 'source_id': source['id'],
                              'source': source['name'], 'region': source['region'],
                              'language_hint': source['language'], 'category_hint': source['category'],
-                             'kind': 'paper' if source.get('paper') else 'article',
+                             'kind': 'paper' if source.get('paper') else
+                                 ('event' if source.get('event') else 'article'),
                              'evidence_kind': 'abstract' if source.get('paper') else
                                  ('rss' if route_type == 'rss' else 'listing'),
                              'first_seen_at': now.isoformat()})
@@ -247,6 +275,9 @@ def prepare_article(web: PublicWeb, item: dict, source: dict, cfg: dict) -> dict
                 area = soup.select_one('article') or soup.select_one('main')
             if area is None:
                 raise FetchError('본문 선택자 불일치')
+            if source.get('body_exclude_selector'):
+                for tag in area.select(source['body_exclude_selector']):
+                    tag.decompose()
             text = plain(str(area))
             if len(text) >= 100:
                 result['excerpt'] = text[:cfg['max_input_chars_per_article']]

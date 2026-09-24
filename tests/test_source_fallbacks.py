@@ -123,3 +123,81 @@ def test_html_robots_response_not_accepted():
     web._get = Mock(return_value=(b'<html>access error</html>','text/html','https://example.com/robots.txt'))
     assert web._policy('https://example.com/news',['example.com']) is False
     assert 'HTML' in web.robot_errors['https://example.com']
+
+
+def test_dacon_event_listing_only_open_competitions():
+    source = SOURCES['dacon-events']
+    html = """
+    <div class="swiper-wrapper">
+      <a href="/competitions/official/236749/overview/description">
+        <div class="truncate font-bold">딥보이스 탐지 AI 경진대회</div>
+        <span>종료까지 D-5</span>
+      </a>
+      <a href="/competitions/official/236743/overview/description">
+        <div class="truncate font-bold">지난달 종료된 AI 해커톤</div>
+        <span>종료</span>
+      </a>
+    </div>"""
+    rows = parse_html_listing(html.encode(), source)
+    assert len(rows) == 1
+    assert rows[0]['title_original'] == '딥보이스 탐지 AI 경진대회'
+    assert rows[0]['url'] == 'https://www.dacon.io/competitions/official/236749/overview/description'
+    closed = html.replace('종료까지 D-5', '종료')
+    assert parse_html_listing(closed.encode(), source) == []
+    with pytest.raises(FetchError, match='목록 선택자'):
+        parse_html_listing(b'<div class="swiper-wrapper"></div>', source)
+
+
+def test_wevity_event_url_stays_stable_when_listing_filter_changes():
+    source = SOURCES['wevity-university']
+    html = """
+    <div class="ms-list"><ul class="list">
+      <li><div class="tit"><a href="?c=find&s=_university&gub=1&cidx=21&gbn=view&gp=1&ix=111062">
+        제4회 경남 대학생 AI·SW 경진대회<span>SPECIAL IDEA</span></a></div></li>
+      <li><div class="tit"><a href="?c=find&s=_university&mode=ing&gbn=view&gp=2&ix=111062">
+        제4회 경남 대학생 AI·SW 경진대회</a></div></li>
+    </ul></div>"""
+    rows = parse_html_listing(html.encode(), source)
+    assert len(rows) == 1
+    assert rows[0]['title_original'] == '제4회 경남 대학생 AI·SW 경진대회'
+    assert rows[0]['url'] == 'https://www.wevity.com/?c=find&gbn=view&ix=111062'
+
+
+def test_contestkorea_event_date_and_kind():
+    source = SOURCES['contestkorea-it']
+    html = """
+    <div class="list_style_2"><div class="title">
+      <a href="view.php?int_gbn=1&Txt_bcode=030310001&str_no=202609220001">
+        <span class="category">학문·과학·IT</span>
+        <span class="txt">2026 전국 대학생 AI 해커톤 참가 모집</span>
+      </a>
+    </div></div>"""
+    rows = parse_html_listing(html.encode(), source)
+    assert len(rows) == 1
+    assert rows[0]['title_original'] == '2026 전국 대학생 AI 해커톤 참가 모집'
+    assert rows[0]['url'] == 'https://www.contestkorea.com/sub/view.php?str_no=202609220001'
+    assert rows[0]['published_at'] == '2026-09-22T00:00:00+09:00'
+    web = Mock(get=Mock(return_value=(html.encode(), 'text/html', source['url'])))
+    collected, statuses = collect_sources(web, [source], NOW, load_config())
+    assert statuses[0]['status'] == 'ok'
+    assert len(collected) == 1 and collected[0]['kind'] == 'event'
+
+
+def test_contestkorea_body_ignores_site_generated_tips():
+    source = SOURCES['contestkorea-it']
+    detail = """
+    <div class="view_detail_area"><div class="txt">
+      <h2 class="tip2">AI 3줄 요약</h2>
+      <p class="tip_box2">검증되지 않은 추천 사항이 이곳에 들어갑니다.</p>
+      <h2>접수 안내</h2>
+      <p>전국 대학생을 대상으로 AI 서비스를 개발하는 해커톤입니다.
+         참가 신청은 공식 주최 기관 홈페이지에서 접수하며,
+         일정과 장소, 팀 구성 요건은 모집 요강에 따라 확인해야 합니다.</p>
+    </div></div>"""
+    item = {'url': 'https://www.contestkorea.com/sub/view.php?str_no=202609220001',
+            'excerpt': '', 'kind': 'event', 'published_at': None}
+    web = Mock(get=Mock(return_value=(detail.encode(), 'text/html', item['url'])))
+    prepared = prepare_article(web, item, source, load_config())
+    assert prepared['evidence_kind'] == 'body_excerpt'
+    assert '검증되지 않은 추천 사항' not in prepared['excerpt']
+    assert '전국 대학생' in prepared['excerpt']

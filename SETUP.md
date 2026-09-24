@@ -138,6 +138,8 @@ env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 ```
 
+2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 `GEMINI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 두 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
+
 키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.
 
 참고: [GitHub Actions Secret 사용](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
@@ -170,7 +172,7 @@ env:
 
 페이지 아래쪽 **Workflow permissions**에서 기본 쓰기 권한을 허용할 수 있는 환경인지 확인합니다. 제공된 YAML은 빌드 작업에 `contents: write`, 배포 작업에 `pages: write`, `id-token: write`를 필요한 범위로 명시합니다. 개인 저장소에서 `news-state` 쓰기가 거절된다면 **Read and write permissions** 설정과 저장소 Rulesets를 확인하세요.
 
-별도의 `GH_TOKEN`, 개인 액세스 토큰(PAT), GitHub API 키를 만들 필요는 없습니다. 실행마다 제공되는 `GITHUB_TOKEN`과 체크아웃 자격증명을 사용합니다. **Allow GitHub Actions to create and approve pull requests**는 이 프로젝트에 필요하지 않습니다.
+GitHub 자체 예약 실행만 쓰는 경우 별도의 `GH_TOKEN`, 개인 액세스 토큰(PAT), GitHub API 키를 만들 필요는 없습니다. 외부 예약 서비스에서 `workflow_dispatch`를 호출하려면 아래 10절의 제한된 권한 토큰이 필요합니다. 실행마다 제공되는 `GITHUB_TOKEN`과 체크아웃 자격증명을 사용합니다. **Allow GitHub Actions to create and approve pull requests**는 이 프로젝트에 필요하지 않습니다.
 
 브랜치 보호 규칙이 모든 브랜치 쓰기를 막고 있다면 `news-state`에 대한 허용 범위를 검토하세요. 코드가 보호 규칙을 우회하거나 강제 푸시하지는 않습니다.
 
@@ -203,19 +205,21 @@ env:
 Checkout source
 Set up Python
 Install dependencies
-Run tests
 Check secret configuration
 Restore persistent data
 Collect, summarize, select HOT, generate HTML
 Save persistent data
 Configure Pages
 Upload generated site only
+Wait for scheduled publication time (예약 실행만)
 Deploy Pages
 ```
 
 **Save persistent data**가 처음 성공하면 `news-state` 브랜치가 자동으로 생깁니다. 직접 만들거나 빈 파일을 넣을 필요가 없습니다. 이 브랜치를 삭제하면 보고서 누적·중복 판별 상태가 사라집니다.
 
 일부 수집원이나 요약이 실패해도, 완료한 기사로 사이트를 게시할 수 있습니다. 따라서 Actions가 초록색이라는 것만으로 모든 기사가 성공한 것은 아닙니다. 실행의 **Summary**, 보고서의 **수집 안내**, **수집원별 상태**, **요약 보류**도 확인하세요.
+
+배포 워크플로에서 테스트 실행은 생략하고, 별도 `Tests` 워크플로가 main 푸시와 PR에서 테스트합니다.
 
 수동 실행은 `수동 1회`처럼 별도로 표시됩니다. 오전 예약을 기다리지 않고 실행했다고 해서 `06:00 완료`로 가짜 표시하지 않습니다.
 
@@ -246,19 +250,46 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 
 첫 설정 이후 기본 브랜치에 워크플로가 있으면 예약 실행을 사용합니다.
 
-| 한국시간(KST) | 워크플로의 UTC cron |
-|---|---|
-| 06:00 | `0 21 * * *` — UTC 전날 21시 |
-| 13:00 | `0 4 * * *` |
-| 19:00 | `0 10 * * *` |
+| 목표 공개 시각(KST) | 수집 시작(KST) | 워크플로의 UTC cron |
+|---|---|---|
+| 06:00 | 05:07 | `7 20 * * *` — UTC 전날 20:07 |
+| 13:00 | 12:07 | `7 3 * * *` |
+| 19:00 | 18:07 | `7 9 * * *` |
 
 각 실행은 같은 KST 날짜의 `reports/YYYY-MM-DD.html`을 갱신합니다. 오전 기사를 지우고 오후 기사로만 교체하는 방식이 아니라, 이미 요약한 기사에 새 기사를 추가하고 HOT을 다시 선정합니다.
 
-**예약 시각은 정확한 게시 시각을 보장하지 않습니다.** GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.
+수집·요약·HTML 생성은 목표 시각보다 53분 전에 시작하며, 예약 실행의 Pages 배포는 목표 시각까지 대기합니다. 수동 실행은 바로 배포합니다. **정확한 게시 시각은 보장하지 않습니다.** GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.
 
-시간을 변경할 때는 `update-news.yml`의 cron뿐 아니라 `digest/common.py`의 `SLOTS`, `CRON_SLOTS`, `templates/index.html`의 시간 안내도 함께 변경해야 표시가 일치합니다. 처음에는 기본값을 유지하세요.
+시간을 변경할 때는 `update-news.yml`의 cron·배포 게이트·외부 예약 호출 시각뿐 아니라 `digest/common.py`의 `SLOTS`, `CRON_SLOTS`, `templates/index.html`의 시간 안내도 함께 변경해야 표시가 일치합니다. 처음에는 기본값을 유지하세요.
 
 참고: [GitHub schedule 이벤트](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+### 정시성이 중요할 때: 외부 예약 호출
+
+이 저장소의 최근 GitHub 기본 예약 실행은 예정 시각보다 수 시간 늦게 시작했습니다. 비정각 선행 예약은 지연 가능성을 낮추지만, 정시성이 중요하면 비밀 헤더를 보관할 수 있는 별도 HTTPS 예약 서비스에서 GitHub의 `workflow_dispatch` API를 호출하세요. 외부 서비스도 실행 지연 가능성이 있으며 Pages 반영 시간까지 정확히 보장할 수는 없습니다.
+
+1. GitHub에서 **이 저장소만 선택**하고 **Actions: write**만 허용한 fine-grained 개인 액세스 토큰을 만듭니다. 토큰은 외부 예약 서비스의 비밀 저장소에 보관하고 URL·웹페이지·저장소에 넣지 않습니다.
+2. 외부 예약 서비스에 다음 HTTPS POST 요청을 세 개 등록합니다. `OWNER/REPO`와 `ref`는 실제 저장소·기본 브랜치로 바꿉니다. 각 요청은 목표보다 53분 앞선 **05:07, 12:07, 18:07 KST**에 보냅니다.
+
+```text
+POST https://api.github.com/repos/OWNER/REPO/actions/workflows/update-news.yml/dispatches
+Authorization: Bearer <제한된 GitHub 토큰>
+Accept: application/vnd.github+json
+Content-Type: application/json
+```
+
+요청 본문은 순서대로 다음과 같습니다.
+
+```json
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"06:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"13:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"19:00"}}
+```
+
+3. 한 슬롯을 먼저 시험하고 Actions의 `build`와 `deploy`가 완료되는지 확인합니다. 지정 슬롯의 배포는 목표 시각 전이면 대기하고, 목표가 지났으면 즉시 진행합니다. 목표보다 1시간 넘게 이른 호출은 게시를 막습니다.
+4. 외부 예약이 정상 동작하면 저장소 **Settings → Secrets and variables → Actions → Variables**에 `EXTERNAL_SCHEDULER_ENABLED=true`를 추가해 GitHub 기본 예약 실행을 건너뛸 수 있습니다. 값을 설정하지 않으면 기본 예약도 계속 실행되어 같은 슬롯에 수집·배포가 중복될 수 있습니다. 이 변수는 외부 예약을 확인한 후에만 설정하세요.
+
+참고: [GitHub workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event), [GitHub 예약 실행 지연](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows), [GitHub Pages 반영 시간](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site).
 
 ## 11. API 호출 없이 다시 배포하기
 
@@ -296,7 +327,8 @@ RSS·본문 요청은 robots.txt와 사이트 제한을 따릅니다. 로그인,
 | Gemini HTTP 400/403 | 키 종류·폐기/차단 여부·프로젝트 권한·API 설정·모델 입력 확인. 키를 로그에 출력하지 않음 |
 | Gemini HTTP 404 | 모델 ID와 Interactions 지원 여부 확인 후 Variables 또는 설정 파일 수정 |
 | Gemini HTTP 429 | AI Studio 할당량·사용량 확인. 호출 간격·요청 상한·수집 범위 조절 |
-| HOT 실패 / 이전 선정 결과 | 요약은 성공해도 HOT 모델 호출이 실패할 수 있음. 모델 권한·할당량 확인 |
+| HOT 실패 / 이전 선정 결과 | HOT 후보가 많으면 단계별 Gemini 선정. 429·5xx는 대체 모델 재시도, 계속 실패하면 할당량 확인 |
+| Gemini HTTP 401 | AI Studio에서 Auth 키 유형·차단 상태 확인 후 `GEMINI_API_KEY` Secret 교체. `mode: check-api`로 검증. 인증 오류에서는 배포 중단 |
 | `git push ... 403` | `contents: write`, 저장소 Workflow permissions, 조직 정책, `news-state` 보호 규칙 확인 |
 | Pages 설정 오류 / 404 | Pages Source가 GitHub Actions인지, `deploy`까지 성공했는지 확인 |
 | 특정 사이트만 403/robots 제한 | 사이트 수집 정책 또는 Actions IP 차단 가능. 상태 안내를 확인하고 허용된 수집원으로 대체 |

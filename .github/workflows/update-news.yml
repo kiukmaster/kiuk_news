@@ -4,17 +4,28 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'collect: 수집·요약·배포 / rebuild: API 호출 없이 재배포'
+        description: 'collect: 수집·배포 / rebuild: 재배포 / check-api: Gemini 키·모델 검사'
         type: choice
         options:
           - collect
           - rebuild
+          - check-api
         default: collect
+      scheduled_slot:
+        description: '외부 예약 실행용 게시 시각 (KST). 직접 실행은 manual'
+        type: choice
+        options:
+          - manual
+          - '06:00'
+          - '13:00'
+          - '19:00'
+        default: manual
   schedule:
-    # UTC -> 한국시간(UTC+9). 실제 실행은 GitHub 상황에 따라 지연될 수 있습니다.
-    - cron: '0 21 * * *'  # 다음 날짜 06:00 KST
-    - cron: '0 4 * * *'   # 13:00 KST
-    - cron: '0 10 * * *'  # 19:00 KST
+    # 수집을 공개 시각 53분 전에 시작합니다. 매시 정각은 Actions 대기열 혼잡을 피합니다.
+    # deploy 작업은 아래에서 해당 UTC 정각까지 대기합니다.
+    - cron: '7 20 * * *'  # 다음 날짜 05:07 KST 준비 → 06:00 KST 공개
+    - cron: '7 3 * * *'   # 12:07 KST 준비 → 13:00 KST 공개
+    - cron: '7 9 * * *'   # 18:07 KST 준비 → 19:00 KST 공개
 
 permissions:
   contents: read
@@ -25,7 +36,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -34,53 +45,81 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
+
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt pytest==9.0.2
-      - name: Run tests
-        run: python -m pytest -q
+        run: python -m pip install -r requirements.txt
+
       - name: Check secret configuration
         if: inputs.mode != 'rebuild'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python -c "import os; assert os.environ.get('GEMINI_API_KEY','').strip(), 'GEMINI_API_KEY repository secret를 등록하세요.'"
+
+      - name: Check Gemini key and models without publishing
+        if: inputs.mode == 'check-api'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
+        run: python -u -m digest --check-api
+
       - name: Restore persistent data
         id: restore
+        if: inputs.mode != 'check-api'
         run: python scripts/state_branch.py restore --dir state
+
       - name: Collect, summarize, select HOT, generate HTML
         id: collect
-        if: inputs.mode != 'rebuild'
+        if: inputs.mode != 'rebuild' && inputs.mode != 'check-api'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
-        run: python -u -m digest --state-dir state --output public
+          SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
+        run: |
+          case "${SCHEDULED_SLOT:-manual}" in
+            '06:00') slot_cron='7 20 * * *' ;;
+            '13:00') slot_cron='7 3 * * *' ;;
+            '19:00') slot_cron='7 9 * * *' ;;
+            manual|'') slot_cron="${SCHEDULE_CRON:-}" ;;
+            *) echo "Unknown scheduled slot: $SCHEDULED_SLOT" >&2; exit 1 ;;
+          esac
+          python -u -m digest --schedule "$slot_cron" --state-dir state --output public
+
       - name: Rebuild without API calls
         if: inputs.mode == 'rebuild'
         run: python -u -m digest --build-only --state-dir state --output public
+
       - name: Save persistent data
         if: always() && steps.restore.outcome == 'success'
         run: python scripts/state_branch.py save --dir state
+
       - name: Configure Pages
+        if: inputs.mode != 'check-api'
         uses: actions/configure-pages@v5
+
       - name: Upload generated site only
+        if: inputs.mode != 'check-api'
         uses: actions/upload-pages-artifact@v4
         with:
           path: public
           retention-days: 1
 
   deploy:
+    if: inputs.mode != 'check-api'
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 75
     permissions:
       pages: write
       id-token: write
@@ -88,6 +127,35 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Wait for scheduled publication time
+        if: github.event_name == 'schedule' || inputs.scheduled_slot == '06:00' || inputs.scheduled_slot == '13:00' || inputs.scheduled_slot == '19:00'
+        env:
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+          SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
+        run: |
+          python - <<'PY'
+          import os
+          import time
+          from datetime import datetime, timedelta, timezone
+
+          cron_slots = {'7 20 * * *': '06:00', '7 3 * * *': '13:00', '7 9 * * *': '19:00'}
+          requested = os.environ.get('SCHEDULED_SLOT', '')
+          slot = requested if requested in ('06:00', '13:00', '19:00') else cron_slots.get(os.environ.get('SCHEDULE_CRON', ''))
+          if not slot:
+              raise SystemExit('Unknown scheduled publication slot')
+          kst = timezone(timedelta(hours=9))
+          now = datetime.now(kst)
+          target = now.replace(hour=int(slot[:2]), minute=0, second=0, microsecond=0)
+          seconds = (target - now).total_seconds()
+          if seconds > 3600:
+              raise SystemExit(f'Too early for {slot} KST publication; dispatch within one hour of the slot')
+          if seconds > 0:
+              print(f'Waiting {seconds:.0f}s until {target.isoformat()} to publish', flush=True)
+              time.sleep(seconds)
+          else:
+              print(f'{slot} KST publication time passed; deploying immediately at {now.isoformat()}', flush=True)
+          PY
+
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4

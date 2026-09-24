@@ -52,6 +52,33 @@ def test_429_retries_then_success(monkeypatch):
     assert client.calls == 2
 
 
+def test_429_cooldown_is_shared_with_hot_fallback(monkeypatch):
+    client = make_client(monkeypatch)
+    delays = []
+    monkeypatch.setattr('digest.gemini.time.sleep', delays.append)
+    monkeypatch.setattr('digest.gemini.random.uniform', lambda _low, _high: 0)
+    client.session.post = Mock(side_effect=[
+        api_response({}, 429),
+        api_response({'picks': [{'id': 'real', 'reason_ko': '테스트 이유'}],
+                      'shortfall_reason_ko': ''}),
+    ])
+    result = client.select_hot([{'id': 'real'}])
+    assert result['model_used'] == client.summary_model
+    assert client.calls == 2
+    assert any(delay >= 29 for delay in delays)
+
+
+def test_401_does_not_sleep_or_retry(monkeypatch):
+    client = make_client(monkeypatch)
+    delays = []
+    monkeypatch.setattr('digest.gemini.time.sleep', delays.append)
+    client.session.post = Mock(return_value=api_response({}, 401))
+    with pytest.raises(GeminiAuthenticationError):
+        client.request('test', {}, {'type': 'object'}, client.summary_model)
+    assert client.calls == 1
+    assert not delays
+
+
 def test_fatal_error_does_not_leak_secret(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({}, 403))

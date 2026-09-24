@@ -70,12 +70,12 @@ HTML 자체를 모델에게 맡기지 않습니다. Gemini는 구조화된 JSON�
 | `batch_size` | 6 | 요약 요청 한 번에 보내는 기사 수 |
 | `max_new_articles_per_run` | 0 | 기사 수 별도 제한 없음. API 상한은 별개 |
 | `max_api_calls_per_run` | 80 | 재시도·HOT 포함 요청 수 상한 |
-| `api_interval_seconds` | 5 | 요청 시작 사이의 최소 간격 |
+| `api_interval_seconds` | 10 | 요청 시작 사이의 최소 간격 |
 | `max_input_chars_per_article` | 6000 | 기사당 모델에 보내는 최대 글자 수 |
 | `fetch_article_body` | true | 허용된 경우 본문 일부 확보 |
 | `github_max_items` | 25 | Trending 화면에서 읽는 최대 저장소 수 |
 
-API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 401 인증 실패는 게시를 중단하므로 AI Studio의 인증 키와 저장소 `GEMINI_API_KEY` Secret을 확인하세요. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
+API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 401 인증 실패는 게시를 중단합니다. AI Studio에서 Auth 키 유형과 차단 여부를 확인해 저장소 `GEMINI_API_KEY` Secret을 교체하고, Actions의 `mode: check-api`로 두 모델 연결을 검사할 수 있습니다. 이 진단은 수집·상태 저장·배포를 하지 않지만 Gemini 호출은 발생합니다. 429는 프로젝트별 호출·토큰·일일 한도 문제이므로 AI Studio의 사용량과 한도를 확인하세요. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
 
 보류된 기사는 다음 실행에서 다시 시도하지만, 발행 후 48시간을 넘기거나 5일 보관 범위를 벗어나면 처리 대상에서 빠집니다. API 할당량이 계속 부족하면 모든 수집 기사를 요약할 수 없습니다.
 

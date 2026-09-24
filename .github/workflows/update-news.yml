@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'collect: 수집·요약·배포 / rebuild: API 호출 없이 재배포'
+        description: 'collect: 수집·배포 / rebuild: 재배포 / check-api: Gemini 키·모델 검사'
         type: choice
         options:
           - collect
           - rebuild
+          - check-api
         default: collect
       scheduled_slot:
         description: '외부 예약 실행용 게시 시각 (KST). 직접 실행은 manual'
@@ -62,13 +63,22 @@ jobs:
         run: |
           python -c "import os; assert os.environ.get('GEMINI_API_KEY','').strip(), 'GEMINI_API_KEY repository secret를 등록하세요.'"
 
+      - name: Check Gemini key and models without publishing
+        if: inputs.mode == 'check-api'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
+        run: python -u -m digest --check-api
+
       - name: Restore persistent data
         id: restore
+        if: inputs.mode != 'check-api'
         run: python scripts/state_branch.py restore --dir state
 
       - name: Collect, summarize, select HOT, generate HTML
         id: collect
-        if: inputs.mode != 'rebuild'
+        if: inputs.mode != 'rebuild' && inputs.mode != 'check-api'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
@@ -95,15 +105,18 @@ jobs:
         run: python scripts/state_branch.py save --dir state
 
       - name: Configure Pages
+        if: inputs.mode != 'check-api'
         uses: actions/configure-pages@v5
 
       - name: Upload generated site only
+        if: inputs.mode != 'check-api'
         uses: actions/upload-pages-artifact@v4
         with:
           path: public
           retention-days: 1
 
   deploy:
+    if: inputs.mode != 'check-api'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 75

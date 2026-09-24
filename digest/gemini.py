@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import time
 
 import requests
@@ -41,7 +42,7 @@ class GeminiHTTPError(GeminiError):
     def __init__(self, status_code: int):
         self.status_code = status_code
         if status_code == 401:
-            detail = 'GEMINI_API_KEY 인증 실패. AI Studio에서 인증 키 여부를 확인하고 GitHub 저장소 Secret을 갱신하세요'
+            detail = 'GEMINI_API_KEY 인증 실패. AI Studio에서 Auth 키 유형·차단 상태를 확인하고 GitHub 저장소 Secret을 갱신하세요'
         elif status_code == 429:
             detail = '모델 요청 할당량 초과'
         elif status_code in (500, 502, 503, 504):
@@ -83,6 +84,7 @@ class Gemini:
         self.calls = 0
         self.tokens = 0
         self.last_call = 0.0
+        self.cooldown_until = 0.0
         self.session = requests.Session()
         self.session.trust_env = False
 
@@ -101,7 +103,8 @@ class Gemini:
         for attempt in range(attempts):
             if self.remaining <= 0:
                 raise BudgetExceeded('설정된 이번 실행의 API 호출 상한에 도달했습니다')
-            gap = self.last_call + self.cfg['api_interval_seconds'] - time.monotonic()
+            gap = max(self.last_call + self.cfg['api_interval_seconds'],
+                      self.cooldown_until) - time.monotonic()
             if gap > 0:
                 time.sleep(gap)
             self.calls += 1
@@ -109,10 +112,15 @@ class Gemini:
             try:
                 response = self.session.post(ENDPOINT, json=payload,
                     headers={'x-goog-api-key': self.key, 'Content-Type': 'application/json'}, timeout=(10, 120))
-                if response.status_code in (429, 500, 502, 503, 504):
+                if response.status_code in TRANSIENT_HTTP_STATUSES:
                     error = GeminiHTTPError(response.status_code)
-                    if attempt < attempts - 1:
-                        time.sleep(min(45, 8 * 2 ** attempt))
+                    if response.status_code == 429:
+                        # The project may be rate limited across models. Carry the
+                        # cooldown into HOT fallback and later CVE requests too.
+                        delay = min(60, 30 * 2 ** attempt) + random.uniform(0, 3)
+                        self.cooldown_until = max(self.cooldown_until, time.monotonic() + delay)
+                    elif attempt < attempts - 1:
+                        time.sleep(min(45, 8 * 2 ** attempt) + random.uniform(0, 2))
                     continue
                 if response.status_code >= 400:
                     # Never log the key, full body, request headers or source content.

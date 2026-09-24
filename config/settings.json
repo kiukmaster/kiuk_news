@@ -8,7 +8,7 @@
   "batch_size": 6,
   "max_new_articles_per_run": 0,
   "max_api_calls_per_run": 80,
-  "api_interval_seconds": 5,
+  "api_interval_seconds": 10,
   "max_input_chars_per_article": 6000,
   "http_timeout_seconds": 18,
   "per_host_delay_seconds": 0.7,

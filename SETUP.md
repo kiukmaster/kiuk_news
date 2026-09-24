@@ -138,7 +138,7 @@ env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 ```
 
-2026년 9월부터 Gemini의 기존 표준 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지 확인하고, 401 오류가 나면 새 인증 키를 만들어 `GEMINI_API_KEY` Secret을 교체한 뒤 `--check-api` 또는 수동 collect로 검증하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
+2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 `GEMINI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 두 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
 
 키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.
 
@@ -328,7 +328,7 @@ RSS·본문 요청은 robots.txt와 사이트 제한을 따릅니다. 로그인,
 | Gemini HTTP 404 | 모델 ID와 Interactions 지원 여부 확인 후 Variables 또는 설정 파일 수정 |
 | Gemini HTTP 429 | AI Studio 할당량·사용량 확인. 호출 간격·요청 상한·수집 범위 조절 |
 | HOT 실패 / 이전 선정 결과 | HOT 후보가 많으면 단계별 Gemini 선정. 429·5xx는 대체 모델 재시도, 계속 실패하면 할당량 확인 |
-| Gemini HTTP 401 | Auth 키 상태를 AI Studio에서 확인하고 `GEMINI_API_KEY` Secret 교체. 인증 오류에서는 배포 중단 |
+| Gemini HTTP 401 | AI Studio에서 Auth 키 유형·차단 상태 확인 후 `GEMINI_API_KEY` Secret 교체. `mode: check-api`로 검증. 인증 오류에서는 배포 중단 |
 | `git push ... 403` | `contents: write`, 저장소 Workflow permissions, 조직 정책, `news-state` 보호 규칙 확인 |
 | Pages 설정 오류 / 404 | Pages Source가 GitHub Actions인지, `deploy`까지 성공했는지 확인 |
 | 특정 사이트만 403/robots 제한 | 사이트 수집 정책 또는 Actions IP 차단 가능. 상태 안내를 확인하고 허용된 수집원으로 대체 |

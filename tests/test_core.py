@@ -1,7 +1,5 @@
 from __future__ import annotations
-import ast
 import json
-import re
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -171,9 +169,9 @@ def test_three_runs_one_report(tmp_path):
 
 def test_scheduled_slots_match_workflow_and_lead_time():
     workflow = (ROOT / '.github/workflows/update-news.yml').read_text(encoding='utf-8')
-    gate = re.search(r"cron_slots = (\{[^\n]+\})", workflow)
-    assert gate is not None
-    assert ast.literal_eval(gate.group(1)) == CRON_SLOTS
+    assert 'python -m digest.publication plan' in workflow
+    assert 'PUBLISH_AT: ${{ needs.build.outputs.publish_at }}' in workflow
+    assert 'python -m digest.publication wait' in workflow
     for cron, slot in CRON_SLOTS.items():
         assert f"- cron: '{cron}'" in workflow
         assert f"'{slot}') slot_cron='{cron}'" in workflow

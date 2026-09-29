@@ -12,6 +12,7 @@ from .network import PublicWeb
 from .pipeline import load_state, prune, run_pipeline
 from .render import render_site
 from .sources import collect_sources, collect_github
+from .publication import aware_date
 
 
 def main():
@@ -19,6 +20,8 @@ def main():
     parser.add_argument('--state-dir', type=Path, default=ROOT / 'state')
     parser.add_argument('--output', type=Path, default=ROOT / 'public')
     parser.add_argument('--schedule', default=os.getenv('SCHEDULE_CRON', ''))
+    parser.add_argument('--publication-at', default=os.getenv('PUBLISH_AT', ''),
+                        help='날짜와 시간대를 포함한 예약 공개 목표 시각')
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--build-only', action='store_true', help='API/수집 없이 현재 상태로 HTML만 생성')
     mode.add_argument('--check-sources', action='store_true', help='수집원·NVD 확인; Gemini 호출·상태 변경 없음')
@@ -45,7 +48,8 @@ def main():
     state = load_state(args.state_dir)
     prune(state, now, cfg['keep_days'])
     if not args.build_only:
-        report = run_pipeline(state, args.state_dir, now, cfg, args.schedule)
+        report = run_pipeline(state, args.state_dir, now, cfg, args.schedule,
+                              publication_at=aware_date(args.publication_at) if args.publication_at else None)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         summary_path = os.getenv('GITHUB_STEP_SUMMARY')
         if summary_path:

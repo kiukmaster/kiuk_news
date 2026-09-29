@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 
-from .common import (ROOT, CRON_SLOTS, read_json, write_json, retention_cutoff,
+from .common import (ROOT, KST, CRON_SLOTS, read_json, write_json, retention_cutoff,
                      text_key, parse_date)
-from .gemini import Gemini, GeminiError, GeminiAuthenticationError, HOT_CHUNK_SIZE, PROMPT_VERSION
+from .gemini import Gemini, GeminiError, GeminiAuthenticationError, PROMPT_VERSION
+from .budget import hot_round_calls, plan_api_budget
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_window
 from .cves import collect_cves, merge_cves, translate_cves
+from .publication import publication_target
 
 
 def empty_state() -> dict:
@@ -21,6 +23,7 @@ def load_state(directory: Path) -> dict:
     state = read_json(directory / 'state.json', empty_state())
     if state.get('version') != 1 or any(not isinstance(state.get(k), dict) for k in empty_state() if k != 'version'):
         raise ValueError('지원하지 않거나 손상된 상태 파일입니다. 기존 news-state 브랜치를 보존하세요.')
+    repair_slot_dates(state)
     return state
 
 
@@ -38,6 +41,32 @@ def new_day(day: str) -> dict:
             'sources': [], 'warnings': [], 'pending_count': 0, 'cves': {}, 'cve_meta': {}}
 
 
+def repair_slot_dates(state: dict) -> None:
+    """Move legacy overnight executions to their intended publication day."""
+    moved = []
+    for date, day in list(state['days'].items()):
+        for slot, cycle in list(day.get('slots', {}).items()):
+            if slot not in CRON_SLOTS.values():
+                continue
+            at = parse_date(cycle.get('at'))
+            target = parse_date(cycle.get('publish_at'))
+            if not target and at:
+                target = at.replace(hour=int(slot[:2]), minute=0, second=0, microsecond=0)
+                # External dispatch can start a full hour before its target.
+                if at < target - timedelta(hours=1):
+                    target -= timedelta(days=1)
+                cycle['publish_at'] = target.isoformat()
+            if target and target.date().isoformat() != date:
+                day['slots'].pop(slot)
+                moved.append((target.date().isoformat(), slot, cycle))
+    # Remove all misplaced entries before resolving collisions at destinations.
+    for date, slot, cycle in moved:
+        destination = state['days'].setdefault(date, new_day(date))
+        previous = destination['slots'].get(slot)
+        if not previous or (cycle.get('at') or '') > (previous.get('at') or ''):
+            destination['slots'][slot] = cycle
+
+
 def fair_queue(pending: dict) -> list[dict]:
     # Round-robin avoids an abundant arXiv feed starving Korean news.
     groups = defaultdict(deque)
@@ -50,15 +79,6 @@ def fair_queue(pending: dict) -> list[dict]:
             if not groups[key]:
                 del groups[key]
     return result
-
-
-def hot_round_calls(candidate_count: int) -> int:
-    calls = 1
-    while candidate_count > HOT_CHUNK_SIZE:
-        groups = (candidate_count + HOT_CHUNK_SIZE - 1) // HOT_CHUNK_SIZE
-        calls += groups
-        candidate_count = groups * 10
-    return calls
 
 
 def repo_cache_key(item: dict, model: str) -> str:
@@ -86,8 +106,18 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
 
 
 def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedule: str = '',
-                 web=None, gemini=None, source_loader=None, github_loader=None, cve_loader=None) -> dict:
+                 web=None, gemini=None, source_loader=None, github_loader=None, cve_loader=None,
+                 publication_at: datetime | None = None) -> dict:
+    repair_slot_dates(state)
     prune(state, now, cfg['keep_days'])
+    slot = CRON_SLOTS.get(schedule)
+    if slot:
+        publication_at = publication_at or publication_target(now, 'schedule', schedule)
+        if publication_at.tzinfo is None:
+            raise ValueError('게시 목표 시각에는 시간대가 필요합니다')
+        publication_at = publication_at.astimezone(KST)
+        if publication_at.strftime('%H:%M') != slot:
+            raise ValueError('게시 목표와 수집 슬롯이 일치하지 않습니다')
     daykey = now.date().isoformat()
     day = state['days'].get(daykey, new_day(daykey))
     day['warnings'] = []
@@ -101,12 +131,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     articles, statuses = (source_loader or collect_sources)(fetcher, sources, now, cfg)
     repos, repo_status = (github_loader or collect_github)(fetcher, now, cfg)
     day['sources'] = statuses + [repo_status]
-    # Leave enough calls to rank all candidates in bounded Gemini groups,
-    # including possible alternate-model retries and the separate CVE budget.
-    possible_candidates = len(day['articles']) + len(state['pending']) + len(articles) + len(repos)
-    hot_calls = max(4, hot_round_calls(possible_candidates) * 3)
     cve_calls = max(0, int(cfg.get('cve_summary_max_calls_per_run', 12))) if cve_enabled else 0
-    reserved_calls = min(cfg['max_api_calls_per_run'], hot_calls + cve_calls)
     if cve_enabled:
         cve_rows, cve_status = (cve_loader or collect_cves)(now, cfg)
         merge_cves(state, day, cve_rows, cve_status, now, new_day)
@@ -134,6 +159,14 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             state['pending'].pop(item['id'], None)
         else:
             state['pending'][item['id']] = item
+
+    # A queued article is not yet a HOT candidate. Only completed summaries and
+    # the batches this run can actually afford may increase the ranking budget.
+    budget = plan_api_budget(client.remaining, len(day['articles']), len(state['pending']),
+                             cfg['batch_size'], cve_calls, cfg['max_new_articles_per_run'])
+    reserved_calls = budget.reserved_calls
+    print(f'[API 예산] 뉴스 {budget.news_calls}회 · HOT {budget.hot_calls}회 · '
+          f'CVE {budget.cve_calls}회', flush=True)
 
     def checkpoint():
         if day['articles'] or day.get('cves') or day.get('cve_meta', {}).get('status') == 'ok':
@@ -245,7 +278,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             day['hot_status'] = 'stale' if day['hot'] else 'unavailable'
             day['warnings'].append('HOT 재선정 실패: ' + str(exc))
     if cve_enabled:
-        cve_summary = translate_cves(state, day, now, cfg, client, checkpoint)
+        cve_cfg = {**cfg, 'cve_summary_max_calls_per_run': budget.cve_calls}
+        cve_summary = translate_cves(state, day, now, cve_cfg, client, checkpoint)
         if cve_summary['error']:
             day['warnings'].append('CVE 요약 보류: ' + cve_summary['error'])
         if cve_summary['pending']:
@@ -257,16 +291,21 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     if day['pending_count']:
         day['warnings'].append(f'{day["pending_count"]}건은 근거 부족·호출 제한·요약 실패 등으로 보류 중입니다.')
     day['updated_at'] = now.isoformat()
-    slot = CRON_SLOTS.get(schedule)
     if slot:
-        day['slots'][slot] = {'at': now.isoformat(), 'status': 'partial' if day['warnings'] else 'ok',
-                             'new_count': new_count}
+        slot_day = publication_at.date().isoformat()
+        if retention_cutoff(now, cfg['keep_days']) <= slot_day <= daykey:
+            scheduled_day = day if slot_day == daykey else state['days'].setdefault(slot_day, new_day(slot_day))
+            scheduled_day['slots'][slot] = {
+                'at': now.isoformat(), 'publish_at': publication_at.isoformat(),
+                'status': 'partial' if day['warnings'] else 'ok', 'new_count': new_count}
     else:
         day['manual_runs'] += 1
     state['last_run'] = {'at': now.isoformat(), 'day': daykey, 'new_count': new_count,
                          'api_calls': client.calls, 'api_tokens': client.tokens,
                          'pending_count': len(state['pending']), 'sources': day['sources'],
                          'warnings': day['warnings'], 'slot': slot or '수동',
+                         'slot_day': publication_at.date().isoformat() if slot else None,
+                         'publish_at': publication_at.isoformat() if slot else None,
                          'summary_model': client.summary_model, 'hot_model': client.hot_model,
                          'hot_model_used': day.get('hot_model_used'),
                          'cve_count': len(day.get('cves', {})), 'cve_summary': cve_summary}

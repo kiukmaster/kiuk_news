@@ -39,9 +39,12 @@ jobs:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      publish_at: ${{ steps.publication.outputs.publish_at }}
     permissions:
       contents: write
       pages: read
+      actions: read
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
@@ -52,6 +55,18 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
+
+      - name: Resolve publication time from original run
+        id: publication
+        if: inputs.mode != 'check-api' && (github.event_name == 'schedule' || inputs.scheduled_slot == '06:00' || inputs.scheduled_slot == '13:00' || inputs.scheduled_slot == '19:00')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+          SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
+        run: |
+          RUN_CREATED_AT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)"
+          export RUN_CREATED_AT
+          python -m digest.publication plan
 
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
@@ -121,40 +136,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Wait for scheduled publication time
-        if: github.event_name == 'schedule' || inputs.scheduled_slot == '06:00' || inputs.scheduled_slot == '13:00' || inputs.scheduled_slot == '19:00'
-        env:
-          SCHEDULE_CRON: ${{ github.event.schedule }}
-          SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
-        run: |
-          python - <<'PY'
-          import os
-          import time
-          from datetime import datetime, timedelta, timezone
+      - name: Checkout publication helper
+        if: needs.build.outputs.publish_at != ''
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
-          cron_slots = {'7 20 * * *': '06:00', '7 3 * * *': '13:00', '7 9 * * *': '19:00'}
-          requested = os.environ.get('SCHEDULED_SLOT', '')
-          slot = requested if requested in ('06:00', '13:00', '19:00') else cron_slots.get(os.environ.get('SCHEDULE_CRON', ''))
-          if not slot:
-              raise SystemExit('Unknown scheduled publication slot')
-          kst = timezone(timedelta(hours=9))
-          now = datetime.now(kst)
-          target = now.replace(hour=int(slot[:2]), minute=0, second=0, microsecond=0)
-          seconds = (target - now).total_seconds()
-          if seconds > 3600:
-              raise SystemExit(f'Too early for {slot} KST publication; dispatch within one hour of the slot')
-          if seconds > 0:
-              print(f'Waiting {seconds:.0f}s until {target.isoformat()} to publish', flush=True)
-              time.sleep(seconds)
-          else:
-              print(f'{slot} KST publication time passed; deploying immediately at {now.isoformat()}', flush=True)
-          PY
+      - name: Wait for scheduled publication time
+        if: needs.build.outputs.publish_at != ''
+        env:
+          PUBLISH_AT: ${{ needs.build.outputs.publish_at }}
+        run: python -m digest.publication wait
 
       - name: Deploy Pages
         id: deployment

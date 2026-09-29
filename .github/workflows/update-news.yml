@@ -101,6 +101,7 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
+          PUBLISH_AT: ${{ steps.publication.outputs.publish_at }}
         run: |
           case "${SCHEDULED_SLOT:-manual}" in
             '06:00') slot_cron='7 20 * * *' ;;

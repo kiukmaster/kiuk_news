@@ -253,6 +253,23 @@ def test_budget_queues_unfinished(tmp_path):
     assert len(state['pending']) == 1 and not state['seen']
 
 
+def test_large_pending_backlog_still_summarizes_news(tmp_path):
+    state = empty_state()
+    for index in range(1912):
+        row = article(index)
+        state['pending'][row['id']] = row
+    cfg = load_config()
+    cfg.update(fetch_article_body=False, cve_enabled=False, max_new_articles_per_run=12)
+    client = FakeGemini()
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=client,
+                 source_loader=lambda *a: ([], []),
+                 github_loader=lambda *a: ([], {'status': 'ok', 'name': 'Test', 'message': 'Test'}))
+    assert len(client.summarized) == 12
+    assert len(state['days'][NOW.date().isoformat()]['articles']) == 12
+    assert state['pending']
+    assert client.calls <= cfg['max_api_calls_per_run']
+
+
 def test_missing_evidence_is_not_hallucinated(tmp_path):
     state = empty_state()
     missing = article(1)

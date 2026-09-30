@@ -13,7 +13,7 @@ from digest.cves import (NvdClient, NvdError, ENDPOINT, collect_cves, cvss_metri
                         merge_cves, normalize_cve, query_window, translate_cves, utc_parameter)
 from digest.pipeline import empty_state, new_day, run_pipeline, load_state, prune
 from digest.render import render_site, render_context
-from digest.gemini import GeminiError
+from digest.gemini import Gemini, GeminiError
 
 NOW = datetime(2026, 9, 22, 13, 0, tzinfo=KST)
 
@@ -48,13 +48,16 @@ class FakeSummary:
     @property
     def remaining(self):
         return self.budget - self.calls
-    def request(self, instruction, data, schema, model):
+    def request(self, instruction, data, schema, model, validator=None):
         self.calls += 1
         self.inputs.append(deepcopy(data))
         if self.broken:
             raise GeminiError('검증용 실패')
-        return {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.'}
-                         for row in data['cves']]}
+        result = {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.'}
+                           for row in data['cves']]}
+        if validator:
+            validator(result)
+        return result
     def select_hot(self, articles):
         self.calls += 1
         return {'picks': [], 'shortfall_reason_ko': ''}
@@ -239,6 +242,41 @@ def test_summary_id_invention_rejected_atomically():
     row = normalize_cve(raw(), NOW); day['cves'][row['id']] = row
     result = translate_cves(state, day, NOW, load_config(), client, Mock())
     assert result['error'] and not row['summary_ko']
+
+
+def test_duplicate_cve_response_retried_before_checkpoint(monkeypatch):
+    monkeypatch.setenv('GEMINI_API_KEY', 'offline-test-secret')
+    monkeypatch.setattr('digest.gemini.time.sleep', lambda _: None)
+    cfg = load_config()
+    cfg.update(max_api_calls_per_run=3, api_interval_seconds=0,
+               cve_summary_batch_size=2, cve_summary_max_calls_per_run=3)
+    client = Gemini(cfg)
+    state, day = empty_state(), new_day('2026-09-22')
+    for index in (1, 2):
+        row = normalize_cve(raw(index), NOW)
+        day['cves'][row['id']] = row
+    first, second = list(day['cves'])
+
+    def reply(ids):
+        result = {'cves': [{'id': ident, 'summary_ko': '테스트 서버의 서비스 거부 취약점 설명입니다.'}
+                           for ident in ids]}
+        return Mock(status_code=200, json=Mock(return_value={
+            'status': 'completed', 'steps': [{'type': 'model_output', 'content': [
+                {'type': 'text', 'text': json.dumps(result)}]}]}))
+
+    # Both IDs are allowed and the count is correct: JSON Schema alone cannot
+    # detect this duplicate/missing-ID combination from the production incident.
+    client.session.post = Mock(side_effect=[reply([first, first]), reply([first, second])])
+    checkpoint = Mock()
+    result = translate_cves(state, day, NOW, cfg, client, checkpoint)
+    assert result == {'translated': 2, 'pending': 0, 'error': ''}
+    assert client.calls == 2 and client.session.post.call_count == 2
+    assert checkpoint.call_count == 1
+    assert all(row['summary_ko'] for row in day['cves'].values())
+    schema = client.session.post.call_args.kwargs['json']['response_format']['schema']
+    assert schema['properties']['cves']['minItems'] == 2
+    assert schema['properties']['cves']['maxItems'] == 2
+    assert set(schema['properties']['cves']['items']['properties']['id']['enum']) == {first, second}
 
 
 def pipeline_run(state, path, rows, now=NOW):

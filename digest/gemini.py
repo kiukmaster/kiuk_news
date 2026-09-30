@@ -4,6 +4,7 @@ import json
 import os
 import random
 import time
+from typing import Callable
 
 import requests
 from jsonschema import validate, ValidationError
@@ -32,6 +33,10 @@ SUMMARY_SCHEMA = {
 
 class GeminiError(RuntimeError):
     pass
+
+
+class GeminiResponseValidationError(GeminiError):
+    """A completed model response failed the caller's semantic checks."""
 
 
 class BudgetExceeded(GeminiError):
@@ -93,7 +98,7 @@ class Gemini:
         return self.cfg['max_api_calls_per_run'] - self.calls
 
     def request(self, instruction: str, data: dict, schema: dict, model: str,
-                attempts: int = 3) -> dict:
+                attempts: int = 3, validator: Callable[[dict], None] | None = None) -> dict:
         payload = {'model': model, 'system_instruction': SYSTEM,
                    'input': instruction + '\n\nUNTRUSTED_DATA_JSON:\n' + json.dumps(data, ensure_ascii=False),
                    'store': False, 'stream': False,
@@ -131,7 +136,13 @@ class Gemini:
                 self.tokens += raw.get('usage', {}).get('total_tokens', 0)
                 result = json.loads(response_text(raw))
                 validate(result, schema)
+                if validator is not None:
+                    validator(result)
                 return result
+            except GeminiResponseValidationError as exc:
+                error = exc
+                if attempt < attempts - 1:
+                    time.sleep(5 * (attempt + 1))
             except (requests.RequestException, ValueError, ValidationError) as exc:
                 error = GeminiError(f'Gemini 응답/연결 검증 실패: {type(exc).__name__}')
                 if attempt < attempts - 1:

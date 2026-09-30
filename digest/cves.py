@@ -17,17 +17,35 @@ from typing import Callable
 import requests
 
 from .common import KST, parse_date
-from .gemini import GeminiError, GeminiAuthenticationError
+from .gemini import GeminiError, GeminiAuthenticationError, GeminiResponseValidationError
 
 ENDPOINT = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 CVE_ID = re.compile(r'CVE-\d{4}-\d{4,}')
 VERSIONS = (('cvssMetricV40', '4.0'), ('cvssMetricV31', '3.1'),
             ('cvssMetricV30', '3.0'), ('cvssMetricV2', '2.0'))
 SEVERITIES = {'NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'UNKNOWN'}
-SUMMARY_SCHEMA = {
-    'type': 'object', 'properties': {'cves': {'type': 'array', 'items': {
-        'type': 'object', 'properties': {'id': {'type': 'string'}, 'summary_ko': {'type': 'string'}},
-        'required': ['id', 'summary_ko']}}}, 'required': ['cves']}
+def summary_schema(expected_ids: set[str]) -> dict:
+    return {'type': 'object', 'properties': {'cves': {
+        'type': 'array', 'minItems': len(expected_ids), 'maxItems': len(expected_ids),
+        'items': {'type': 'object', 'properties': {
+            'id': {'type': 'string', 'enum': sorted(expected_ids)},
+            'summary_ko': {'type': 'string'}},
+            'required': ['id', 'summary_ko']}}}, 'required': ['cves']}
+
+
+def validate_summaries(response: dict, expected_ids: set[str]) -> None:
+    """Reject the whole response before changing any CVE or saving a checkpoint."""
+    try:
+        answers = response['cves']
+        ids = [answer['id'] for answer in answers]
+        if len(set(ids)) != len(ids) or set(ids) != expected_ids:
+            raise GeminiResponseValidationError('CVE 요약의 ID 누락·중복·변조')
+        for answer in answers:
+            text = answer['summary_ko'].strip()
+            if not text or len(text) > 500 or not re.search(r'[가-힣]', text):
+                raise GeminiResponseValidationError('CVE 한국어 요약 형식 불일치')
+    except (KeyError, TypeError, AttributeError):
+        raise GeminiResponseValidationError('CVE 요약 응답 형식 불일치') from None
 
 
 class NvdError(RuntimeError):
@@ -273,6 +291,7 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
         if client.remaining < 3 or client.calls - starting_calls + 3 > max_calls:
             break
         batch = pending[offset:offset + batch_size]
+        expected_ids = {row['id'] for _, row in batch}
         try:
             print(f'[CVE 요약] {len(batch)}건 · 완료 {translated}/{len(pending)}', flush=True)
             response = client.request(
@@ -281,15 +300,11 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
                 '공격 실행 절차나 페이로드를 추가하지 마라. 입력마다 id와 summary_ko를 반환하라. '
                 'CVE ID를 그대로 복사하고 어떤 항목도 생략하지 마라.',
                 {'cves': [{'id': row['id'], 'description': row['description'][:3000]} for _, row in batch]},
-                SUMMARY_SCHEMA, client.summary_model)
+                summary_schema(expected_ids), client.summary_model,
+                validator=lambda result: validate_summaries(result, expected_ids))
+            # Injected/offline clients may not implement request's validation hook.
+            validate_summaries(response, expected_ids)
             answers = response['cves']
-            ids = [answer['id'] for answer in answers]
-            if len(set(ids)) != len(ids) or set(ids) != {row['id'] for _, row in batch}:
-                raise GeminiError('CVE 요약의 ID 누락·중복·변조')
-            for answer in answers:
-                text = answer['summary_ko'].strip()
-                if not text or len(text) > 500 or not re.search(r'[가-힣]', text):
-                    raise GeminiError('CVE 한국어 요약 형식 불일치')
             summaries = {a['id']: a['summary_ko'].strip() for a in answers}
             for _, row in batch:
                 row['summary_ko'], row['summary_model'] = summaries[row['id']], client.summary_model

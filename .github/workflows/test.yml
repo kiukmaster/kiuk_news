@@ -19,6 +19,8 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
+      - name: Test external publication scheduler
+        run: node --test scheduler/worker.test.mjs
       - run: python -m playwright install --with-deps chromium
       - name: Test cover and unfolded layouts
         run: python tests/browser_check.py

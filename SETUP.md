@@ -250,23 +250,25 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 
 첫 설정 이후 기본 브랜치에 워크플로가 있으면 예약 실행을 사용합니다.
 
-| 목표 공개 시각(KST) | 수집 시작(KST) | 워크플로의 UTC cron |
+| 목표 공개 시각(KST) | 수집 시작(KST) | 워크플로의 KST cron (`timezone: Asia/Seoul`) |
 |---|---|---|
-| 06:00 | 05:07 | `7 20 * * *` — UTC 전날 20:07 |
-| 13:00 | 12:07 | `7 3 * * *` |
-| 19:00 | 18:07 | `7 9 * * *` |
+| 06:00 | 05:07 | `7 5 * * *` |
+| 13:00 | 12:07 | `7 12 * * *` |
+| 19:00 | 18:07 | `7 18 * * *` |
 
 각 실행은 같은 KST 날짜의 `reports/YYYY-MM-DD.html`을 갱신합니다. 오전 기사를 지우고 오후 기사로만 교체하는 방식이 아니라, 이미 요약한 기사에 새 기사를 추가하고 HOT을 다시 선정합니다.
 
 수집·요약·HTML 생성은 목표 시각보다 53분 전에 시작하며, 예약 실행의 Pages 배포는 목표 시각까지 대기합니다. 수동 실행은 바로 배포합니다. **정확한 게시 시각은 보장하지 않습니다.** GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.
 
-시간을 변경할 때는 `update-news.yml`의 cron·배포 게이트·외부 예약 호출 시각뿐 아니라 `digest/common.py`의 `SLOTS`, `CRON_SLOTS`, `templates/index.html`의 시간 안내도 함께 변경해야 표시가 일치합니다. 처음에는 기본값을 유지하세요.
+수집·대기·Pages 배포는 같은 `publish` 작업에서 실행합니다. 목표 시각에 두 번째 runner를 요청하지 않습니다. 시간을 변경할 때는 `update-news.yml`의 cron·배포 게이트·외부 예약 호출 시각뿐 아니라 `digest/common.py`의 `SLOTS`, `CRON_SLOTS`, `CRON_TIMEZONES`, `templates/index.html`의 시간 안내도 함께 변경해야 표시가 일치합니다.
 
 참고: [GitHub schedule 이벤트](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 ### 정시성이 중요할 때: 외부 예약 호출
 
 이 저장소의 최근 GitHub 기본 예약 실행은 예정 시각보다 수 시간 늦게 시작했습니다. 비정각 선행 예약은 지연 가능성을 낮추지만, 정시성이 중요하면 비밀 헤더를 보관할 수 있는 별도 HTTPS 예약 서비스에서 GitHub의 `workflow_dispatch` API를 호출하세요. 외부 서비스도 실행 지연 가능성이 있으며 Pages 반영 시간까지 정확히 보장할 수는 없습니다.
+
+PC나 서버를 상시 켤 수 없다면 저장소에 준비된 **Cloudflare Cron Worker**를 사용합니다. [설정 절차와 실행 파일](scheduler/README.md)을 참고하세요. Worker 계정·비밀 키·Cron Trigger를 실제 등록해야 예약이 동작합니다. 파일을 GitHub에 올리는 것만으로 Cloudflare 예약이 켜지지 않습니다.
 
 1. GitHub에서 **이 저장소만 선택**하고 **Actions: write**만 허용한 fine-grained 개인 액세스 토큰을 만듭니다. 토큰은 외부 예약 서비스의 비밀 저장소에 보관하고 URL·웹페이지·저장소에 넣지 않습니다.
 2. 외부 예약 서비스에 다음 HTTPS POST 요청을 세 개 등록합니다. `OWNER/REPO`와 `ref`는 실제 저장소·기본 브랜치로 바꿉니다. 각 요청은 목표보다 53분 앞선 **05:07, 12:07, 18:07 KST**에 보냅니다.
@@ -286,7 +288,9 @@ Content-Type: application/json
 {"ref":"main","inputs":{"mode":"collect","scheduled_slot":"19:00"}}
 ```
 
-3. 한 슬롯을 먼저 시험하고 Actions의 `build`와 `deploy`가 완료되는지 확인합니다. 지정 슬롯의 배포는 목표 시각 전이면 대기하고, 목표가 지났으면 즉시 진행합니다. 목표보다 1시간 넘게 이른 호출은 게시를 막습니다.
+`publish_at` 입력에 `2026-10-01T19:00:00+09:00`처럼 날짜와 한국시간을 함께 지정하면 외부 예약 이벤트가 지연되거나 재시도돼도 게시 날짜가 바뀌지 않습니다. 이 시각은 지정한 슬롯과 정확히 일치해야 합니다.
+
+3. 한 슬롯을 먼저 시험하고 Actions의 `publish` 작업이 완료되는지 확인합니다. 지정 슬롯의 배포는 목표 시각 전이면 대기하고, 목표가 지났으면 즉시 진행합니다. 목표보다 1시간 넘게 이른 호출은 게시를 막습니다.
 4. 외부 예약이 정상 동작하면 저장소 **Settings → Secrets and variables → Actions → Variables**에 `EXTERNAL_SCHEDULER_ENABLED=true`를 추가해 GitHub 기본 예약 실행을 건너뛸 수 있습니다. 값을 설정하지 않으면 기본 예약도 계속 실행되어 같은 슬롯에 수집·배포가 중복될 수 있습니다. 이 변수는 외부 예약을 확인한 후에만 설정하세요.
 
 참고: [GitHub workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event), [GitHub 예약 실행 지연](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows), [GitHub Pages 반영 시간](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site).

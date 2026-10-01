@@ -13,9 +13,12 @@ KST = ZoneInfo('Asia/Seoul')
 ROOT = Path(__file__).resolve().parents[1]
 CATEGORIES = {'ai': 'AI', 'security': '보안', 'tech': '신기술·논문', 'event': '대회·행사', 'github': 'GitHub 인기'}
 SLOTS = ('06:00', '13:00', '19:00')
-# Each cron starts 53 minutes before the publication slot. GitHub Actions
-# publishes the prepared artifact no earlier than the matching UTC hour.
-CRON_SLOTS = {'7 20 * * *': '06:00', '7 3 * * *': '13:00', '7 9 * * *': '19:00'}
+# Each cron prepares 53 minutes before publication. Retain UTC aliases for old
+# queued runs; the workflow now declares Asia/Seoul and uses the KST aliases.
+CRON_SLOTS = {'7 20 * * *': '06:00', '7 3 * * *': '13:00', '7 9 * * *': '19:00',
+              '7 5 * * *': '06:00', '7 12 * * *': '13:00', '7 18 * * *': '19:00'}
+CRON_TIMEZONES = {cron: ('UTC' if cron in ('7 20 * * *', '7 3 * * *', '7 9 * * *')
+                         else 'Asia/Seoul') for cron in CRON_SLOTS}
 
 
 def now_kst() -> datetime:

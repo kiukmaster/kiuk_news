@@ -1,4 +1,4 @@
-"""Freeze the publication date before Actions queues the deploy job."""
+"""Resolve explicit KST publication targets and wait on the same runner."""
 from __future__ import annotations
 
 import argparse
@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .common import CRON_SLOTS, KST, SLOTS
+from .common import CRON_SLOTS, CRON_TIMEZONES, KST, SLOTS
 
 
 def aware_date(value: str) -> datetime:
@@ -18,7 +18,7 @@ def aware_date(value: str) -> datetime:
 
 
 def publication_target(created_at: datetime, event: str, cron: str = '',
-                       slot: str = 'manual') -> datetime | None:
+                       slot: str = 'manual', *, requested_at: datetime | None = None) -> datetime | None:
     if created_at.tzinfo is None:
         raise ValueError('Run creation time must include a timezone')
     anchor = created_at.astimezone(KST)
@@ -27,7 +27,8 @@ def publication_target(created_at: datetime, event: str, cron: str = '',
             raise ValueError('Unknown scheduled publication slot')
         slot = CRON_SLOTS[cron]
         minute, hour = map(int, cron.split()[:2])
-        prepared = anchor.astimezone(timezone.utc).replace(
+        cron_zone = KST if CRON_TIMEZONES[cron] == 'Asia/Seoul' else timezone.utc
+        prepared = anchor.astimezone(cron_zone).replace(
             hour=hour, minute=minute, second=0, microsecond=0)
         if prepared > anchor:
             prepared -= timedelta(days=1)
@@ -35,6 +36,18 @@ def publication_target(created_at: datetime, event: str, cron: str = '',
         target = prepared.replace(hour=int(slot[:2]), minute=0)
         if target < prepared:
             target += timedelta(days=1)
+        if requested_at is None:
+            return target
+    if requested_at is not None:
+        if slot not in SLOTS:
+            raise ValueError('An explicit publication timestamp needs a scheduled slot')
+        if requested_at.tzinfo is None:
+            raise ValueError('Publication timestamps must include a timezone')
+        target = requested_at.astimezone(KST)
+        if target.strftime('%H:%M') != slot or target.second or target.microsecond:
+            raise ValueError('Publication timestamp does not match its KST slot')
+        if (target - anchor).total_seconds() > 3600:
+            raise ValueError(f'Too early for {slot} KST publication; dispatch within one hour of the slot')
         return target
     if slot in ('', 'manual'):
         return None
@@ -63,7 +76,9 @@ def main(argv: list[str] | None = None) -> int:
         target = publication_target(aware_date(os.environ['RUN_CREATED_AT']),
                                     os.environ['GITHUB_EVENT_NAME'],
                                     os.getenv('SCHEDULE_CRON', ''),
-                                    os.getenv('SCHEDULED_SLOT', 'manual'))
+                                    os.getenv('SCHEDULED_SLOT', 'manual'),
+                                    requested_at=aware_date(os.environ['REQUESTED_PUBLISH_AT'])
+                                        if os.getenv('REQUESTED_PUBLISH_AT') else None)
         value = target.isoformat() if target else ''
         if os.getenv('GITHUB_OUTPUT'):
             with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:

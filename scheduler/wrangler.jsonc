@@ -1,0 +1,16 @@
+{
+  "name": "kiuk-news-scheduler",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  // GITHUB_TOKEN is a Cloudflare Secret; never place its value in this file.
+  "vars": {
+    "GITHUB_REPOSITORY": "kiukmaster/kiuk_news",
+    "GITHUB_REF": "main"
+  },
+  // Cloudflare Cron is UTC. These prepare 06:00 / 13:00 / 19:00 KST publication.
+  "triggers": {
+    "crons": ["7 20 * * *", "7 3 * * *", "7 9 * * *"]
+  }
+}

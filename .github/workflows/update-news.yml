@@ -1,4 +1,8 @@
 name: Update news & deploy
+run-name: News ${{ inputs.scheduled_slot || 'scheduled' }} ${{ inputs.publish_at || github.event.schedule || inputs.mode || 'manual' }}
+
+env:
+  TZ: Asia/Seoul
 
 on:
   workflow_dispatch:
@@ -20,31 +24,41 @@ on:
           - '13:00'
           - '19:00'
         default: manual
+      publish_at:
+        description: '외부 예약의 공개 목표 ISO 시각. 예: 2026-10-01T13:00:00+09:00'
+        type: string
+        required: false
+        default: ''
   schedule:
-    # 수집을 공개 시각 53분 전에 시작합니다. 매시 정각은 Actions 대기열 혼잡을 피합니다.
-    # deploy 작업은 아래에서 해당 UTC 정각까지 대기합니다.
-    - cron: '7 20 * * *'  # 다음 날짜 05:07 KST 준비 → 06:00 KST 공개
-    - cron: '7 3 * * *'   # 12:07 KST 준비 → 13:00 KST 공개
-    - cron: '7 9 * * *'   # 18:07 KST 준비 → 19:00 KST 공개
+    # KST 공개 목표 53분 전에 수집하고 같은 runner에서 목표까지 대기합니다.
+    - cron: '7 5 * * *'   # 05:07 준비 → 06:00 공개
+      timezone: Asia/Seoul
+    - cron: '7 12 * * *'  # 12:07 준비 → 13:00 공개
+      timezone: Asia/Seoul
+    - cron: '7 18 * * *'  # 18:07 준비 → 19:00 공개
+      timezone: Asia/Seoul
 
 permissions:
   contents: read
 
 concurrency:
   group: news-publish-${{ github.repository }}
+  queue: max
   cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    outputs:
-      publish_at: ${{ steps.publication.outputs.publish_at }}
+    timeout-minutes: 90
     permissions:
       contents: write
-      pages: read
+      pages: write
+      id-token: write
       actions: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
@@ -58,11 +72,13 @@ jobs:
 
       - name: Resolve publication time from original run
         id: publication
-        if: inputs.mode != 'check-api' && (github.event_name == 'schedule' || inputs.scheduled_slot == '06:00' || inputs.scheduled_slot == '13:00' || inputs.scheduled_slot == '19:00')
+        if: inputs.mode != 'check-api' && (github.event_name == 'schedule' || inputs.scheduled_slot == '06:00' || inputs.scheduled_slot == '13:00' || inputs.scheduled_slot == '19:00' || inputs.publish_at != '')
         env:
           GH_TOKEN: ${{ github.token }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
+          SCHEDULE_TIMEZONE: Asia/Seoul
           SCHEDULED_SLOT: ${{ inputs.scheduled_slot }}
+          REQUESTED_PUBLISH_AT: ${{ inputs.publish_at }}
         run: |
           RUN_CREATED_AT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)"
           export RUN_CREATED_AT
@@ -94,6 +110,7 @@ jobs:
       - name: Collect, summarize, select HOT, generate HTML
         id: collect
         if: inputs.mode != 'rebuild' && inputs.mode != 'check-api'
+        timeout-minutes: 35
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
@@ -104,9 +121,9 @@ jobs:
           PUBLISH_AT: ${{ steps.publication.outputs.publish_at }}
         run: |
           case "${SCHEDULED_SLOT:-manual}" in
-            '06:00') slot_cron='7 20 * * *' ;;
-            '13:00') slot_cron='7 3 * * *' ;;
-            '19:00') slot_cron='7 9 * * *' ;;
+            '06:00') slot_cron='7 5 * * *' ;;
+            '13:00') slot_cron='7 12 * * *' ;;
+            '19:00') slot_cron='7 18 * * *' ;;
             manual|'') slot_cron="${SCHEDULE_CRON:-}" ;;
             *) echo "Unknown scheduled slot: $SCHEDULED_SLOT" >&2; exit 1 ;;
           esac
@@ -131,32 +148,13 @@ jobs:
           path: public
           retention-days: 1
 
-  deploy:
-    if: inputs.mode != 'check-api'
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 75
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout publication helper
-        if: needs.build.outputs.publish_at != ''
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
       - name: Wait for scheduled publication time
-        if: needs.build.outputs.publish_at != ''
+        if: inputs.mode != 'check-api' && steps.publication.outputs.publish_at != ''
         env:
-          PUBLISH_AT: ${{ needs.build.outputs.publish_at }}
+          PUBLISH_AT: ${{ steps.publication.outputs.publish_at }}
         run: python -m digest.publication wait
 
       - name: Deploy Pages
+        if: inputs.mode != 'check-api'
         id: deployment
         uses: actions/deploy-pages@v4

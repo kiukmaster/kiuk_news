@@ -9,7 +9,7 @@ import pytest
 from bs4 import BeautifulSoup
 from defusedxml.common import DefusedXmlException
 
-from digest.common import (KST, ROOT, CRON_SLOTS, canonical_url, item_id, parse_date, retention_cutoff, load_config, text_key)
+from digest.common import (KST, ROOT, CRON_SLOTS, CRON_TIMEZONES, canonical_url, item_id, parse_date, retention_cutoff, load_config, text_key)
 from digest.gemini import Gemini, GeminiError, GeminiAuthenticationError, response_text
 from digest.network import PublicWeb, FetchError
 from digest.pipeline import empty_state, load_state, new_day, prune, run_pipeline, fair_queue, public_article
@@ -170,13 +170,20 @@ def test_three_runs_one_report(tmp_path):
 def test_scheduled_slots_match_workflow_and_lead_time():
     workflow = (ROOT / '.github/workflows/update-news.yml').read_text(encoding='utf-8')
     assert 'python -m digest.publication plan' in workflow
-    assert 'PUBLISH_AT: ${{ needs.build.outputs.publish_at }}' in workflow
+    assert 'PUBLISH_AT: ${{ steps.publication.outputs.publish_at }}' in workflow
     assert 'python -m digest.publication wait' in workflow
+    assert 'TZ: Asia/Seoul' in workflow
+    assert workflow.count('timezone: Asia/Seoul') == 3
+    assert '\n  deploy:' not in workflow
+    assert 'needs: build' not in workflow
+    assert workflow.index('python -m digest.publication wait') < workflow.index('uses: actions/deploy-pages@')
     for cron, slot in CRON_SLOTS.items():
+        if CRON_TIMEZONES[cron] != 'Asia/Seoul':
+            continue  # Legacy UTC aliases remain accepted for already queued runs.
         assert f"- cron: '{cron}'" in workflow
         assert f"'{slot}') slot_cron='{cron}'" in workflow
         minute, hour = map(int, cron.split()[:2])
-        started = datetime(2026, 9, 24, hour, minute, tzinfo=timezone.utc).astimezone(KST)
+        started = datetime(2026, 9, 24, hour, minute, tzinfo=KST)
         target = started.replace(hour=int(slot[:2]), minute=0)
         assert target - started == timedelta(minutes=53)
 

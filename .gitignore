@@ -10,5 +10,8 @@ __pycache__/
 playwright-report/
 test-results/
 .qa/
+.wrangler/
+scheduler/node_modules/
+scheduler/.dev.vars*
 .DS_Store
 Thumbs.db

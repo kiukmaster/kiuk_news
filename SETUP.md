@@ -170,7 +170,7 @@ env:
 
 **Actions permissions**에서 GitHub 공식 Actions를 실행할 수 있어야 합니다. 개인 저장소에서는 기본 허용 설정으로 진행할 수 있습니다. 조직 정책이 제한 중이면 필요한 공식 Actions를 허용하도록 관리자와 확인하세요. 임의의 외부 Action은 사용하지 않습니다.
 
-페이지 아래쪽 **Workflow permissions**에서 기본 쓰기 권한을 허용할 수 있는 환경인지 확인합니다. 제공된 YAML은 빌드 작업에 `contents: write`, 배포 작업에 `pages: write`, `id-token: write`를 필요한 범위로 명시합니다. 개인 저장소에서 `news-state` 쓰기가 거절된다면 **Read and write permissions** 설정과 저장소 Rulesets를 확인하세요.
+페이지 아래쪽 **Workflow permissions**에서 기본 쓰기 권한을 허용할 수 있는 환경인지 확인합니다. 제공된 YAML은 `publish` 작업에 상태 저장용 `contents: write`, 배포용 `pages: write`와 `id-token: write`, 실행 조회용 `actions: read`를 명시합니다. 개인 저장소에서 `news-state` 쓰기가 거절된다면 **Read and write permissions** 설정과 저장소 Rulesets를 확인하세요.
 
 GitHub 자체 예약 실행만 쓰는 경우 별도의 `GH_TOKEN`, 개인 액세스 토큰(PAT), GitHub API 키를 만들 필요는 없습니다. 외부 예약 서비스에서 `workflow_dispatch`를 호출하려면 아래 10절의 제한된 권한 토큰이 필요합니다. 실행마다 제공되는 `GITHUB_TOKEN`과 체크아웃 자격증명을 사용합니다. **Allow GitHub Actions to create and approve pull requests**는 이 프로젝트에 필요하지 않습니다.
 
@@ -197,7 +197,7 @@ GitHub 자체 예약 실행만 쓰는 경우 별도의 `GH_TOKEN`, 개인 액세
 3. 오른쪽 **Run workflow**를 누릅니다.
 4. **Branch: main**, **mode: collect**를 선택합니다.
 5. 다시 **Run workflow**를 누릅니다.
-6. 실행 항목을 열고 `build`와 `deploy` 작업을 확인합니다. 소요 시간은 기사 수, 사이트 응답, 모델 응답에 따라 달라집니다.
+6. 실행 항목을 열고 `publish` 작업의 수집·대기·배포 단계를 확인합니다. 소요 시간은 기사 수, 사이트 응답, 모델 응답에 따라 달라집니다.
 
 진행 순서는 다음과 같습니다.
 
@@ -225,7 +225,7 @@ Deploy Pages
 
 ## 9. 사이트 열기
 
-`deploy`가 성공하면 배포 작업의 URL을 클릭하거나 **Settings → Pages → Visit site**에서 접속합니다.
+`publish` 작업의 **Deploy Pages** 단계가 성공하면 작업의 URL을 클릭하거나 **Settings → Pages → Visit site**에서 접속합니다.
 
 일반 프로젝트 저장소의 주소 형태는 다음과 같습니다. 실제 주소는 GitHub가 표시하는 것을 사용하세요.
 
@@ -270,7 +270,7 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 
 PC나 서버를 상시 켤 수 없다면 저장소에 준비된 **Cloudflare Cron Worker**를 사용합니다. [설정 절차와 실행 파일](scheduler/README.md)을 참고하세요. Worker 계정·비밀 키·Cron Trigger를 실제 등록해야 예약이 동작합니다. 파일을 GitHub에 올리는 것만으로 Cloudflare 예약이 켜지지 않습니다.
 
-1. GitHub에서 **이 저장소만 선택**하고 **Actions: write**만 허용한 fine-grained 개인 액세스 토큰을 만듭니다. 토큰은 외부 예약 서비스의 비밀 저장소에 보관하고 URL·웹페이지·저장소에 넣지 않습니다.
+1. GitHub에서 **이 저장소만 선택**하고 **Actions: Read and write**를 허용한 fine-grained 개인 액세스 토큰을 만듭니다. Worker는 기존 요청을 조회한 뒤 요청하므로 읽기도 필요합니다. 토큰은 외부 예약 서비스의 비밀 저장소에 보관하고 URL·웹페이지·저장소에 넣지 않습니다.
 2. 외부 예약 서비스에 다음 HTTPS POST 요청을 세 개 등록합니다. `OWNER/REPO`와 `ref`는 실제 저장소·기본 브랜치로 바꿉니다. 각 요청은 목표보다 53분 앞선 **05:07, 12:07, 18:07 KST**에 보냅니다.
 
 ```text
@@ -280,12 +280,12 @@ Accept: application/vnd.github+json
 Content-Type: application/json
 ```
 
-요청 본문은 순서대로 다음과 같습니다.
+요청 본문 예시는 다음과 같습니다. `publish_at`의 날짜는 매 실행의 원래 공개 목표 날짜로 바꿉니다. Cloudflare Worker는 이 값을 원래 예약 이벤트에서 자동 계산해 자정 이후 지연에도 유지합니다.
 
 ```json
-{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"06:00"}}
-{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"13:00"}}
-{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"19:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"06:00","publish_at":"2026-10-01T06:00:00+09:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"13:00","publish_at":"2026-10-01T13:00:00+09:00"}}
+{"ref":"main","inputs":{"mode":"collect","scheduled_slot":"19:00","publish_at":"2026-10-01T19:00:00+09:00"}}
 ```
 
 `publish_at` 입력에 `2026-10-01T19:00:00+09:00`처럼 날짜와 한국시간을 함께 지정하면 외부 예약 이벤트가 지연되거나 재시도돼도 게시 날짜가 바뀌지 않습니다. 이 시각은 지정한 슬롯과 정확히 일치해야 합니다.

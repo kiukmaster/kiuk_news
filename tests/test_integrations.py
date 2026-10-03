@@ -131,14 +131,16 @@ def test_english_summary_is_rejected(monkeypatch):
 
 def test_hot_unsupported_id(monkeypatch):
     client = make_client(monkeypatch)
-    client.request = Mock(return_value={'picks': [{'id': 'invented', 'reason_ko': '테스트'}], 'shortfall_reason_ko': ''})
+    client.session.post = Mock(return_value=api_response(
+        {'picks': [{'id': 'invented', 'reason_ko': '테스트'}], 'shortfall_reason_ko': ''}))
     with pytest.raises(GeminiError, match='ID'):
         client.select_hot([{'id': 'real'}])
 
 
 def test_hot_shortfall_requires_reason(monkeypatch):
     client = make_client(monkeypatch)
-    client.request = Mock(return_value={'picks': [{'id': '1', 'reason_ko': '테스트'}], 'shortfall_reason_ko': ''})
+    client.session.post = Mock(return_value=api_response(
+        {'picks': [{'id': '1', 'reason_ko': '테스트'}], 'shortfall_reason_ko': ''}))
     with pytest.raises(GeminiError, match='개수'):
         client.select_hot([{'id': '1'}, {'id': '2'}])
 
@@ -148,7 +150,7 @@ def test_hot_ranks_every_candidate_in_bounded_gemini_rounds(monkeypatch):
     articles = [{'id': str(index), 'title_ko': f'테스트 {index}', 'summary_ko': '테스트 요약'} for index in range(170)]
     calls = []
 
-    def choose(_instruction, data, _schema, model, attempts=3):
+    def choose(_instruction, data, _schema, model, attempts=3, validator=None):
         calls.append((model, attempts, [row['id'] for row in data['candidates']]))
         return {'picks': [{'id': row['id'], 'reason_ko': '테스트 이유'}
                           for row in data['candidates'][:10]], 'shortfall_reason_ko': ''}
@@ -171,7 +173,7 @@ def test_hot_transient_error_falls_back_to_other_gemini_model(monkeypatch, statu
     client = make_client(monkeypatch)
     calls = []
 
-    def choose(_instruction, data, _schema, model, attempts=3):
+    def choose(_instruction, data, _schema, model, attempts=3, validator=None):
         calls.append((model, attempts))
         if model == client.hot_model:
             raise GeminiHTTPError(status)

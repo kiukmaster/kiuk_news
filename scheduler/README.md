@@ -12,6 +12,8 @@
 
 ## 실제 활성화
 
+처음 만든 Cloudflare 계정은 가입 이메일 인증을 완료한 뒤 대시보드의 **Workers & Pages** 메뉴를 한 번 엽니다. 이때 계정의 `workers.dev` 기본 설정이 생성됩니다. 이메일 인증 전에는 `10034`, 기본 설정 전에는 Cron 등록 시 `10063` 오류가 발생할 수 있습니다.
+
 1. 무료 Cloudflare 계정에 로그인합니다. Workers & Pages에서 `kiuk-news-scheduler` Worker를 만듭니다. [worker.mjs](worker.mjs)를 전체 Worker 코드로 사용합니다.
 2. Worker의 Settings → Variables and Secrets에 다음 값을 등록합니다.
 

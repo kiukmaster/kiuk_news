@@ -1,4 +1,4 @@
-"""Daily CVEs from NVD's documented REST API, not scraped news or AI scores.
+"""Official NVD CVE evidence and separately labeled Gemini editorial selection.
 
 Date basis: NVD `published` (NVD publication, NOT CVE reservation, discovery,
 lastModified or necessarily CVE Program first publication). All grouping is KST.
@@ -11,12 +11,13 @@ import math
 import os
 import re
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 import requests
 
-from .common import KST, parse_date
+from .common import KST, canonical_url, parse_date
 from .gemini import GeminiError, GeminiAuthenticationError, GeminiResponseValidationError
 
 ENDPOINT = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
@@ -24,6 +25,8 @@ CVE_ID = re.compile(r'CVE-\d{4}-\d{4,}')
 VERSIONS = (('cvssMetricV40', '4.0'), ('cvssMetricV31', '3.1'),
             ('cvssMetricV30', '3.0'), ('cvssMetricV2', '2.0'))
 SEVERITIES = {'NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'UNKNOWN'}
+CURATION_SCORE_KEYS = {'social_impact', 'attention', 'issue_relevance'}
+CURATION_FIELDS = ('curation', 'related_ids', 'related_cves')
 def summary_schema(expected_ids: set[str]) -> dict:
     return {'type': 'object', 'properties': {'cves': {
         'type': 'array', 'minItems': len(expected_ids), 'maxItems': len(expected_ids),
@@ -157,6 +160,96 @@ def cvss_metrics(metrics: dict) -> list[dict]:
     return rows
 
 
+def product_evidence(configurations) -> tuple[list[str], list[dict]]:
+    """Keep only explicitly vulnerable CPEs, never infer an affected product."""
+    stack = list(configurations) if isinstance(configurations, list) else []
+    cpes, products, seen = [], [], set()
+    visited = 0
+    while stack and visited < 2000 and len(cpes) < 100:
+        node = stack.pop()
+        visited += 1
+        if not isinstance(node, dict):
+            continue
+        for field in ('nodes', 'children'):
+            if isinstance(node.get(field), list):
+                stack.extend(node[field])
+        matches = node.get('cpeMatch', [])
+        if not isinstance(matches, list):
+            continue
+        for match in matches:
+            if not isinstance(match, dict) or match.get('vulnerable') is not True:
+                continue
+            criteria = match.get('criteria')
+            if (not isinstance(criteria, str) or len(criteria) > 2000
+                    or not criteria.startswith('cpe:2.3:') or criteria in seen):
+                continue
+            # Escaped colons are part of the vendor/product, not separators.
+            parts = re.split(r'(?<!\\):', criteria)
+            if len(parts) != 13 or parts[2] not in ('a', 'o', 'h'):
+                continue
+            seen.add(criteria)
+            cpes.append(criteria)
+            product = {'part': parts[2], 'vendor': parts[3], 'product': parts[4],
+                       'version': parts[5], 'criteria': criteria}
+            for field in ('versionStartIncluding', 'versionStartExcluding',
+                          'versionEndIncluding', 'versionEndExcluding'):
+                if isinstance(match.get(field), str):
+                    product[field] = match[field][:160]
+            products.append(product)
+            if len(cpes) >= 100:
+                break
+    return cpes, products
+
+
+def reference_evidence(references) -> list[dict]:
+    rows, seen = [], set()
+    for ref in references if isinstance(references, list) else []:
+        if not isinstance(ref, dict) or not isinstance(ref.get('url'), str):
+            continue
+        url = ref['url'].strip()
+        if len(url) > 2000 or url in seen:
+            continue
+        try:
+            canonical_url(url)  # Validation only: retain the original evidence URL.
+        except (ValueError, UnicodeError):
+            continue
+        seen.add(url)
+        tags = ref.get('tags', [])
+        rows.append({'url': url, 'source': str(ref.get('source') or '')[:160],
+                     'tags': [tag[:80] for tag in tags[:20] if isinstance(tag, str)]
+                         if isinstance(tags, list) else []})
+        if len(rows) >= 40:
+            break
+    return rows
+
+
+def kev_evidence(cve: dict) -> dict | None:
+    """An absent CISA KEV date means unknown, not proof of no exploitation."""
+    added = cve.get('cisaExploitAdd')
+    if not isinstance(added, str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', added):
+        return None
+    try:
+        datetime.fromisoformat(added)
+    except ValueError:
+        return None
+    return {'added_at': added,
+            'required_action': str(cve.get('cisaRequiredAction') or '')[:1500],
+            'vulnerability_name': str(cve.get('cisaVulnerabilityName') or '')[:500]}
+
+
+def weakness_evidence(weaknesses) -> list[str]:
+    found = set()
+    for weakness in weaknesses if isinstance(weaknesses, list) else []:
+        if not isinstance(weakness, dict):
+            continue
+        descriptions = weakness.get('description', [])
+        for entry in descriptions if isinstance(descriptions, list) else []:
+            if (isinstance(entry, dict) and isinstance(entry.get('value'), str)
+                    and re.fullmatch(r'CWE-\d+', entry['value'])):
+                found.add(entry['value'])
+    return sorted(found)[:40]
+
+
 def normalize_cve(cve: dict, now: datetime) -> dict:
     ident = str(cve.get('id', '')).upper()
     if not CVE_ID.fullmatch(ident):
@@ -168,6 +261,9 @@ def normalize_cve(cve: dict, now: datetime) -> dict:
     description = next((x for x in descriptions if x.get('lang') == 'en'), descriptions[0] if descriptions else {})
     text = re.sub(r'\s+', ' ', str(description.get('value', ''))).strip()
     metrics = cvss_metrics(cve.get('metrics', {}))
+    cpes, products = product_evidence(cve.get('configurations'))
+    weaknesses = weakness_evidence(cve.get('weaknesses'))
+    kev = kev_evidence(cve)
     return {'id': ident, 'url': 'https://nvd.nist.gov/vuln/detail/' + ident,
             'published_at': published.isoformat(), 'published_day': published.date().isoformat(),
             'last_modified_at': (parse_date(cve.get('lastModified')) or published).isoformat(),
@@ -176,6 +272,9 @@ def normalize_cve(cve: dict, now: datetime) -> dict:
             'description': text[:6000], 'description_language': str(description.get('lang', 'en')),
             'description_hash': hashlib.sha256(text.encode()).hexdigest(),
             'cvss': metrics[0] if metrics else None, 'cvss_all': metrics,
+            'cpes': cpes, 'products': products, 'weaknesses': weaknesses,
+            'references': reference_evidence(cve.get('references')),
+            'known_exploited': True if kev else None, 'kev': kev,
             'observed_at': now.astimezone(KST).isoformat(), 'summary_ko': '', 'summary_model': ''}
 
 
@@ -237,51 +336,154 @@ def collect_cves(now: datetime, cfg: dict, client=None):
 
 def merge_cves(state: dict, today: dict, rows: list[dict], status: dict,
                now: datetime, make_day: Callable[[str], dict]) -> None:
-    """Update by CVE ID and publication day without relabeling old CVEs as today's."""
+    """Refresh the private pool and canonical facts of already selected cards."""
     current_day = now.astimezone(KST).date().isoformat()
     cutoff = min([current_day, *state['days'].keys()])
     # Caller already prunes; derive fetch cutoff from status when available.
     if status.get('start'):
         cutoff = parse_date(status['start']).date().isoformat()
     existing = {**state['days'], current_day: today}
+    for target in existing.values():
+        candidate_pool(target)
     for row in rows:
+        if row['rejected']:
+            for day in existing.values():
+                day.get('cve_candidates', {}).pop(row['id'], None)
+                day.get('cves', {}).pop(row['id'], None)
+            continue
         daykey = row['published_day']
         if not cutoff <= daykey <= current_day:
             continue
         for key, day in existing.items():
-            if row['rejected'] or key != daykey:
+            if key != daykey:
+                day.get('cve_candidates', {}).pop(row['id'], None)
                 day.get('cves', {}).pop(row['id'], None)
-        if row['rejected']:
-            continue
         target = existing.setdefault(daykey, make_day(daykey))
-        old = target.setdefault('cves', {}).get(row['id'], {})
+        pool = candidate_pool(target)
+        old = pool.get(row['id'], {})
+        canonical = deepcopy(row)
         if old.get('description_hash') == row['description_hash']:
             for field in ('summary_ko', 'summary_model'):
-                row[field] = old.get(field, '')
-        target['cves'][row['id']] = row
+                canonical[field] = old.get(field, '')
+        pool[row['id']] = canonical
         if daykey != current_day:
             state['days'][daykey] = target
     # Failed refreshes keep prior cards and their last successful observation time.
     for daykey, target in existing.items():
         if not cutoff <= daykey <= current_day:
             continue
-        target.setdefault('cves', {})
+        refresh_selected_cves(target)
         previous = target.get('cve_meta', {})
-        target['cve_meta'] = {'status': status['status'], 'at': now.isoformat(),
+        target['cve_meta'] = {**previous, 'status': status['status'], 'at': now.isoformat(),
                               'last_success_at': now.isoformat() if status['status'] == 'ok'
                                   else previous.get('last_success_at'),
-                              'message': status['message'], 'count': len(target['cves'])}
-        if target['cves'] and daykey != current_day:
+                              'message': status['message'], 'count': len(target['cves']),
+                              'candidate_count': len(target['cve_candidates'])}
+        if target['cve_candidates'] and daykey != current_day:
             target['updated_at'] = now.isoformat()
 
 
+def candidate_pool(day: dict) -> dict:
+    """Migrate legacy public CVEs without losing original evidence or summaries."""
+    pool = day.setdefault('cve_candidates', {})
+    for ident, row in day.setdefault('cves', {}).items():
+        if ident not in pool and not row.get('rejected'):
+            canonical = deepcopy(row)
+            for field in CURATION_FIELDS:
+                canonical.pop(field, None)
+            pool[ident] = canonical
+    return pool
+
+
+def original_signature(row: dict) -> str:
+    data = {key: row.get(key) for key in
+            ('description_hash', 'cvss_all', 'cvss', 'cpes', 'products',
+             'weaknesses', 'references', 'known_exploited', 'kev', 'vuln_status')}
+    return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def related_cve(row: dict) -> dict:
+    return {**{key: deepcopy(row.get(key)) for key in
+               ('id', 'url', 'published_at', 'cvss', 'cvss_all', 'references',
+                'known_exploited', 'kev', 'products')},
+            'cvss_score': (row.get('cvss') or {}).get('score')}
+
+
+def refresh_selected_cves(day: dict) -> None:
+    """Drop rejected IDs and update originals, keeping Gemini judgments separate."""
+    pool = candidate_pool(day)
+    refreshed = {}
+    for ident, previous in day.get('cves', {}).items():
+        canonical = pool.get(ident)
+        if not canonical or canonical.get('rejected'):
+            continue
+        row = deepcopy(canonical)
+        curation = deepcopy(previous.get('curation', {}))
+        previous_related = previous.get('related_ids', curation.get('related_ids', []))
+        related = [rid for rid in previous_related if rid in pool and rid != ident
+                   and not pool[rid].get('rejected')]
+        old_related = {item['id']: item for item in previous.get('related_cves', [])}
+        if curation and (original_signature(previous) != original_signature(canonical)
+                or related != previous_related
+                or any(old_related.get(rid) != related_cve(pool[rid]) for rid in related)):
+            curation['stale'] = True
+        if curation:
+            curation['related_ids'] = related
+            row['curation'] = curation
+        row['related_ids'] = related
+        row['related_cves'] = [related_cve(pool[rid]) for rid in related]
+        refreshed[ident] = row
+    day['cves'] = refreshed
+
+
+def apply_cve_selection(day: dict, picks: list[dict], now: datetime, model: str) -> None:
+    """Commit a fully validated maximum of twenty Gemini-selected representatives."""
+    pool = candidate_pool(day)
+    if not isinstance(picks, list) or len(picks) > 20:
+        raise GeminiResponseValidationError('CVE 대표 선정은 최대 20건입니다')
+    selected, used = {}, set()
+    try:
+        for rank, pick in enumerate(picks, 1):
+            ident = pick['id']
+            related = pick['related_ids']
+            scores, reason = pick['scores'], pick['reason_ko'].strip()
+            if (not isinstance(ident, str) or not CVE_ID.fullmatch(ident)
+                    or ident not in pool or pool[ident].get('rejected')
+                    or pool[ident].get('id') != ident
+                    or ident in used):
+                raise GeminiResponseValidationError('CVE 대표 선정 ID가 유효하지 않습니다')
+            if (not isinstance(related, list) or len(related) > max(0, len(pool) - 1)
+                    or any(not isinstance(rid, str) or rid not in pool or rid == ident
+                           or pool[rid].get('id') != rid or pool[rid].get('rejected')
+                           for rid in related)
+                    or len(set(related)) != len(related) or set(related) & used):
+                raise GeminiResponseValidationError('CVE 관련 ID가 유효하지 않습니다')
+            if (not isinstance(scores, dict) or set(scores) != CURATION_SCORE_KEYS
+                    or any(isinstance(score, bool) or not isinstance(score, int)
+                           or not 0 <= score <= 5
+                           for score in scores.values())
+                    or not reason or len(reason) > 500 or not re.search(r'[가-힣]', reason)):
+                raise GeminiResponseValidationError('CVE 중요도 또는 선정 이유가 유효하지 않습니다')
+            used.update([ident, *related])
+            row = deepcopy(pool[ident])
+            row['curation'] = {'scores': deepcopy(scores), 'reason_ko': reason,
+                               'rank': rank, 'model': model, 'at': now.isoformat(),
+                               'related_ids': list(related)}
+            row['related_ids'] = list(related)
+            row['related_cves'] = [related_cve(pool[rid]) for rid in related]
+            selected[ident] = row
+    except (KeyError, TypeError, AttributeError):
+        raise GeminiResponseValidationError('CVE 대표 선정 응답 형식 불일치') from None
+    day['cves'] = selected
+    day.setdefault('cve_meta', {}).update(count=len(selected), candidate_count=len(pool))
+
+
 def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, checkpoint: Callable):
-    """Only translate descriptions. No AI relevance filtering or score generation."""
-    by_day = {**state['days'], today['date']: today}
-    pending = [(key, row) for key, day in by_day.items() for row in day.get('cves', {}).values()
+    """Translate today's selected originals; never process the private/archive backlog."""
+    pending = [row for row in today.get('cves', {}).values()
                if not row.get('summary_ko') and row.get('description')]
-    pending.sort(key=lambda x: (x[0] == today['date'], x[0],
-                 x[1]['cvss']['score'] if x[1]['cvss'] else -1, x[1]['published_at']), reverse=True)
+    pending.sort(key=lambda row: (row.get('curation', {}).get('rank', 999),
+                                 row['published_at']))
     batch_size = max(1, min(20, int(cfg.get('cve_summary_batch_size', 12))))
     max_calls = max(0, int(cfg.get('cve_summary_max_calls_per_run', 12)))
     starting_calls = client.calls
@@ -291,7 +493,7 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
         if client.remaining < 3 or client.calls - starting_calls + 3 > max_calls:
             break
         batch = pending[offset:offset + batch_size]
-        expected_ids = {row['id'] for _, row in batch}
+        expected_ids = {row['id'] for row in batch}
         try:
             print(f'[CVE 요약] {len(batch)}건 · 완료 {translated}/{len(pending)}', flush=True)
             response = client.request(
@@ -299,15 +501,18 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
                 '제공된 설명에 있는 사실만 쓰고, 없는 버전·패치·공격 발생·CVSS 점수는 만들지 마라. '
                 '공격 실행 절차나 페이로드를 추가하지 마라. 입력마다 id와 summary_ko를 반환하라. '
                 'CVE ID를 그대로 복사하고 어떤 항목도 생략하지 마라.',
-                {'cves': [{'id': row['id'], 'description': row['description'][:3000]} for _, row in batch]},
+                {'cves': [{'id': row['id'], 'description': row['description'][:3000]} for row in batch]},
                 summary_schema(expected_ids), client.summary_model,
                 validator=lambda result: validate_summaries(result, expected_ids))
             # Injected/offline clients may not implement request's validation hook.
             validate_summaries(response, expected_ids)
             answers = response['cves']
             summaries = {a['id']: a['summary_ko'].strip() for a in answers}
-            for _, row in batch:
+            for row in batch:
                 row['summary_ko'], row['summary_model'] = summaries[row['id']], client.summary_model
+                canonical = today.get('cve_candidates', {}).get(row['id'])
+                if canonical and canonical.get('description_hash') == row.get('description_hash'):
+                    canonical['summary_ko'], canonical['summary_model'] = row['summary_ko'], row['summary_model']
                 translated += 1
             checkpoint()
         except GeminiAuthenticationError:
@@ -315,5 +520,5 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
         except (GeminiError, KeyError, TypeError, ValueError) as exc:
             error = str(exc) if isinstance(exc, GeminiError) else f'CVE 요약 응답 오류: {type(exc).__name__}'
             break
-    total_pending = sum(not row.get('summary_ko') for day in by_day.values() for row in day.get('cves', {}).values())
+    total_pending = sum(not row.get('summary_ko') for row in today.get('cves', {}).values())
     return {'translated': translated, 'pending': total_pending, 'error': error}

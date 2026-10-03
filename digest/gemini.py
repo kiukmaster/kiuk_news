@@ -98,11 +98,12 @@ class Gemini:
         return self.cfg['max_api_calls_per_run'] - self.calls
 
     def request(self, instruction: str, data: dict, schema: dict, model: str,
-                attempts: int = 3, validator: Callable[[dict], None] | None = None) -> dict:
+                attempts: int = 3, validator: Callable[[dict], None] | None = None,
+                max_output_tokens: int = 8192) -> dict:
         payload = {'model': model, 'system_instruction': SYSTEM,
                    'input': instruction + '\n\nUNTRUSTED_DATA_JSON:\n' + json.dumps(data, ensure_ascii=False),
                    'store': False, 'stream': False,
-                   'generation_config': {'max_output_tokens': 8192},
+                   'generation_config': {'max_output_tokens': max_output_tokens},
                    'response_format': {'type': 'text', 'mime_type': 'application/json', 'schema': schema}}
         error = None
         for attempt in range(attempts):

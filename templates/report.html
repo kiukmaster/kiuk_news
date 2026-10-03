@@ -6,7 +6,12 @@
   <section class="report-intro">
     <div class="intro-meta"><span class="digest-badge"><svg class="icon small"><use href="#i-ai"/></svg>GEMINI INTELLIGENCE DIGEST</span><span class="small-text"><svg class="icon small"><use href="#i-clock"/></svg>갱신 {{ day.updated_at|kst('%H:%M') }} KST</span></div>
     <h1>{{ day.date_label }}<br class="narrow-break"> 데일리 리포트</h1>
-    <p class="intro-description">국내외 AI·보안·신기술과 국내 대회·행사를 한국어로 정리합니다.<br>하루 세 번, 같은 보고서에 새로운 이슈를 더합니다.</p>
+    <p class="intro-description">국내외 AI·보안·신기술과 국내 대회·행사를 한국어로 정리합니다.<br>하루 세 번, 같은 보고서의 핵심 이슈를 갱신합니다.</p>
+    {% if day.news_curation.status in ['fresh', 'stale'] %}
+    <p class="section-description">Gemini가 중복 보도를 정리하고 <strong>사회적 파급력·화제성·이슈성</strong>을 함께 고려해 분야마다 하루 최대 {{ day.news_curation.limit }}건을 중요도순으로 선정합니다. 새 이슈에 따라 선정 목록이 바뀔 수 있습니다.</p>
+    {% if day.news_curation.status == 'stale' %}<p class="inline-warning">기사 재선정에 실패하여 {{ day.news_curation.at|kst }} KST의 선정 결과를 유지합니다.</p>{% endif %}
+    {% elif day.news_curation.status == 'unavailable' %}<p class="inline-warning">분야별 기사 선정을 아직 완료하지 못했습니다.</p>
+    {% else %}<p class="section-description">이 보고서는 분야별 하루 최대 20건 선별 정책을 적용하기 전에 생성된 기록입니다.</p>{% endif %}
     {{ cycles(day, slots) }}
     <div class="intro-stats"><span><strong>{{ day.count }}</strong>개 이슈</span><span><strong>{{ day.hot_cards|length }}</strong>개 HOT</span><span>CVE <strong>{{ day.cve_count }}</strong>건</span><span>요약 보류 <strong>{{ day.pending_count }}</strong>건</span></div>
   </section>
@@ -38,7 +43,7 @@
     {% for key, name in categories.items() %}
     <section class="issue-section" id="sec-{{ key }}" data-section>
       <div class="section-heading"><h2><span class="section-marker {{ key }}-marker"></span><svg class="icon"><use href="#i-{{ icons[key] }}"/></svg>{{ name }} <span class="heading-count">{{ day.counts[key] }}</span></h2><span class="section-kicker">{{ kickers[key] }}</span></div>
-      {% if key == 'github' %}<p class="section-description">GitHub Trending에 표시된 <strong>stars today</strong> 내림차순입니다. 전체 GitHub의 전수 순위나 한국시간 00시 기준 증가량은 아닙니다.</p>{% endif %}
+      {% if key == 'github' %}<p class="section-description">{% if day.news_curation.status in ['fresh', 'stale'] %}Gemini가 고른 저장소를 중요도순으로 표시합니다. {% else %}GitHub Trending에 표시된 <strong>stars today</strong> 내림차순입니다. {% endif %}일일 스타 수는 GitHub의 표시값이며, 전체 GitHub의 전수 순위나 한국시간 00시 기준 증가량은 아닙니다.</p>{% endif %}
       {% if day.sections[key] %}<div class="report-grid">{% for a in day.sections[key] %}{{ article_card(a) }}{% endfor %}</div>
       {% else %}<div class="section-empty">아직 수집·요약이 완료된 이슈가 없습니다.</div>{% endif %}
       <p class="search-empty" hidden>이 분야에서 검색어와 일치하는 이슈가 없습니다.</p>

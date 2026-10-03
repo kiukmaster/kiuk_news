@@ -10,10 +10,11 @@ from bs4 import BeautifulSoup
 
 from digest.common import KST, load_config
 from digest.cves import (NvdClient, NvdError, ENDPOINT, collect_cves, cvss_metrics,
-                        merge_cves, normalize_cve, query_window, translate_cves, utc_parameter)
+                        apply_cve_selection, merge_cves, normalize_cve, query_window,
+                        translate_cves, utc_parameter)
 from digest.pipeline import empty_state, new_day, run_pipeline, load_state, prune
 from digest.render import render_site, render_context
-from digest.gemini import Gemini, GeminiError
+from digest.gemini import Gemini, GeminiError, GeminiResponseValidationError
 
 NOW = datetime(2026, 9, 22, 13, 0, tzinfo=KST)
 
@@ -40,6 +41,13 @@ def status(state='ok'):
             'start': start.isoformat(), 'end': end.isoformat()}
 
 
+def pick(index, related=()):
+    return {'id': f'CVE-2026-{index:05}',
+            'scores': {'social_impact': 4, 'attention': 3, 'issue_relevance': 5},
+            'reason_ko': '공개된 영향과 악용 근거를 비교해 선정한 테스트 항목입니다.',
+            'related_ids': [f'CVE-2026-{other:05}' for other in related]}
+
+
 class FakeSummary:
     summary_model = hot_model = 'offline-test-model'
     tokens = 0
@@ -48,13 +56,21 @@ class FakeSummary:
     @property
     def remaining(self):
         return self.budget - self.calls
-    def request(self, instruction, data, schema, model, validator=None):
+    def request(self, instruction, data, schema, model, validator=None, **kwargs):
         self.calls += 1
         self.inputs.append(deepcopy(data))
         if self.broken:
             raise GeminiError('검증용 실패')
-        result = {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.'}
-                           for row in data['cves']]}
+        if 'candidates' in data:
+            limit = schema['properties']['picks']['maxItems']
+            result = {'picks': [{'id': row['id'],
+                                'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
+                                'reason_ko': '테스트용 선정 이유입니다.', 'related_ids': []}
+                               for row in data['candidates'][:limit]],
+                      'shortfall_reason_ko': ''}
+        else:
+            result = {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.'}
+                               for row in data['cves']]}
         if validator:
             validator(result)
         return result
@@ -174,7 +190,8 @@ def test_older_backfill_stays_on_its_publication_day():
     old = normalize_cve(raw(published='2026-09-21T12:30:00Z'), NOW)
     merge_cves(state, day, [old], status(), NOW, new_day)
     assert not day['cves']
-    assert old['id'] in state['days']['2026-09-21']['cves']
+    assert old['id'] in state['days']['2026-09-21']['cve_candidates']
+    assert not state['days']['2026-09-21']['cves']
 
 
 def test_reuse_translation_on_score_change_only():
@@ -199,22 +216,26 @@ def test_rejection_removes_cached_card():
 def test_failed_refresh_preserves_data_and_success_time():
     state, day = empty_state(), new_day('2026-09-22')
     merge_cves(state, day, [normalize_cve(raw(), NOW)], status(), NOW, new_day)
+    apply_cve_selection(day, [pick(1)], NOW, 'offline-curator')
     successful = day['cve_meta']['last_success_at']
     merge_cves(state, day, [], status('error'), NOW + timedelta(hours=6), new_day)
     assert day['cves'] and day['cve_meta']['last_success_at'] == successful
     assert day['cve_meta']['status'] == 'error'
 
 
-def test_translation_never_receives_scores_and_retains_all_rows():
+def test_translation_only_selected_and_caches_in_private_pool():
     state, day, client = empty_state(), new_day('2026-09-22'), FakeSummary()
     for i in range(30):
-        row = normalize_cve(raw(i), NOW); day['cves'][row['id']] = row
+        row = normalize_cve(raw(i), NOW); day.setdefault('cve_candidates', {})[row['id']] = row
+    apply_cve_selection(day, [pick(i) for i in range(20)], NOW, 'offline-curator')
     cfg = load_config(); cfg['cve_summary_max_calls_per_run'] = 3
     check = Mock()
     result = translate_cves(state, day, NOW, cfg, client, check)
-    assert result['translated'] == 12 and result['pending'] == 18
-    assert len(day['cves']) == 30 and check.call_count == 1
+    assert result['translated'] == 12 and result['pending'] == 8
+    assert len(day['cves']) == 20 and len(day['cve_candidates']) == 30 and check.call_count == 1
     assert all(set(x) == {'id','description'} for x in client.inputs[0]['cves'])
+    assert sum(bool(row['summary_ko']) for row in day['cve_candidates'].values()) == 12
+    assert not day['cve_candidates'][pick(29)['id']]['summary_ko']
 
 
 def test_translation_failure_does_not_remove_cves():
@@ -224,15 +245,17 @@ def test_translation_failure_does_not_remove_cves():
     assert result['error'] and result['pending'] == 1 and len(day['cves']) == 1
 
 
-def test_today_translations_before_backfill():
+def test_archive_backlog_never_translated_or_counted_as_pending():
     state, day, client = empty_state(), new_day('2026-09-22'), FakeSummary()
     yesterday = new_day('2026-09-21')
     yesterday['cves']['older'] = normalize_cve(raw(2, published='2026-09-21T01:00:00Z', score=10), NOW)
     state['days']['2026-09-21'] = yesterday
     row = normalize_cve(raw(1, score=1), NOW); day['cves'][row['id']] = row
     cfg = load_config(); cfg['cve_summary_batch_size'] = 1; cfg['cve_summary_max_calls_per_run'] = 3
-    translate_cves(state, day, NOW, cfg, client, Mock())
+    result = translate_cves(state, day, NOW, cfg, client, Mock())
     assert client.inputs[0]['cves'][0]['id'] == row['id']
+    assert result['pending'] == 0
+    assert not yesterday['cves']['older']['summary_ko']
 
 
 def test_summary_id_invention_rejected_atomically():
@@ -327,6 +350,135 @@ def test_five_day_retention_prunes_cve_days():
         state['days'][date] = new_day(date)
     prune(state, NOW, 5)
     assert len(state['days']) == 5 and min(state['days']) == '2026-09-18'
+
+
+def test_product_weakness_reference_and_confirmed_kev_evidence():
+    affected = 'cpe:2.3:a:example:library:1.0:*:*:*:*:*:*:*'
+    platform = 'cpe:2.3:o:example:platform:*:*:*:*:*:*:*:*'
+    row = normalize_cve(raw(
+        configurations=[{'nodes': [{'cpeMatch': [
+            {'vulnerable': True, 'criteria': affected, 'versionEndExcluding': '1.1'},
+            {'vulnerable': False, 'criteria': platform}]}]}],
+        weaknesses=[{'description': [{'lang': 'en', 'value': 'CWE-79'},
+                                    {'lang': 'fr', 'value': 'CWE-79'},
+                                    {'value': 'NVD-CWE-noinfo'}]}],
+        references=[{'url': 'https://example.invalid/advisory', 'source': 'vendor',
+                     'tags': ['Vendor Advisory']},
+                    {'url': 'javascript:alert(1)'},
+                    {'url': 'https://user:password@example.invalid/private'}],
+        cisaExploitAdd='2026-09-22', cisaRequiredAction='Apply the vendor update.',
+        cisaVulnerabilityName='Example library issue'), NOW)
+    assert row['cpes'] == [affected]
+    assert row['products'][0]['vendor'] == 'example'
+    assert row['products'][0]['product'] == 'library'
+    assert row['products'][0]['versionEndExcluding'] == '1.1'
+    assert row['weaknesses'] == ['CWE-79']
+    assert row['references'] == [{'url': 'https://example.invalid/advisory',
+                                 'source': 'vendor', 'tags': ['Vendor Advisory']}]
+    assert row['known_exploited'] is True
+    assert row['kev']['added_at'] == '2026-09-22'
+
+
+@pytest.mark.parametrize('added', [None, '', 'not-a-date', '2026-02-30'])
+def test_missing_or_invalid_kev_is_unknown_not_false(added):
+    row = normalize_cve(raw(cisaExploitAdd=added, configurations=None,
+                            weaknesses=[{'description': None}], references=None), NOW)
+    assert row['known_exploited'] is None and row['kev'] is None
+    assert row['products'] == [] and row['cpes'] == []
+
+
+def test_raw_pool_is_separate_and_selected_card_is_canonical():
+    state, day = empty_state(), new_day('2026-09-22')
+    rows = [normalize_cve(raw(i), NOW) for i in range(1, 31)]
+    merge_cves(state, day, rows, status(), NOW, new_day)
+    assert not day['cves'] and len(day['cve_candidates']) == 30
+    apply_cve_selection(day, [pick(1, related=[2, 3]), pick(4)], NOW, 'gemini-test')
+    card = day['cves'][pick(1)['id']]
+    assert len(day['cves']) == 2 and card['curation']['rank'] == 1
+    assert card['cvss']['score'] == 7.5
+    assert card['curation']['scores']['social_impact'] == 4
+    assert [r['id'] for r in card['related_cves']] == pick(1, [2, 3])['related_ids']
+    assert all(r['cvss_score'] == 7.5 and r['url'].endswith(r['id']) for r in card['related_cves'])
+    assert all('description' not in r for r in card['related_cves'])
+    assert 'curation' not in day['cve_candidates'][card['id']]
+    card['cvss']['score'] = 1
+    assert day['cve_candidates'][card['id']]['cvss']['score'] == 7.5
+
+
+def test_large_duplicate_group_keeps_all_canonical_links_with_twenty_representatives():
+    state, day = empty_state(), new_day('2026-09-22')
+    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 172)],
+               status(), NOW, new_day)
+    picks = [pick(1, range(2, 152)), *[pick(i) for i in range(152, 171)]]
+    apply_cve_selection(day, picks, NOW, 'curator')
+    card = day['cves'][pick(1)['id']]
+    assert len(day['cves']) == 20
+    assert len(card['related_ids']) == len(card['related_cves']) == 150
+    assert card['related_ids'] == pick(1, range(2, 152))['related_ids']
+    assert all(row['url'].endswith(row['id']) for row in card['related_cves'])
+    assert len(day['cve_candidates']) == 171
+
+
+def test_legacy_migration_and_reselection_reuse_original_summary():
+    state, day = empty_state(), new_day('2026-09-22')
+    row = normalize_cve(raw(), NOW)
+    row['summary_ko'] = '기존 원문에 대한 캐시된 요약입니다.'
+    row['summary_model'] = 'cached-model'
+    day['cves'][row['id']] = row
+    merge_cves(state, day, [], status('error'), NOW, new_day)
+    apply_cve_selection(day, [pick(1)], NOW, 'curation-model')
+    assert day['cve_candidates'][row['id']]['summary_ko'] == row['summary_ko']
+    assert day['cves'][row['id']]['summary_model'] == 'cached-model'
+    assert day['cves'][row['id']]['curation']['model'] == 'curation-model'
+
+
+def test_related_cve_updates_keep_own_cvss_and_rejections_drop_links():
+    state, day = empty_state(), new_day('2026-09-22')
+    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in (1, 2)], status(), NOW, new_day)
+    apply_cve_selection(day, [pick(1, [2])], NOW, 'curator')
+    merge_cves(state, day, [normalize_cve(raw(2, score=9.1), NOW)], status(), NOW, new_day)
+    card = day['cves'][pick(1)['id']]
+    assert card['cvss']['score'] == 7.5
+    assert card['related_cves'][0]['cvss_score'] == 9.1
+    assert card['curation']['stale'] is True
+    merge_cves(state, day, [normalize_cve(raw(2, vulnStatus='Rejected'), NOW)], status(), NOW, new_day)
+    card = day['cves'][pick(1)['id']]
+    assert card['related_ids'] == card['curation']['related_ids'] == []
+    assert card['related_cves'] == []
+    assert pick(2)['id'] not in day['cve_candidates']
+
+
+def test_selected_description_change_invalidates_summary_but_score_change_does_not():
+    state, day = empty_state(), new_day('2026-09-22')
+    original = normalize_cve(raw(), NOW)
+    original['summary_ko'] = '캐시된 한국어 요약입니다.'
+    merge_cves(state, day, [original], status(), NOW, new_day)
+    apply_cve_selection(day, [pick(1)], NOW, 'curator')
+    merge_cves(state, day, [normalize_cve(raw(score=9.5), NOW)], status(), NOW, new_day)
+    assert day['cves'][original['id']]['summary_ko'] == original['summary_ko']
+    assert day['cves'][original['id']]['curation']['stale'] is True
+    changed = raw(); changed['descriptions'][0]['value'] += ' New evidence.'
+    merge_cves(state, day, [normalize_cve(changed, NOW)], status(), NOW, new_day)
+    assert day['cves'][original['id']]['summary_ko'] == ''
+    assert day['cve_candidates'][original['id']]['summary_ko'] == ''
+
+
+@pytest.mark.parametrize('bad_picks', [
+    [pick(i) for i in range(1, 22)],
+    [pick(99)], [pick(1), pick(1)], [pick(1, [2, 2])],
+    [pick(1, [2]), pick(2)], [pick(1), pick(2, [1])],
+    [{**pick(1), 'scores': {'social_impact': True, 'attention': 3, 'issue_relevance': 4}}],
+    [{**pick(1), 'scores': {'social_impact': float('nan'), 'attention': 3, 'issue_relevance': 4}}],
+    [{**pick(1), 'reason_ko': 'English only'}],
+])
+def test_invalid_selection_is_atomic(bad_picks):
+    state, day = empty_state(), new_day('2026-09-22')
+    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 22)], status(), NOW, new_day)
+    apply_cve_selection(day, [pick(3)], NOW, 'curator')
+    previous = deepcopy(day['cves'])
+    with pytest.raises(GeminiResponseValidationError):
+        apply_cve_selection(day, bad_picks, NOW, 'curator')
+    assert day['cves'] == previous
 
 
 def response(payload=None, status_code=200):

@@ -1,7 +1,12 @@
 <section class="issue-section cve-section" id="sec-cve" data-section>
   <div class="section-heading"><h2><span class="section-marker security-marker"></span><svg class="icon"><use href="#i-shield"/></svg>당일 공개 CVE <span class="heading-count">{{ day.cve_count }}</span></h2><span class="section-kicker">NVD · CVSS</span></div>
-  <p class="section-description"><strong>{{ day.date_label }} 한국시간 00:00부터 {% if day.is_today %}수집 시각까지{% else %}23:59까지{% endif %}</strong> NVD에 공개된 CVE입니다. 발견일·예약일·수정일 또는 CVE Program 최초 공개일과는 다를 수 있습니다. NVD 반영 지연으로 아직 포함되지 않은 CVE가 있을 수 있습니다.</p>
-  <p class="section-description">대표 CVSS 기본 점수 내림차순 · 점수 미제공 {{ day.cve_unscored }}건 · 한국어 요약 대기 {{ day.cve_pending }}건. 점수는 Gemini가 생성하지 않으며, CVSS 버전이 다른 점수의 단순 비교는 제한적입니다.</p>
+  <p class="section-description"><strong>{{ day.date_label }} 한국시간 00:00부터 {% if day.is_today %}수집 시각까지{% else %}23:59까지{% endif %}</strong> NVD에 공개된 CVE{% if day.cve_curation.status in ['fresh', 'stale'] %} 중 Gemini가 선정한 대표 항목{% endif %}입니다. 발견일·예약일·수정일 또는 CVE Program 최초 공개일과는 다를 수 있습니다. NVD 반영 지연으로 아직 포함되지 않은 CVE가 있을 수 있습니다.</p>
+  {% if day.cve_curation.status in ['fresh', 'stale'] %}
+  <p class="section-description">같은 라이브러리·제품의 비슷한 문제를 묶어 <strong>하루 최대 {{ day.cve_curation.limit }}건</strong>을 선정합니다. 사회적 파급력·화제성·이슈성을 함께 고려한 Gemini 중요도순이며, 묶인 CVE는 대표 항목에서 확인할 수 있습니다.</p>
+  {% if day.cve_curation.status == 'stale' %}<p class="inline-warning">CVE 재선정에 실패하여 {{ day.cve_curation.at|kst }} KST의 선정 결과를 유지합니다.</p>{% endif %}
+  {% elif day.cve_curation.status == 'unavailable' %}<p class="inline-warning">CVE 선정을 아직 완료하지 못했습니다.</p>
+  {% else %}<p class="section-description">이 CVE 목록은 하루 최대 20건 선별 정책을 적용하기 전의 기록이며, 대표 CVSS 기본 점수 내림차순입니다.</p>{% endif %}
+  <p class="section-description">점수 미제공 {{ day.cve_unscored }}건 · 한국어 요약 대기 {{ day.cve_pending }}건. CVSS는 제공기관의 취약점 심각도 점수로, Gemini의 중요도 평가와 별개입니다. CVSS 버전이 다른 점수의 단순 비교는 제한적입니다.</p>
   {% if day.cve_meta.status in ['error', 'partial'] %}<p class="inline-warning">이번 NVD 갱신은 {{ '실패' if day.cve_meta.status == 'error' else '일부 완료' }}했습니다. 기존 수집 결과를 유지합니다. 마지막 전체 조회: {{ day.cve_meta.last_success_at|kst }} KST. {{ day.cve_meta.message }}</p>
   {% elif day.cve_meta.at %}<p class="small-text">NVD 조회 {{ day.cve_meta.at|kst }} KST · 최근 보관 기간을 재조회해 늦게 반영된 항목과 점수 변경도 갱신합니다.</p>{% endif %}
   {% if day.cve_cards %}
@@ -14,11 +19,19 @@
           {% if c.cvss %}<span class="cve-score severity-{{ c.cvss.severity|lower }}">CVSS {{ '%.1f'|format(c.cvss.score) }}<small>v{{ c.cvss.version }} · {{ c.cvss.severity }}</small></span>{% else %}<span class="cve-score severity-unknown">점수 미제공<small>0점이라는 뜻이 아닙니다</small></span>{% endif %}
         </div>
         {% if c.summary_ko %}<p class="issue-summary">{{ c.summary_ko }}</p>{% else %}<p class="small-text">번역 대기 중 · API 원문 설명</p><p class="issue-summary" lang="{{ c.description_language }}">{{ c.description[:500] }}{{ '…' if c.description|length > 500 else '' }}{% if not c.description %}원문 설명 미제공{% endif %}</p>{% endif %}
+        {% if c.curation %}
+        <p class="pick-reason"><span>Gemini 선정 이유 · {{ c.curation.rank }}위</span>{{ c.curation.reason_ko }}</p>
+        {% if c.curation.scores %}<p class="small-text">사회적 파급력 {{ c.curation.scores.social_impact }}/5 · 화제성 {{ c.curation.scores.attention }}/5 · 이슈성 {{ c.curation.scores.issue_relevance }}/5</p>{% endif %}
+        {% endif %}
         {% if c.cvss %}<p class="small-text cve-provider">점수 제공: {{ c.cvss.source }}{% if c.cvss.type %} · {{ c.cvss.type }}{% endif %}</p>{% endif %}
         <details class="cve-details"><summary>평가 근거 · 다른 CVSS 보기</summary>
           <p class="small-text">NVD 처리 상태: {{ c.vuln_status or '미제공' }}<br>정보 수정: {{ c.last_modified_at|kst }} KST<br>데이터 확인: {{ c.observed_at|kst }} KST</p>
           {% for m in c.cvss_all %}<div class="cve-metric"><strong>CVSS v{{ m.version }} · {{ '%.1f'|format(m.score) }} · {{ m.severity }}</strong><p>{{ m.source }} · {{ m.type }}</p>{% if m.vector %}<code>{{ m.vector }}</code>{% endif %}</div>{% endfor %}
           {% if not c.cvss_all %}<p>API에서 유효한 CVSS 점수가 제공되지 않았습니다. 추정 점수를 붙이지 않습니다.</p>{% endif %}
+          {% if c.related_cves %}
+          <p><strong>함께 묶인 관련 CVE {{ c.related_cves|length }}건</strong></p>
+          <ul>{% for related in c.related_cves %}<li><a href="{{ related.url }}" target="_blank" rel="noopener noreferrer">{{ related.id }}</a>{% if related.cvss_score is not none %} · 제공기관 CVSS {{ '%.1f'|format(related.cvss_score) }}{% else %} · 점수 미제공{% endif %}</li>{% endfor %}</ul>
+          {% endif %}
           <p class="small-text">대표 점수 선택: v4.0 → v3.1 → v3.0 → v2.0. 같은 버전에서는 Primary 우선, 같은 유형이면 NVD 우선. 제공기관별 점수는 다를 수 있습니다. CVSS는 실제 악용 여부를 뜻하지 않습니다.</p>
         </details>
       </div>

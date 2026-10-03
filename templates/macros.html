@@ -31,6 +31,10 @@
     <h3 class="issue-title"><a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.title_ko }}</a></h3>
     <p class="issue-summary">{{ a.summary_ko }}</p>
     {% if hot %}<p class="pick-reason"><span>선정 이유</span>{{ a.reason_ko }}</p>{% endif %}
+    {% if not hot and a.curation %}
+    <p class="pick-reason"><span>Gemini 선정 이유 · 분야 {{ a.curation.rank }}위</span>{{ a.curation.reason_ko }}</p>
+    {% if a.curation.scores %}<p class="small-text">사회적 파급력 {{ a.curation.scores.social_impact }}/5 · 화제성 {{ a.curation.scores.attention }}/5 · 이슈성 {{ a.curation.scores.issue_relevance }}/5</p>{% endif %}
+    {% endif %}
     {% if a.kind == 'github' %}<div class="repo-stats">
       {% if a.programming_language %}<span>{{ a.programming_language }}</span>{% endif %}
       {% if a.total_stars is not none %}<span>총 ★ {{ '{:,}'.format(a.total_stars) }}</span>{% endif %}

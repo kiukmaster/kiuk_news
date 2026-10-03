@@ -40,6 +40,23 @@ class FakeGemini:
     def remaining(self):
         return self.budget - self.calls
 
+    def request(self, instruction, data, schema, model, validator=None, **kwargs):
+        self.calls += 1
+        picks, counts = [], {}
+        for row in data['candidates']:
+            category = {'github': 'github', 'event': 'event', 'paper': 'tech'}.get(
+                row.get('kind'), row.get('category_hint') or 'ai')
+            if counts.get(category, 0) >= 20:
+                continue
+            counts[category] = counts.get(category, 0) + 1
+            picks.append({'id': row['id'], 'category': category,
+                          'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
+                          'reason_ko': '자동 테스트용 선정 결과입니다.', 'related_ids': []})
+        result = {'picks': picks, 'shortfall_reason_ko': '테스트 후보만 선정했습니다.'}
+        if validator:
+            validator(result)
+        return result
+
     def summarize(self, items):
         self.calls += 1
         if self.fail_summary:
@@ -217,7 +234,7 @@ def test_summary_failure_keeps_pending(tmp_path):
     state = empty_state()
     run(state, tmp_path, [article(1)], client=FakeGemini(fail_summary=True))
     assert len(state['pending']) == 1
-    assert not state['seen'] and not state['days']
+    assert not state['seen'] and not state['days'][NOW.date().isoformat()]['articles']
     assert state['last_run']['warnings']
 
 
@@ -374,8 +391,9 @@ def test_failed_duplicate_summary_not_silently_lost(tmp_path):
     second['title_original'] = first['title_original']
     state = empty_state()
     run(state, tmp_path, [first, second], client=FakeGemini(fail_summary=True))
-    assert len(state['pending']) == 2
-    assert not state['seen']
+    assert set(state['pending']) == {first['id']}
+    assert first['id'] not in state['seen']
+    assert state['seen'][second['id']]['excluded_duplicate'] is True
     run(state, tmp_path, [first, second], now=NOW+timedelta(hours=1))
     assert len(state['days'][NOW.date().isoformat()]['articles']) == 1
     assert not state['pending']

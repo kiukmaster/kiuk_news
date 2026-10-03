@@ -225,22 +225,31 @@ class Gemini:
             '충분하면 반드시 지정 개수를 반환하고 부족 이유는 빈 문자열로 쓴다. 후보 밖 ID는 금지한다.'
         )
         data = {'candidates': candidates}
+
+        def validate_hot(result: dict) -> None:
+            ids = [pick['id'] for pick in result['picks']]
+            if len(ids) != len(set(ids)) or not set(ids).issubset({a['id'] for a in articles}):
+                raise GeminiResponseValidationError('HOT 결과의 기사 ID가 유효하지 않습니다')
+            if not ids or (len(ids) < count and not result['shortfall_reason_ko'].strip()):
+                raise GeminiResponseValidationError('HOT 선정 개수 또는 부족 사유가 유효하지 않습니다')
+            if any(not pick['reason_ko'].strip() or len(pick['reason_ko']) > 200
+                   for pick in result['picks']):
+                raise GeminiResponseValidationError('HOT 선정 이유가 유효하지 않습니다')
+
         try:
-            result = self.request(instruction, data, schema, preferred_model, attempts=1)
+            result = self.request(instruction, data, schema, preferred_model,
+                                  attempts=1, validator=validate_hot)
             model_used = preferred_model
-        except GeminiHTTPError as exc:
-            if exc.status_code not in TRANSIENT_HTTP_STATUSES or fallback_model == preferred_model:
+        except (GeminiHTTPError, GeminiResponseValidationError) as exc:
+            if isinstance(exc, GeminiHTTPError) and (
+                    exc.status_code not in TRANSIENT_HTTP_STATUSES or fallback_model == preferred_model):
                 raise
-            print(f'[HOT 모델 대체] {preferred_model} HTTP {exc.status_code} → {fallback_model}', flush=True)
-            result = self.request(instruction, data, schema, fallback_model, attempts=2)
+            # Keep the reserved three physical calls: one preferred response,
+            # then at most two validated responses from the fallback model.
+            reason = f'HTTP {exc.status_code}' if isinstance(exc, GeminiHTTPError) else '응답 검증 실패'
+            print(f'[HOT 모델 대체] {preferred_model} {reason} → {fallback_model}', flush=True)
+            result = self.request(instruction, data, schema, fallback_model,
+                                  attempts=2, validator=validate_hot)
             model_used = fallback_model
-        ids = [pick['id'] for pick in result['picks']]
-        if len(ids) != len(set(ids)) or not set(ids).issubset({a['id'] for a in articles}):
-            raise GeminiError('HOT 결과의 기사 ID가 유효하지 않습니다')
-        if not ids or (len(ids) < count and not result['shortfall_reason_ko'].strip()):
-            raise GeminiError('HOT 선정 개수 또는 부족 사유가 유효하지 않습니다')
-        if any(not pick['reason_ko'].strip() or len(pick['reason_ko']) > 200
-               for pick in result['picks']):
-            raise GeminiError('HOT 선정 이유가 유효하지 않습니다')
         result['model_used'] = model_used
         return result

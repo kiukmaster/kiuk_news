@@ -36,7 +36,18 @@ def fixture_state(now):
         day['hot_status'] = 'fresh'
         day['slots'] = {slot: {'at': dt.isoformat(), 'status': 'ok', 'new_count': 4} for slot in SLOTS}
         day['sources'] = [{'name': 'UI 검증 데이터 · 실제 뉴스 아님', 'status':'ok', 'message':'오프라인 시험'}]
-        for i in range(12):
+        article_count = 100 if offset == 0 else 12
+        cve_count = 20 if offset == 0 else (45 if offset == 4 else 3)
+        curated = offset != 4
+        if curated:
+            for field, selected_count in (('news_curation', article_count), ('cve_curation', cve_count)):
+                day[field] = {'status': 'fresh', 'model': 'offline-ui-test', 'at': dt.isoformat(),
+                              'limit': 20, 'candidate_count': selected_count + 30,
+                              'selected_count': selected_count}
+        else:
+            day.pop('news_curation', None)
+            day.pop('cve_curation', None)
+        for i in range(article_count):
             category = ['ai', 'security', 'tech', 'event', 'github'][i % 5]
             key = f'test-{date}-{i}'
             a = {'id':key, 'url':'https://example.invalid/ui-test', 'source':'UI 검증 · 실제 뉴스 아님',
@@ -50,9 +61,14 @@ def fixture_state(now):
                 'repo_name':'ui-test/'+'long-repository-name-'*5 if category=='github' else None,
                 'stars_today':(i+1)*123, 'total_stars':(i+1)*9876, 'programming_language':'Python',
                 'summary_model':'offline-ui-test'}
+            if curated:
+                a['curation'] = {'rank': i // 5 + 1,
+                                 'scores': {'social_impact': 4, 'attention': 3, 'issue_relevance': 5},
+                                 'reason_ko': '실제 선정이 아닌 화면 검증용 이유입니다. 파급력과 화제성, 이슈성 설명의 배치를 확인합니다.',
+                                 'related_ids': []}
             day['articles'][key] = a
         day['hot'] = [{'id':key, 'reason_ko':'실제 선정이 아닌 화면 검증용 항목입니다.'} for key in list(day['articles'])[:10]]
-        for cve_index in range(45 if offset == 0 else 3):
+        for cve_index in range(cve_count):
             raw_cve = {'id':f'CVE-2099-{90000+cve_index}', 'published':dt.isoformat(),
                        'lastModified':dt.isoformat(), 'vulnStatus':'SYNTHETIC UI TEST ONLY',
                        'descriptions':[{'lang':'en','value':'SYNTHETIC TEST DATA, NOT A REAL CVE. '+ 'Long description for a test layout. '*20}],
@@ -63,6 +79,14 @@ def fixture_state(now):
             row = normalize_cve(raw_cve, now)
             if cve_index % 2:
                 row['summary_ko'] = '실제 CVE가 아닌 화면 검증용 데이터입니다. 점수 제공기관 이름과 설명이 긴 경우에도 좁은 화면에서 잘리지 않는지 확인합니다.'
+            if curated:
+                row['curation'] = {'rank': cve_index + 1,
+                                   'scores': {'social_impact': 4, 'attention': 3, 'issue_relevance': 5},
+                                   'reason_ko': '실제 선정이 아닌 화면 검증용 이유입니다. 반복되는 제품의 대표 항목 표시를 확인합니다.',
+                                   'related_ids': ['CVE-2099-99000'] if cve_index == 0 else []}
+                row['related_cves'] = [{'id': 'CVE-2099-99000',
+                                        'url': 'https://nvd.nist.gov/vuln/detail/CVE-2099-99000',
+                                        'cvss_score': 9.1}] if cve_index == 0 else []
             day['cves'][row['id']] = row
         day['cve_meta'] = {'status':'ok','at':now.isoformat(),'last_success_at':now.isoformat(),'message':'오프라인 시험 데이터'}
         state['days'][date] = day
@@ -138,6 +162,10 @@ def main():
                             assert page.locator('#sec-hot [data-issue-card]').count() == 10
                             assert page.locator('#report-content').is_visible()
                             assert page.locator('[data-cve-card]:visible').count() == 20
+                            assert page.locator('[data-cve-card]').count() == 20
+                            assert page.locator('[data-cve-more]').is_hidden()
+                            for category in ('ai', 'security', 'tech', 'event', 'github'):
+                                assert page.locator(f'#sec-{category} [data-issue-card]').count() == 20
                             assert page.locator('#cve-grid').evaluate('e => getComputedStyle(e).gridTemplateColumns.split(" ").length') == expected
 
                         if screenshots and width in (390,768):
@@ -170,17 +198,13 @@ def main():
                 page.locator('#issue-search').fill('존재하지않는검색어123456789')
                 assert page.locator('[data-issue-card]:visible').count() == 0
                 page.locator('#issue-search').fill('')
-                assert page.locator('[data-issue-card]:visible').count() == 42
-                page.locator('[data-cve-more]').click()
-                assert page.locator('[data-cve-card]:visible').count() == 40
-                page.locator('#issue-search').fill('CVE-2099-90044')
+                assert page.locator('[data-issue-card]:visible').count() == 130
+                assert page.locator('[data-cve-more]').is_hidden()
+                page.locator('#issue-search').fill('CVE-2099-99000')
                 assert page.locator('[data-cve-card]:visible').count() == 1
                 assert page.locator('[data-cve-more]').is_hidden()
                 page.locator('#issue-search').fill('')
-                assert page.locator('[data-cve-card]:visible').count() == 40
-                page.locator('[data-cve-more]').click()
-                assert page.locator('[data-cve-card]:visible').count() == 45
-                assert page.locator('[data-cve-more]').is_hidden()
+                assert page.locator('[data-cve-card]:visible').count() == 20
                 page.locator('.cve-details summary').first.click()
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                 if screenshots:
@@ -209,8 +233,27 @@ def main():
                     no_js = browser.new_context(java_script_enabled=False)
                     no_js_page = no_js.new_page()
                     no_js_page.goto(base+f'reports/{now.date().isoformat()}.html')
-                    assert no_js_page.locator('[data-issue-card]').count() == 67
+                    assert no_js_page.locator('[data-issue-card]').count() == 130
+                    assert no_js_page.locator('[data-cve-card]').count() == 20
+                    for category in ('ai', 'security', 'tech', 'event', 'github'):
+                        assert no_js_page.locator(f'#sec-{category} [data-issue-card]').count() == 20
                     no_js.close()
+                # Older archives can retain more than 20 CVEs. Keep their
+                # pagination and hidden-card search usable without implying
+                # that these old records followed the new curation policy.
+                legacy_date = (now - timedelta(days=4)).date().isoformat()
+                load(f'reports/{legacy_date}.html')
+                assert page.locator('[data-cve-card]:visible').count() == 20
+                page.locator('[data-cve-more]').click()
+                assert page.locator('[data-cve-card]:visible').count() == 40
+                page.locator('#issue-search').fill('CVE-2099-90044')
+                assert page.locator('[data-cve-card]:visible').count() == 1
+                assert page.locator('[data-cve-more]').is_hidden()
+                page.locator('#issue-search').fill('')
+                assert page.locator('[data-cve-card]:visible').count() == 40
+                page.locator('[data-cve-more]').click()
+                assert page.locator('[data-cve-card]:visible').count() == 45
+                assert page.locator('[data-cve-more]').is_hidden()
                 assert not errors, errors
                 browser.close()
         finally:
@@ -219,7 +262,7 @@ def main():
     report = {'tested_at':now.isoformat(),'browser':'headless Chromium','physical_device_test':False, 'http_navigation_test':not args.in_memory,
               'local_storage_mocked':args.in_memory,
               'viewport_page_checks':len(results),'functional_checks':'bookmark/search/share/resize and static navigation links' if args.in_memory else 'navigation/bookmark/search/anchors/share/resize/no-JS',
-              'cve_checks':'12 viewport column/overflow checks; more20/search beyond hidden cards/details', 'page_errors':errors, 'viewports':results}
+              'cve_checks':'daily 20 per category/CVE; related CVE search; 12 viewport checks; legacy pagination and hidden-card search; details', 'page_errors':errors, 'viewports':results}
     if screenshots:
         (screenshots/'results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False,indent=2))

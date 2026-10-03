@@ -15,6 +15,14 @@ def format_time(value, pattern='%m.%d %H:%M'):
     return dt.strftime(pattern) if dt else '시각 미제공'
 
 
+def curation_order(item: dict) -> tuple[int, int]:
+    """Prioritize saved Gemini ranks while retaining legacy order as a fallback."""
+    rank = (item.get('curation') or {}).get('rank')
+    if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0:
+        return 0, rank
+    return 1, 0
+
+
 def render_context(day: dict, today: str) -> dict:
     out = deepcopy(day)
     articles = list(day['articles'].values())
@@ -22,6 +30,10 @@ def render_context(day: dict, today: str) -> dict:
                        key=lambda a: a.get('published_at') or a['collected_at'], reverse=True)
                        for c in CATEGORIES}
     out['sections']['github'].sort(key=lambda a: a.get('stars_today') or 0, reverse=True)
+    for section in out['sections'].values():
+        section.sort(key=curation_order)
+    out['news_curation'] = day.get('news_curation') or {}
+    out['cve_curation'] = day.get('cve_curation') or {}
     out['hot_cards'] = []
     for rank, pick in enumerate(day['hot'], 1):
         if pick['id'] in day['articles']:
@@ -32,6 +44,7 @@ def render_context(day: dict, today: str) -> dict:
     out['counts'] = {k: len(v) for k, v in out['sections'].items()}
     cves = list(day.get('cves', {}).values())
     out['cve_cards'] = sorted(cves, key=lambda x: ((x.get('cvss') or {}).get('score', -1), x['published_at']), reverse=True)
+    out['cve_cards'].sort(key=curation_order)
     out['cve_count'] = len(cves)
     out['cve_unscored'] = sum(x.get('cvss') is None for x in cves)
     out['cve_pending'] = sum(not x.get('summary_ko') for x in cves)

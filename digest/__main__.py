@@ -25,7 +25,7 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--build-only', action='store_true', help='API/수집 없이 현재 상태로 HTML만 생성')
     mode.add_argument('--check-sources', action='store_true', help='수집원·NVD 확인; Gemini 호출·상태 변경 없음')
-    mode.add_argument('--check-api', action='store_true', help='설정한 Gemini 모델 2개 연결 확인')
+    mode.add_argument('--check-api', action='store_true', help='설정한 Gemini 요약·선별·HOT 모델 연결 확인')
     args = parser.parse_args()
     cfg, now = load_config(), now_kst()
     if args.check_sources:
@@ -41,7 +41,7 @@ def main():
     if args.check_api:
         client = Gemini(cfg)
         schema = {'type': 'object', 'properties': {'ok': {'type': 'boolean'}}, 'required': ['ok']}
-        for model in dict.fromkeys((client.summary_model, client.hot_model)):
+        for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gemini-3.8-flash'), client.hot_model)):
             client.request('연결 시험입니다. {"ok":true}만 반환하세요.', {}, schema, model)
             print(f'{model}: 연결 확인')
         return 0
@@ -57,7 +57,8 @@ def main():
                     f'신규 {report["new_count"]}건 · 보류 {report["pending_count"]}건 · '
                     f'Gemini 요청 {report["api_calls"]}회 · API 보고 토큰 {report["api_tokens"]}\n\n'
                     f'당일 NVD 공개 CVE {report.get("cve_count", 0)}건 · CVE 번역 대기 '
-                    f'{report.get("cve_summary", {}).get("pending", 0)}건(보관 기간 전체)\n\n')
+                    f'{report.get("cve_summary", {}).get("pending", 0)}건(오늘 선정분)\n\n'
+                    f'Gemini 선별 {report.get("curation_model", "")} · 카테고리별 하루 최대 20건\n\n')
             text += '\n'.join('- ' + message for message in report['warnings'])
             Path(summary_path).write_text(text + '\n', encoding='utf-8')
     if args.build_only and (args.state_dir / 'state.json').exists():

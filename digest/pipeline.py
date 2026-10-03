@@ -5,13 +5,14 @@ from datetime import datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 
-from .common import (ROOT, KST, CRON_SLOTS, read_json, write_json, retention_cutoff,
+from .common import (ROOT, KST, CRON_SLOTS, CATEGORIES, read_json, write_json, retention_cutoff,
                      text_key, parse_date)
 from .gemini import Gemini, GeminiError, GeminiAuthenticationError, PROMPT_VERSION
 from .budget import hot_round_calls, plan_api_budget
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_window
-from .cves import collect_cves, merge_cves, translate_cves
+from .cves import collect_cves, merge_cves, translate_cves, apply_cve_selection
+from .curation import curate_candidates
 from .publication import publication_target
 
 
@@ -38,7 +39,46 @@ def prune(state: dict, now: datetime, keep: int) -> None:
 def new_day(day: str) -> dict:
     return {'date': day, 'articles': {}, 'hot': [], 'hot_status': 'unavailable', 'hot_at': None,
             'hot_shortfall': '', 'slots': {}, 'manual_runs': 0, 'updated_at': None,
-            'sources': [], 'warnings': [], 'pending_count': 0, 'cves': {}, 'cve_meta': {}}
+            'sources': [], 'warnings': [], 'pending_count': 0, 'cves': {}, 'cve_meta': {},
+            'news_candidates': {}, 'cve_candidates': {}}
+
+
+def capped_articles(articles: dict, limit: int) -> bool:
+    return all(sum(row.get('category') == category for row in articles.values()) <= limit
+               for category in CATEGORIES) and all(row.get('category') in CATEGORIES for row in articles.values())
+
+
+def curate_news(day: dict, pending: dict, client, now: datetime, model: str, limit: int) -> dict:
+    """Commit validated representative IDs before any body fetch or summary."""
+    pool = day.setdefault('news_candidates', {})
+    pool.update({ident: {**pool.get(ident, {}), **row} for ident, row in day['articles'].items()})
+    candidates = list(pool.values())
+    selection = curate_candidates(client, candidates, kind='news', model=model, limit=limit,
+                                  as_of=now.isoformat())
+    picks = {pick['id']: pick for pick in selection['picks']}
+    ranks = defaultdict(int)
+    for pick in picks.values():
+        ranks[pick['category']] += 1
+        pick['rank'] = ranks[pick['category']]
+    day['articles'] = {ident: row for ident, row in day['articles'].items() if ident in picks}
+    for ident, row in day['articles'].items():
+        row['category'] = picks[ident]['category']
+        row['curation'] = {**picks[ident], 'model': model, 'at': now.isoformat()}
+    day['news_curation'] = {'status': 'fresh', 'model': model, 'at': now.isoformat(),
+                            'limit': limit, 'candidate_count': len(candidates),
+                            'selected_count': len(picks), 'shortfall_reason_ko': selection['shortfall_reason_ko']}
+    # Previously summarized, subsequently promoted candidates reuse their summary.
+    for ident, pick in picks.items():
+        row = pool[ident]
+        if ident not in day['articles'] and row.get('summary_ko'):
+            day['articles'][ident] = {**row, 'category': pick['category'],
+                                     'curation': {**pick, 'model': model, 'at': now.isoformat()}}
+            pending.pop(ident, None)
+        elif ident not in day['articles']:
+            pending.setdefault(ident, dict(row))
+    # HOT must never link to a representative removed by daily curation.
+    day['hot'] = [pick for pick in day['hot'] if pick['id'] in day['articles']]
+    return picks
 
 
 def repair_slot_dates(state: dict) -> None:
@@ -121,6 +161,11 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     daykey = now.date().isoformat()
     day = state['days'].get(daykey, new_day(daykey))
     day['warnings'] = []
+    previous_article_ids = set(day['articles'])
+    limit = min(20, max(1, int(cfg.get('category_daily_limit', 20))))
+    curation_model = cfg.get('curation_model', 'gemini-3.8-flash')
+    pool = day.setdefault('news_candidates', {})
+    pool.update({ident: {**pool.get(ident, {}), **row} for ident, row in day['articles'].items()})
     cve_status = None
     cve_summary = {'translated': 0, 'pending': 0, 'error': ''}
     cve_enabled = cfg.get('cve_enabled', False)
@@ -154,22 +199,94 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
         if cached:
             cached['day'] = daykey
             if cached['summary']['relevant']:
-                new_count += int(item['id'] not in day['articles'])
-                day['articles'][item['id']] = public_article(item, cached['summary'], now, client.summary_model)
+                pool[item['id']] = {**item, **public_article(item, cached['summary'], now, client.summary_model)}
             state['pending'].pop(item['id'], None)
         else:
             state['pending'][item['id']] = item
 
+    for ident, item in list(state['pending'].items()):
+        if (item['kind'] == 'github' and item.get('observed_at', '')[:10] != daykey
+                or item['kind'] != 'github' and not in_window(item, now, cfg['lookback_hours'])):
+            state['pending'].pop(ident, None)
+            continue
+        # Candidate metadata is enough for curation. Full bodies are fetched only
+        # for selected representatives below; all candidates are not summarized.
+        pool[ident] = {**item, 'excerpt': str(item.get('excerpt', ''))[:1500]}
+
+    # The existing exact-title guard also applies to cached candidates so an
+    # already discarded copy cannot be resurrected by tomorrow's retry pool.
+    candidate_titles = set()
+    for ident, item in list(pool.items()):
+        title = text_key(item.get('title_original') or item.get('title_ko') or '')
+        if item['kind'] != 'github' and len(title) >= 15:
+            if title in candidate_titles:
+                pool.pop(ident)
+                state['pending'].pop(ident, None)
+                day['articles'].pop(ident, None)
+                state['seen'][ident] = {'day': daykey, 'title_key': None, 'excluded_duplicate': True}
+            else:
+                candidate_titles.add(title)
+
+    selected = {}
+    try:
+        print(f'[뉴스 선별] 후보 {len(pool)}건 · 분야별 하루 최대 {limit}건 · {curation_model}', flush=True)
+        selected = curate_news(day, state['pending'], client, now, curation_model, limit)
+        for ident, item in list(state['pending'].items()):
+            if ident not in selected:
+                if item['kind'] != 'github':
+                    state['seen'][ident] = {'day': daykey, 'title_key': None, 'excluded_by_curation': True}
+                state['pending'].pop(ident, None)
+    except GeminiAuthenticationError:
+        raise
+    except GeminiError as exc:
+        previous = day.get('news_curation', {})
+        preserve = previous.get('status') in ('fresh', 'stale') and capped_articles(day['articles'], limit)
+        if not preserve:
+            day['articles'] = {}
+            day['hot'] = []
+        day['news_curation'] = {**previous, 'status': 'stale' if preserve else 'unavailable',
+                                'model': curation_model, 'limit': limit, 'candidate_count': len(pool)}
+        day['warnings'].append('뉴스 선별 보류: ' + str(exc))
+
+    if cve_enabled:
+        cve_pool = day.get('cve_candidates', {})
+        try:
+            print(f'[CVE 선별] 후보 {len(cve_pool)}건 · 하루 최대 {limit}건 · {curation_model}', flush=True)
+            cve_selection = curate_candidates(client, list(cve_pool.values()), kind='cve',
+                                               model=curation_model, limit=limit, as_of=now.isoformat())
+            apply_cve_selection(day, cve_selection['picks'], now, curation_model)
+            day['cve_curation'] = {'status': 'fresh', 'model': curation_model, 'at': now.isoformat(),
+                                  'limit': limit, 'candidate_count': len(cve_pool),
+                                  'selected_count': len(day['cves']),
+                                  'shortfall_reason_ko': cve_selection['shortfall_reason_ko']}
+        except GeminiAuthenticationError:
+            raise
+        except GeminiError as exc:
+            previous = day.get('cve_curation', {})
+            preserve = previous.get('status') in ('fresh', 'stale') and len(day['cves']) <= limit
+            if not preserve:
+                day['cves'] = {}
+            day['cve_curation'] = {**previous, 'status': 'stale' if preserve else 'unavailable',
+                                  'model': curation_model, 'limit': limit, 'candidate_count': len(cve_pool),
+                                  'selected_count': len(day['cves'])}
+            day['warnings'].append('CVE 선별 보류: ' + str(exc))
+
+    # Reserve translation for at most the twenty public CVE representatives.
+    pending_cves = sum(not row.get('summary_ko') for row in day.get('cves', {}).values())
+    cve_batch = max(1, min(20, int(cfg.get('cve_summary_batch_size', 12))))
+    cve_calls = min(cve_calls, ((pending_cves + cve_batch - 1) // cve_batch) * 3)
+
     # A queued article is not yet a HOT candidate. Only completed summaries and
     # the batches this run can actually afford may increase the ranking budget.
-    budget = plan_api_budget(client.remaining, len(day['articles']), len(state['pending']),
+    selected_pending = {ident: item for ident, item in state['pending'].items() if ident in selected}
+    budget = plan_api_budget(client.remaining, len(day['articles']), len(selected_pending),
                              cfg['batch_size'], cve_calls, cfg['max_new_articles_per_run'])
     reserved_calls = budget.reserved_calls
     print(f'[API 예산] 뉴스 {budget.news_calls}회 · HOT {budget.hot_calls}회 · '
           f'CVE {budget.cve_calls}회', flush=True)
 
     def checkpoint():
-        if day['articles'] or day.get('cves') or day.get('cve_meta', {}).get('status') == 'ok':
+        if day['articles'] or day.get('cves') or day.get('cve_meta', {}).get('status') == 'ok' or pool:
             state['days'][daykey] = day
         write_json(directory / 'state.json', state)
 
@@ -184,7 +301,13 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             summary = summaries[item['id']]
             if summary['relevant']:
                 new_count += int(item['id'] not in day['articles'])
-                day['articles'][item['id']] = public_article(item, summary, now, client.summary_model)
+                card = public_article(item, summary, now, client.summary_model)
+                card['category'] = selected[item['id']]['category']
+                card['curation'] = {**selected[item['id']], 'model': curation_model, 'at': now.isoformat()}
+                day['articles'][item['id']] = card
+                pool[item['id']].update(card)
+            else:
+                pool.pop(item['id'], None)
             if item['kind'] == 'github':
                 state['repo_cache'][repo_cache_key(item, client.summary_model)] = {'day': daykey, 'summary': summary}
             else:
@@ -196,14 +319,14 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     max_new = cfg['max_new_articles_per_run']
     limit_reached = False
     queued_titles = set()
-    for item in fair_queue(state['pending']):
-        if item['kind'] != 'github' and item['id'] in state['seen']:
+    for item in fair_queue(selected_pending):
+        if item['kind'] != 'github' and item['id'] in state['seen'] and item['id'] not in selected:
             state['pending'].pop(item['id'], None)
             continue
         if item['kind'] == 'github' and item.get('observed_at', '')[:10] != daykey:
             state['pending'].pop(item['id'], None)
             continue
-        if client.remaining <= reserved_calls or (max_new > 0 and prepared_count >= max_new):
+        if client.remaining < reserved_calls + 3 or (max_new > 0 and prepared_count >= max_new):
             limit_reached = True
             break
         if item['kind'] != 'github' and not in_window(item, now, cfg['lookback_hours']):
@@ -246,7 +369,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                 day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
                 batch = []
                 break
-    if batch and client.remaining > reserved_calls - 1:
+    if batch and client.remaining >= reserved_calls + 3:
         try:
             apply_batch(batch)
         except GeminiAuthenticationError:
@@ -283,7 +406,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
         if cve_summary['error']:
             day['warnings'].append('CVE 요약 보류: ' + cve_summary['error'])
         if cve_summary['pending']:
-            day['warnings'].append(f"보관 중 CVE {cve_summary['pending']}건은 한국어 요약 대기입니다. 점수와 원문 설명은 표시합니다.")
+            day['warnings'].append(f"선정 CVE {cve_summary['pending']}건은 한국어 요약 대기입니다. 점수와 원문 설명은 표시합니다.")
     failed_sources = sum(x['status'] != 'ok' for x in day['sources'])
     if failed_sources:
         day['warnings'].append(f'{failed_sources}개 수집원이 응답하지 않거나 수집을 제한했습니다. 수집 상태를 확인하세요.')
@@ -291,6 +414,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     if day['pending_count']:
         day['warnings'].append(f'{day["pending_count"]}건은 근거 부족·호출 제한·요약 실패 등으로 보류 중입니다.')
     day['updated_at'] = now.isoformat()
+    day['news_curation']['selected_count'] = len(day['articles'])
+    new_count = len(set(day['articles']) - previous_article_ids)
     if slot:
         slot_day = publication_at.date().isoformat()
         if retention_cutoff(now, cfg['keep_days']) <= slot_day <= daykey:
@@ -307,6 +432,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                          'slot_day': publication_at.date().isoformat() if slot else None,
                          'publish_at': publication_at.isoformat() if slot else None,
                          'summary_model': client.summary_model, 'hot_model': client.hot_model,
+                         'curation_model': curation_model, 'news_curation': day['news_curation'],
+                         'cve_curation': day.get('cve_curation', {}),
                          'hot_model_used': day.get('hot_model_used'),
                          'cve_count': len(day.get('cves', {})), 'cve_summary': cve_summary}
     checkpoint()

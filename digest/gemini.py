@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import time
 from typing import Callable
 
@@ -44,7 +45,7 @@ class BudgetExceeded(GeminiError):
 
 
 class GeminiHTTPError(GeminiError):
-    def __init__(self, status_code: int):
+    def __init__(self, status_code: int, provider_detail: str = ''):
         self.status_code = status_code
         if status_code == 401:
             detail = 'GEMINI_API_KEY 인증 실패. AI Studio에서 Auth 키 유형·차단 상태를 확인하고 GitHub 저장소 Secret을 갱신하세요'
@@ -52,6 +53,10 @@ class GeminiHTTPError(GeminiError):
             detail = '모델 요청 할당량 초과'
         elif status_code in (500, 502, 503, 504):
             detail = '모델 서비스의 일시적 장애'
+        elif status_code == 400:
+            detail = '요청 형식·모델·JSON 스키마 설정을 확인하세요'
+            if provider_detail:
+                detail += ' · ' + provider_detail
         else:
             detail = '키·모델·프로젝트 설정을 확인하세요'
         super().__init__(f'Gemini HTTP {status_code}: {detail}')
@@ -64,6 +69,87 @@ class GeminiAuthenticationError(GeminiHTTPError):
 
 HOT_CHUNK_SIZE = 80
 TRANSIENT_HTTP_STATUSES = (429, 500, 502, 503, 504)
+DIAGNOSTIC_FIELDS = (
+    'uniqueItems', 'additionalProperties', 'maxItems', 'minItems', 'maxLength',
+    'minLength', 'maximum', 'minimum', 'exclusiveMaximum', 'exclusiveMinimum',
+    'pattern', 'format', 'anyOf', 'oneOf', 'allOf', 'nullable', 'propertyOrdering',
+    'required', 'enum', 'type', 'properties', 'items', 'schema', 'json_schema',
+    'jsonSchema', 'response_format', 'responseFormat', 'response_schema',
+    'responseSchema', 'generation_config', 'generationConfig', 'max_output_tokens',
+    'maxOutputTokens', 'mime_type', 'mimeType', 'response_mime_type', 'model',
+    'input', 'system_instruction', 'store', 'stream', 'temperature', 'top_p',
+    'top_k', 'thinking_config', 'thinking_budget', 'picks', 'scores',
+    'related_ids', 'social_impact', 'attention', 'issue_relevance', 'reason_ko',
+    'shortfall_reason_ko', 'articles', 'cves', 'id', 'category', 'summary_ko',
+)
+DIAGNOSTIC_FIELD_PATTERN = re.compile(
+    r'(?<![A-Za-z0-9_])(?:' + '|'.join(map(re.escape, DIAGNOSTIC_FIELDS))
+    + r')(?![A-Za-z0-9_])')
+
+
+def safe_http_400_detail(response, api_key: str) -> str:
+    """Expose fixed diagnostic labels/field names, never provider prose or input.
+
+    Even a provider message echoing an article or credentials cannot expose its
+    contents: the output vocabulary is fixed. Structured BadRequest parameter
+    fields take precedence; malformed/non-JSON responses retain the generic error.
+    """
+    try:
+        payload = response.json()
+    except (ValueError, requests.RequestException):
+        return ''
+    error = payload.get('error') if isinstance(payload, dict) else None
+    if not isinstance(error, dict):
+        return ''
+
+    def clean(value) -> str:
+        if not isinstance(value, str):
+            return ''
+        text = value[:10000]
+        if api_key:
+            text = text.replace(api_key, '[redacted]')
+            text = text.replace(json.dumps(api_key)[1:-1], '[redacted]')
+        text = re.sub(r'(?:AIza[\w-]{20,}|github_pat_[\w]{20,}|gh[opsur]_[\w]{20,}|sk-[\w-]{12,})',
+                      '[redacted]', text)
+        text = re.sub(r'(?i)\bbearer\s+\S+', '[redacted]', text)
+        text = re.sub(r'(?i)\b(?:api[-_ ]?key|token|authorization|password|secret)\s*[=:]\s*["\']?[^\s,;"\']+',
+                      '[redacted]', text)
+        return re.sub(r'\s+', ' ', re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)).strip()
+
+    descriptions = [clean(error.get('message'))]
+    parameters = []
+    details = error.get('details', [])
+    for detail in details[:8] if isinstance(details, list) else []:
+        if not isinstance(detail, dict):
+            continue
+        violations = detail.get('fieldViolations', [])
+        for violation in violations[:8] if isinstance(violations, list) else []:
+            if isinstance(violation, dict):
+                parameters.append(clean(violation.get('field')))
+                descriptions.append(clean(violation.get('description')))
+        metadata = detail.get('metadata')
+        if isinstance(metadata, dict):
+            parameters.extend(clean(metadata.get(key)) for key in
+                              ('field', 'parameter', 'parameter_name', 'parameterName', 'argument'))
+    message = ' '.join(descriptions).lower()
+    labels = []
+    if re.search(r'too (?:many states|complex)|schema.{0,40}complex|complex.{0,40}schema', message):
+        labels.append('스키마 복잡도 제한')
+    if re.search(r'unsupported|not supported|unknown (?:name|field|keyword)|unrecognized|not allowed', message):
+        labels.append('지원하지 않는 필드·제약 조건')
+    if re.search(r'missing|required (?:field|property|parameter)|must (?:include|provide)', message):
+        labels.append('필수 필드 확인')
+    if re.search(r'(?:too (?:large|small)|out of range|exceed|at (?:least|most)|constraint|maximum|minimum)', message):
+        labels.append('값·제약 조건 범위 확인')
+    if not labels and re.search(r'invalid|malformed|bad request|validation', message):
+        labels.append('요청 값·스키마 검증 실패')
+    structured = [name for parameter in parameters for name in DIAGNOSTIC_FIELD_PATTERN.findall(parameter)]
+    mentioned = set(DIAGNOSTIC_FIELD_PATTERN.findall(' '.join(descriptions)))
+    # Prioritize the rejected constraint over generic schema path components.
+    fields = list(dict.fromkeys([*structured, *[name for name in DIAGNOSTIC_FIELDS if name in mentioned]]))[:16]
+    if fields:
+        labels.append('관련 필드: ' + ', '.join(fields))
+    return ' · '.join(labels)[:300]
 
 
 def response_text(payload: dict) -> str:
@@ -132,7 +218,8 @@ class Gemini:
                     # Never log the key, full body, request headers or source content.
                     if response.status_code == 401:
                         raise GeminiAuthenticationError()
-                    raise GeminiHTTPError(response.status_code)
+                    detail = safe_http_400_detail(response, self.key) if response.status_code == 400 else ''
+                    raise GeminiHTTPError(response.status_code, detail)
                 raw = response.json()
                 self.tokens += raw.get('usage', {}).get('total_tokens', 0)
                 result = json.loads(response_text(raw))

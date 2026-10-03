@@ -8,6 +8,7 @@ from pathlib import Path
 from .common import ROOT, load_config, now_kst, read_json, write_json
 from .gemini import Gemini, GeminiError
 from .cves import collect_cves
+from .curation import curate_candidates
 from .network import PublicWeb
 from .pipeline import load_state, prune, run_pipeline
 from .render import render_site
@@ -44,6 +45,16 @@ def main():
         for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gemini-3.8-flash'), client.hot_model)):
             client.request('연결 시험입니다. {"ok":true}만 반환하세요.', {}, schema, model)
             print(f'{model}: 연결 확인')
+        # Test the production selection schemas with tiny synthetic inputs too.
+        # Simple {ok:true} checks cannot detect provider schema rejections.
+        for kind, candidate in (
+            ('news', {'id': 'diagnostic-news', 'kind': 'article', 'title_original': 'API 연결 검사 자료',
+                      'excerpt': '실제 뉴스가 아닌 가상의 연결 검사 자료입니다.'}),
+            ('cve', {'id': 'CVE-2026-00001', 'description': 'Synthetic API connectivity test only.'}),
+        ):
+            curate_candidates(client, [candidate], kind=kind,
+                              model=cfg.get('curation_model', 'gemini-3.8-flash'), as_of=now.isoformat())
+            print(f'{kind}: 실제 선별 요청 형식 확인')
         return 0
     state = load_state(args.state_dir)
     prune(state, now, cfg['keep_days'])

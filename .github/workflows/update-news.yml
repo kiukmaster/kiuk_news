@@ -69,39 +69,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
-        run: |
-          python -u - <<'PY'
-          import re
-          from copy import deepcopy
-          from digest.common import load_config
-          from digest.gemini import Gemini, GeminiError
-          from digest.curation import _schema
-          client = Gemini(load_config())
-          original_post = client.session.post
-          def probe_post(*args, **kwargs):
-              response = original_post(*args, **kwargs)
-              if response.status_code == 400:
-                  message = str(response.json().get('error', {}).get('message', ''))
-                  message = message.replace(client.key, '[redacted]')
-                  message = re.sub(r'AIza[\w-]{20,}|github_pat_[\w]{20,}|gh[opsur]_[\w]{20,}', '[redacted]', message)
-                  print('Synthetic request diagnostic: ' + re.sub(r'\s+', ' ', message)[:1000], flush=True)
-              return response
-          client.session.post = probe_post
-          schema = _schema('news', 20)
-          stripped = deepcopy(schema)
-          stripped['properties']['picks'].pop('maxItems', None)
-          for field in stripped['properties']['picks']['items']['properties']['scores']['properties'].values():
-              field.pop('minimum', None)
-              field.pop('maximum', None)
-          for label, candidate_schema in [('current', schema), ('types-only', stripped)]:
-              try:
-                  client.request('API connection test. Return an empty picks list and Korean shortfall reason.',
-                      {'candidates': [{'id': 'synthetic-only', 'kind': 'article', 'title_original': '연결 검사 자료'}]},
-                      candidate_schema, 'gemini-3.8-flash', attempts=1, max_output_tokens=16384)
-                  print(label + ': accepted', flush=True)
-              except GeminiError as exc:
-                  print(label + ': ' + str(exc), flush=True)
-          PY
+        run: python -u -m digest --check-api
 
   publish:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.mode != 'check-api' && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')

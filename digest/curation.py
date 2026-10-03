@@ -84,7 +84,7 @@ def _schema(kind: str, limit: int) -> dict:
     properties = {
         'id': {'type': 'string'},
         'scores': {'type': 'object', 'properties': {
-            key: {'type': 'integer', 'minimum': 0, 'maximum': 5} for key in SCORE_KEYS},
+            key: {'type': 'integer'} for key in SCORE_KEYS},
             'required': list(SCORE_KEYS), 'additionalProperties': False},
         # Google's supported schema subset omits maxLength/uniqueItems.
         # Enforce lengths and uniqueness in the semantic validator instead.
@@ -96,7 +96,9 @@ def _schema(kind: str, limit: int) -> dict:
         properties['category'] = {'type': 'string', 'enum': list(NEWS_CATEGORIES)}
         required.append('category')
     return {'type': 'object', 'properties': {
-        'picks': {'type': 'array', 'maxItems': limit * (5 if kind == 'news' else 1),
+        # Combining large maxItems and nested numeric bounds is rejected by
+        # the live API with HTTP 400. All quotas/ranges are enforced below.
+        'picks': {'type': 'array',
                   'items': {'type': 'object', 'properties': properties,
                             'required': required, 'additionalProperties': False}},
         'shortfall_reason_ko': {'type': 'string'}},

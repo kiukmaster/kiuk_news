@@ -62,7 +62,7 @@ class FakeSummary:
         if self.broken:
             raise GeminiError('검증용 실패')
         if 'candidates' in data:
-            limit = schema['properties']['picks']['maxItems']
+            limit = 20
             result = {'picks': [{'id': row['id'],
                                 'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
                                 'reason_ko': '테스트용 선정 이유입니다.', 'related_ids': []}

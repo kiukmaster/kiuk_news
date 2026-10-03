@@ -211,6 +211,9 @@ test('worker has only a scheduled handler and configuration has no public URLs',
 });
 
 test('scheduled handler logs only sanitized failure messages', async () => {
+  const originalTimer = globalThis.setTimeout;
+  globalThis.setTimeout = (callback, milliseconds, ...args) => originalTimer(
+    callback, milliseconds === 1_000 || milliseconds === 3_000 ? 0 : milliseconds, ...args);
   const originalFetch = globalThis.fetch;
   const originalError = console.error;
   const messages = [];
@@ -221,7 +224,173 @@ test('scheduled handler logs only sanitized failure messages', async () => {
     assert.deepEqual(messages, ['News scheduler failed: GitHub request failed']);
     assert.ok(!messages.join('\n').includes(ENV.GITHUB_TOKEN));
   } finally {
+    globalThis.setTimeout = originalTimer;
     globalThis.fetch = originalFetch;
     console.error = originalError;
+  }
+});
+
+test('transient GET failures recover on the third attempt before exactly one POST', async () => {
+  const methods = [];
+  const waits = [];
+  const result = await dispatchScheduled(event(), ENV, async (_, options) => {
+    methods.push(options.method);
+    if (options.method === 'POST') return new Response(null, { status: 204 });
+    return methods.length < 3 ? new Response('private upstream body', { status: 520 }) : emptyRuns();
+  }, async milliseconds => waits.push(milliseconds));
+  assert.equal(result.status, 'dispatched');
+  assert.deepEqual(methods, ['GET', 'GET', 'GET', 'POST']);
+  assert.deepEqual(waits, [1_000, 3_000]);
+});
+
+test('exhausted transient GET retries fail after three attempts without POST or leaked body', async () => {
+  const methods = [];
+  const waits = [];
+  await assert.rejects(dispatchScheduled(event(), ENV, async (_, options) => {
+    methods.push(options.method);
+    return new Response(`upstream private ${ENV.GITHUB_TOKEN}`, { status: 503 });
+  }, async milliseconds => waits.push(milliseconds)), error => {
+    assert.equal(error.code, 'GITHUB_HTTP');
+    assert.equal(error.status, 503);
+    assert.ok(!String(error.stack).includes(ENV.GITHUB_TOKEN));
+    return true;
+  });
+  assert.deepEqual(methods, ['GET', 'GET', 'GET']);
+  assert.deepEqual(waits, [1_000, 3_000]);
+});
+
+test('429 Retry-After seconds and HTTP dates are bounded to thirty seconds', async () => {
+  const originalNow = Date.now;
+  Date.now = () => Date.parse('2026-10-03T10:00:00Z');
+  try {
+    for (const [retryAfter, expectedDelay] of [
+      ['9', 9_000], ['600', 30_000],
+      ['Sat, 03 Oct 2026 10:00:08 GMT', 8_000],
+      ['Saturday, 03-Oct-26 10:00:08 GMT', 8_000],
+      ['Sat Oct  3 10:00:08 2026', 8_000],
+      ['Sat, 03 Oct 2026 10:02:00 GMT', 30_000],
+      ['Sat, 03 Oct 2026 09:59:00 GMT', 1_000],
+      ['0', 1_000], ['-1', 1_000], ['1.5', 1_000], ['invalid', 1_000],
+    ]) {
+      const waits = [];
+      let calls = 0;
+      const result = await dispatchScheduled(event(), ENV, async () => {
+        calls += 1;
+        return calls === 1
+          ? new Response(null, { status: 429, headers: { 'Retry-After': retryAfter } })
+          : json({ workflow_runs: [{ display_title: planPublication(event()).displayTitle }] });
+      }, async milliseconds => waits.push(milliseconds));
+      assert.equal(result.status, 'duplicate');
+      assert.equal(calls, 2);
+      assert.deepEqual(waits, [expectedDelay], retryAfter);
+    }
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+test('GET transport failures retry but sanitized failures never expose authorization', async () => {
+  const methods = [];
+  const waits = [];
+  const result = await dispatchScheduled(event(), ENV, async (_, options) => {
+    methods.push(options.method);
+    if (methods.length < 3) throw new Error(`transport private ${ENV.GITHUB_TOKEN}`);
+    return json({ workflow_runs: [{ display_title: planPublication(event()).displayTitle }] });
+  }, async milliseconds => waits.push(milliseconds));
+  assert.equal(result.status, 'duplicate');
+  assert.deepEqual(methods, ['GET', 'GET', 'GET']);
+  assert.deepEqual(waits, [1_000, 3_000]);
+});
+
+test('GET timeout retries use a fresh signal for each attempt and stop after recovery', async () => {
+  const originalTimer = globalThis.setTimeout;
+  const signals = [];
+  const waits = [];
+  globalThis.setTimeout = (callback, milliseconds) => originalTimer(
+    callback, milliseconds === 20_000 ? 1 : milliseconds);
+  try {
+    const result = await dispatchScheduled(event(), ENV, async (_, { signal }) => {
+      signals.push(signal);
+      if (signals.length === 1) {
+        return new Promise((_, reject) => signal.addEventListener('abort', () => (
+          reject(new Error(`timeout private ${ENV.GITHUB_TOKEN}`))
+        )));
+      }
+      return json({ workflow_runs: [{ display_title: planPublication(event()).displayTitle }] });
+    }, async milliseconds => waits.push(milliseconds));
+    assert.equal(result.status, 'duplicate');
+    assert.equal(signals.length, 2);
+    assert.notEqual(signals[0], signals[1]);
+    assert.equal(signals[0].aborted, true);
+    assert.equal(signals[1].aborted, false);
+    assert.deepEqual(waits, [1_000]);
+  } finally {
+    globalThis.setTimeout = originalTimer;
+  }
+});
+
+test('GET authorization, not-found, redirect and invalid responses fail without retry', async () => {
+  for (const makeResponse of [
+    () => new Response(null, { status: 401 }),
+    () => new Response(null, { status: 403, headers: { 'Retry-After': '1' } }),
+    () => new Response(null, { status: 404 }),
+    () => new Response(null, { status: 302 }),
+    () => new Response('invalid JSON', { status: 200 }),
+    () => json({ unexpected: true }),
+  ]) {
+    const methods = [];
+    const waits = [];
+    await assert.rejects(dispatchScheduled(event(), ENV, async (_, options) => {
+      methods.push(options.method);
+      return makeResponse();
+    }, async milliseconds => waits.push(milliseconds)), SchedulerError);
+    assert.deepEqual(methods, ['GET']);
+    assert.deepEqual(waits, []);
+  }
+});
+
+test('POST transient HTTP failures or transport failures are never automatically retried', async () => {
+  for (const failPost of [
+    () => new Response(null, { status: 429, headers: { 'Retry-After': '1' } }),
+    () => new Response(null, { status: 520, headers: { 'Retry-After': '1' } }),
+    () => { throw new Error(`uncertain POST ${ENV.GITHUB_TOKEN}`); },
+  ]) {
+    const methods = [];
+    const waits = [];
+    await assert.rejects(dispatchScheduled(event(), ENV, async (_, options) => {
+      methods.push(options.method);
+      return options.method === 'GET' ? emptyRuns() : failPost();
+    }, async milliseconds => waits.push(milliseconds)), error => {
+      assert.ok(error instanceof SchedulerError);
+      assert.ok(!String(error.stack).includes(ENV.GITHUB_TOKEN));
+      return true;
+    });
+    assert.deepEqual(methods, ['GET', 'POST']);
+    assert.deepEqual(waits, []);
+  }
+});
+
+test('uncertain POST timeout stops after one POST without a retry delay', async () => {
+  const originalTimer = globalThis.setTimeout;
+  const methods = [];
+  const waits = [];
+  globalThis.setTimeout = (callback, milliseconds) => originalTimer(
+    callback, milliseconds === 20_000 ? 1 : milliseconds);
+  try {
+    await assert.rejects(dispatchScheduled(event(), ENV, async (_, options) => {
+      methods.push(options.method);
+      if (options.method === 'GET') return emptyRuns();
+      return new Promise((_, reject) => options.signal.addEventListener('abort', () => (
+        reject(new Error(`uncertain timeout ${ENV.GITHUB_TOKEN}`))
+      )));
+    }, async milliseconds => waits.push(milliseconds)), error => {
+      assert.equal(error.code, 'GITHUB_TIMEOUT');
+      assert.ok(!String(error.stack).includes(ENV.GITHUB_TOKEN));
+      return true;
+    });
+    assert.deepEqual(methods, ['GET', 'POST']);
+    assert.deepEqual(waits, []);
+  } finally {
+    globalThis.setTimeout = originalTimer;
   }
 });

@@ -114,7 +114,8 @@ def test_expensive_legacy_pool_failure_is_retriable_and_never_exceeds_cap(tmp_pa
         def request(self, *args, **kwargs):
             raise GeminiError('테스트 실패')
 
-    run(state, tmp_path, [], client=FailingCuration())
+    with pytest.raises(GeminiError, match='게시를 중단'):
+        run(state, tmp_path, [], client=FailingCuration())
     assert day['articles'] == {} and day['hot'] == []
     assert len(day['news_candidates']) == 26
     assert day['news_curation']['status'] == 'unavailable'

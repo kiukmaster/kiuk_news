@@ -292,6 +292,11 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
 
     # Persist completed CVE data even if later news/API work is interrupted.
     checkpoint()
+    if day['news_curation']['status'] == 'unavailable' and pool:
+        # A green deployment with an empty report hid an API schema rejection.
+        # Preserve candidates for retry and keep the last deployed report.
+        raise GeminiError('뉴스 선별을 완료하지 못해 게시를 중단합니다. ' +
+                          next(message for message in day['warnings'] if message.startswith('뉴스 선별 보류:')))
 
     def apply_batch(batch):
         nonlocal new_count

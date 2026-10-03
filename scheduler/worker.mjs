@@ -2,6 +2,10 @@
 const PREPARATION_LEAD_MS = 53 * 60 * 1000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 20_000;
+const GET_MAX_ATTEMPTS = 3;
+const GET_RETRY_DELAYS_MS = [1_000, 3_000];
+const MAX_RETRY_AFTER_MS = 30_000;
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const GITHUB_API = 'https://api.github.com';
 const WORKFLOW_FILE = 'update-news.yml';
 
@@ -12,7 +16,7 @@ export const CRON_SLOTS = Object.freeze({
 });
 
 export class SchedulerError extends Error {
-  constructor(code, status = null) {
+  constructor(code, status = null, retryAfterMs = null) {
     const messages = {
       SCHEDULE_INVALID: 'Invalid scheduled event',
       CONFIG_INVALID: 'Invalid scheduler configuration',
@@ -26,6 +30,7 @@ export class SchedulerError extends Error {
     this.name = 'SchedulerError';
     this.code = code;
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -62,6 +67,24 @@ function configuration(env) {
   return { token, repository, ref };
 }
 
+function retryAfterMilliseconds(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const text = value.trim();
+  let delay;
+  if (/^\d+$/.test(text)) {
+    delay = Number(text) * 1_000;
+  } else if (/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(text)) {
+    // HTTP dates start with a weekday. Do not treat negative/fractional seconds
+    // or arbitrary numeric strings as dates accepted by Date.parse().
+    // Obsolete HTTP asctime dates omit GMT but still mean UTC, including when
+    // the same parser is tested on a computer with a non-UTC timezone.
+    delay = Date.parse(/GMT$/i.test(text) ? text : `${text} GMT`) - Date.now();
+  } else {
+    return null;
+  }
+  return Number.isFinite(delay) ? Math.min(MAX_RETRY_AFTER_MS, Math.max(0, delay)) : null;
+}
+
 async function githubRequest(url, options, fetchImpl, expectedStatus, readJson = false) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -73,7 +96,9 @@ async function githubRequest(url, options, fetchImpl, expectedStatus, readJson =
     });
     if (response.status !== expectedStatus) {
       // Never inspect or report error bodies, which may include sensitive data.
-      throw new SchedulerError('GITHUB_HTTP', response.status);
+      const retryAfterMs = options.method === 'GET'
+        ? retryAfterMilliseconds(response.headers.get('Retry-After')) : null;
+      throw new SchedulerError('GITHUB_HTTP', response.status, retryAfterMs);
     }
     if (!readJson) return null;
     try {
@@ -92,7 +117,24 @@ async function githubRequest(url, options, fetchImpl, expectedStatus, readJson =
   }
 }
 
-export async function dispatchScheduled(event, env, fetchImpl = globalThis.fetch) {
+async function githubGet(url, headers, fetchImpl, sleepImpl) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await githubRequest(url, { method: 'GET', headers }, fetchImpl, 200, true);
+    } catch (error) {
+      const retryable = error instanceof SchedulerError && (
+        error.code === 'GITHUB_TIMEOUT' || error.code === 'GITHUB_REQUEST_FAILED'
+        || (error.code === 'GITHUB_HTTP' && (error.status === 429
+          || (error.status >= 500 && error.status <= 599)))
+      );
+      if (!retryable || attempt + 1 >= GET_MAX_ATTEMPTS) throw error;
+      const delay = Math.max(GET_RETRY_DELAYS_MS[attempt], error.retryAfterMs ?? 0);
+      await sleepImpl(delay);
+    }
+  }
+}
+
+export async function dispatchScheduled(event, env, fetchImpl = globalThis.fetch, sleepImpl = sleep) {
   const plan = planPublication(event);
   const { token, repository, ref } = configuration(env);
   const workflow = `${GITHUB_API}/repos/${repository}/actions/workflows/${WORKFLOW_FILE}`;
@@ -104,9 +146,7 @@ export async function dispatchScheduled(event, env, fetchImpl = globalThis.fetch
     'Cache-Control': 'no-cache',
   };
   const query = new URLSearchParams({ event: 'workflow_dispatch', branch: ref, per_page: '20' });
-  const recent = await githubRequest(`${workflow}/runs?${query}`, {
-    method: 'GET', headers,
-  }, fetchImpl, 200, true);
+  const recent = await githubGet(`${workflow}/runs?${query}`, headers, fetchImpl, sleepImpl);
   if (!Array.isArray(recent?.workflow_runs)) {
     throw new SchedulerError('GITHUB_RESPONSE_INVALID');
   }

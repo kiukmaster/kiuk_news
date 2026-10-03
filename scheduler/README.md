@@ -10,6 +10,10 @@
 
 준비가 끝난 Actions runner가 공개 목표까지 기다렸다가 배포합니다. Cloudflare 트리거, Actions runner 및 Pages 자체의 장애·전파 지연까지 초 단위로 보장하는 구성은 아닙니다. GitHub 기본 cron에서 확인된 수 시간의 이벤트 생성 지연을 피하는 구성입니다.
 
+GitHub 실행 기록을 조회하는 GET은 일시적인 5xx·429·통신 오류에 한해 최대 3회 시도합니다. 기본 대기는 1초·3초이며 서버가 보낸 `Retry-After`를 최대 30초까지 반영합니다. 실행을 만드는 POST는 한 번만 보내며, 불확실한 결과는 기존 실행 기록으로 확인합니다.
+
+배포 설정에서 Workers Logs를 활성화합니다. Cloudflare의 **Workers & Pages → kiuk-news-scheduler → Observability**에서 예약 실행의 성공·중복·오류 기록을 확인할 수 있습니다. 토큰이나 응답 본문은 로그에 남기지 않습니다.
+
 ## 실제 활성화
 
 처음 만든 Cloudflare 계정은 가입 이메일 인증을 완료한 뒤 대시보드의 **Workers & Pages** 메뉴를 한 번 엽니다. 이때 계정의 `workers.dev` 기본 설정이 생성됩니다. 이메일 인증 전에는 `10034`, 기본 설정 전에는 Cron 등록 시 `10063` 오류가 발생할 수 있습니다.

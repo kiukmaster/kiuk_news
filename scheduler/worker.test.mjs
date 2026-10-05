@@ -13,12 +13,23 @@ const event = (cron = '7 3 * * *', iso = '2026-10-01T03:07:00Z') => ({
 });
 const json = value => new Response(JSON.stringify(value), { status: 200 });
 const emptyRuns = () => json({ workflow_runs: [] });
+const recoveryEvent = (cron = '27 3 * * *', iso = '2026-10-01T03:27:00Z') => event(cron, iso);
+const matchingRun = (scheduled, fields = {}) => ({
+  id: 12345, run_attempt: 1, status: 'completed', conclusion: 'failure',
+  display_title: planPublication(scheduled).displayTitle, ...fields,
+});
 
 for (const [cron, iso, expected] of [
   ['7 20 * * *', '2026-09-30T20:07:00Z', '2026-10-01T06:00:00+09:00'],
   ['7 3 * * *', '2026-10-01T03:07:00Z', '2026-10-01T13:00:00+09:00'],
   ['7 9 * * *', '2026-10-01T09:07:00Z', '2026-10-01T19:00:00+09:00'],
   ['7 20 * * *', '2026-12-31T20:07:00Z', '2027-01-01T06:00:00+09:00'],
+  ['27 20 * * *', '2026-09-30T20:27:00Z', '2026-10-01T06:00:00+09:00'],
+  ['47 20 * * *', '2026-12-31T20:47:00Z', '2027-01-01T06:00:00+09:00'],
+  ['27 3 * * *', '2026-10-01T03:27:00Z', '2026-10-01T13:00:00+09:00'],
+  ['47 3 * * *', '2026-10-01T03:47:00Z', '2026-10-01T13:00:00+09:00'],
+  ['27 9 * * *', '2026-10-01T09:27:00Z', '2026-10-01T19:00:00+09:00'],
+  ['47 9 * * *', '2026-10-01T09:47:00Z', '2026-10-01T19:00:00+09:00'],
 ]) {
   test(`UTC cron ${cron} preserves KST publication date ${expected}`, () => {
     const plan = planPublication(event(cron, iso));
@@ -57,7 +68,7 @@ test('dispatch posts only configured repository, workflow, ref, and full KST tar
   assert.equal(list.pathname, '/repos/kiukmaster/kiuk_news/actions/workflows/update-news.yml/runs');
   assert.equal(list.searchParams.get('event'), 'workflow_dispatch');
   assert.equal(list.searchParams.get('branch'), 'main');
-  assert.equal(list.searchParams.get('per_page'), '20');
+  assert.equal(list.searchParams.get('per_page'), '100');
   assert.equal(calls[1].url, 'https://api.github.com/repos/kiukmaster/kiuk_news/actions/workflows/update-news.yml/dispatches');
   assert.deepEqual(JSON.parse(calls[1].options.body), {
     ref: 'main', inputs: { mode: 'collect', scheduled_slot: '13:00',
@@ -80,6 +91,101 @@ test('already accepted full target is skipped on repeat or uncertain ack deliver
   });
   assert.equal(result.status, 'duplicate');
   assert.equal(calls, 1);
+});
+
+test('recovery dispatches a missing run once with the original full KST target', async () => {
+  const calls = [];
+  const result = await dispatchScheduled(recoveryEvent(), ENV, async (url, options) => {
+    calls.push({ url, options });
+    return options.method === 'GET' ? emptyRuns() : new Response(null, { status: 204 });
+  });
+  assert.equal(result.status, 'dispatched');
+  assert.deepEqual(calls.map(({ options }) => options.method), ['GET', 'POST']);
+  assert.equal(JSON.parse(calls[1].options.body).inputs.publish_at,
+    '2026-10-01T13:00:00+09:00');
+});
+
+test('recovery leaves queued, running, successful and ambiguous runs untouched', async () => {
+  for (const runs of [
+    [matchingRun(recoveryEvent(), { status: 'queued', conclusion: null })],
+    [matchingRun(recoveryEvent(), { status: 'in_progress', conclusion: null })],
+    [matchingRun(recoveryEvent(), { conclusion: 'success' })],
+    [matchingRun(recoveryEvent()), matchingRun(recoveryEvent(), { id: 12346 })],
+  ]) {
+    let calls = 0;
+    const result = await dispatchScheduled(recoveryEvent(), ENV, async (_, options) => {
+      calls += 1;
+      assert.equal(options.method, 'GET');
+      return json({ workflow_runs: runs });
+    });
+    assert.equal(result.status, 'duplicate');
+    assert.equal(calls, 1);
+  }
+});
+
+test('recovery reruns only a completed failed original run, once per delivery', async () => {
+  for (const conclusion of ['failure', 'cancelled', 'timed_out']) {
+    const calls = [];
+    const run = matchingRun(recoveryEvent(), { conclusion });
+    const result = await dispatchScheduled(recoveryEvent(), ENV, async (url, options) => {
+      calls.push({ url, options });
+      return options.method === 'GET'
+        ? json({ workflow_runs: [run] }) : new Response(null, { status: 201 });
+    });
+    assert.equal(result.status, 'rerun');
+    assert.deepEqual(calls.map(({ options }) => options.method), ['GET', 'POST']);
+    assert.equal(calls[1].url,
+      'https://api.github.com/repos/kiukmaster/kiuk_news/actions/runs/12345/rerun');
+    assert.equal(calls[1].options.body, undefined);
+    assert.equal(calls[1].options.headers.Authorization, `Bearer ${ENV.GITHUB_TOKEN}`);
+  }
+  const active = await dispatchScheduled(recoveryEvent(), ENV, async (_, options) => {
+    assert.equal(options.method, 'GET');
+    return json({ workflow_runs: [matchingRun(recoveryEvent(),
+      { status: 'queued', conclusion: null, run_attempt: 2 })] });
+  });
+  assert.equal(active.status, 'duplicate');
+});
+
+test('recovery stops after two reruns and rejects malformed IDs or attempt counts', async () => {
+  const scheduled = recoveryEvent();
+  for (const attempt of [3, 4]) {
+    let calls = 0;
+    const result = await dispatchScheduled(scheduled, ENV, async (_, options) => {
+      calls += 1;
+      assert.equal(options.method, 'GET');
+      return json({ workflow_runs: [matchingRun(scheduled, { run_attempt: attempt })] });
+    });
+    assert.equal(result.status, 'retry-limit');
+    assert.equal(calls, 1);
+  }
+  for (const fields of [{ id: 0 }, { id: '12345' }, { run_attempt: 0 },
+    { run_attempt: '1' }]) {
+    await assert.rejects(dispatchScheduled(scheduled, ENV, async (_, options) => {
+      assert.equal(options.method, 'GET');
+      return json({ workflow_runs: [matchingRun(scheduled, fields)] });
+    }), /Invalid GitHub response format/);
+  }
+});
+
+test('recovery rerun POST is not retried and never exposes response or token', async () => {
+  for (const failPost of [
+    () => new Response(`private ${ENV.GITHUB_TOKEN}`, { status: 409 }),
+    () => { throw new Error(`private ${ENV.GITHUB_TOKEN}`); },
+  ]) {
+    const methods = [];
+    await assert.rejects(dispatchScheduled(recoveryEvent(), ENV, async (_, options) => {
+      methods.push(options.method);
+      return options.method === 'GET'
+        ? json({ workflow_runs: [matchingRun(recoveryEvent())] }) : failPost();
+    }), error => {
+      assert.ok(error instanceof SchedulerError);
+      assert.ok(!String(error.stack).includes(ENV.GITHUB_TOKEN));
+      assert.ok(!JSON.stringify(error).includes(ENV.GITHUB_TOKEN));
+      return true;
+    });
+    assert.deepEqual(methods, ['GET', 'POST']);
+  }
 });
 
 test('same slot from a different date does not suppress current target', async () => {

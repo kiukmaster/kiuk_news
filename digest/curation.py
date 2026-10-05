@@ -11,7 +11,9 @@ from typing import Any
 
 from .gemini import BudgetExceeded, GeminiResponseValidationError
 
-CURATION_CHUNK_SIZE = 300
+# Leave room for the structured selection and the model's thinking. This must
+# stay above the maximum 100 news representatives so every round shrinks.
+CURATION_CHUNK_SIZE = 200
 CURATION_ATTEMPTS = 2
 CURATION_MODEL = 'gemini-3.8-flash'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
@@ -173,7 +175,9 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
         'related_ids에 이번 입력에 있는 동일 사건의 다른 ID를 넣어라. '
         '각 ID는 대표 또는 related_ids 중 한 곳에만 등장할 수 있다. '
         'already_grouped_ids는 앞 단계에서 묶은 원본 ID이며 이번 출력에 직접 넣지 말라. '
-        'reason_ko는 근거에 기반한 한국어 80자 이내로 작성하라. 후보 밖 ID는 금지한다. '
+        'reason_ko는 근거에 기반한 짧은 한국어 한 문장, 80자 이내로 작성하라. '
+        '후보별 분석이나 긴 검토 과정을 출력하지 말고 지정된 선정 결과 JSON만 간결하게 반환하라. '
+        '후보 밖 ID는 금지한다. '
         '적격 후보가 부족하면 가능한 개수만 고르고 shortfall_reason_ko로 한국어 이유를 써라. '
         '하나도 고르지 않으면 반드시 이유를 써라. 충분하면 부족 이유는 빈 문자열로 써라. '
     )
@@ -226,7 +230,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
         result = client.request(_instruction(kind, limit, preliminary), data, _schema(kind, limit), model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _validate_selection(result, group, kind, limit),
-            max_output_tokens=16384)
+            max_output_tokens=32768, thinking_level='low')
         # Defensively validate lightweight test/integration clients too.
         _validate_selection(result, group, kind, limit)
         output = {'picks': [], 'shortfall_reason_ko': result['shortfall_reason_ko']}

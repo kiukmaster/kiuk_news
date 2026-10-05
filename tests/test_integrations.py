@@ -8,7 +8,8 @@ from unittest.mock import Mock
 import pytest
 
 from digest.common import load_config
-from digest.gemini import Gemini, GeminiError, GeminiHTTPError, GeminiAuthenticationError, BudgetExceeded, ENDPOINT, HOT_CHUNK_SIZE
+from digest.gemini import (Gemini, GeminiError, GeminiHTTPError, GeminiAuthenticationError,
+                          GeminiIncompleteError, BudgetExceeded, ENDPOINT, HOT_CHUNK_SIZE)
 from digest.pipeline import hot_round_calls
 
 
@@ -43,6 +44,17 @@ def test_interactions_contract(monkeypatch):
     assert kwargs['headers']['x-goog-api-key'] == client.key
     assert client.key not in json.dumps(kwargs['json'])
     assert client.tokens == 42
+
+
+def test_interactions_optional_thinking_level_preserves_existing_defaults(monkeypatch):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(return_value=api_response({'ok': True}))
+    client.request('test', {}, {'type': 'object'}, 'gemini-3.8-flash',
+                   max_output_tokens=32768, thinking_level='low')
+    config = client.session.post.call_args.kwargs['json']['generation_config']
+    assert config == {'max_output_tokens': 32768, 'thinking_level': 'low'}
+    client.request('test', {}, {'type': 'object'}, client.summary_model)
+    assert client.session.post.call_args.kwargs['json']['generation_config'] == {'max_output_tokens': 8192}
 
 
 def test_429_retries_then_success(monkeypatch):
@@ -280,6 +292,30 @@ def test_hot_auth_error_does_not_retry_another_model(monkeypatch):
     with pytest.raises(GeminiHTTPError, match='GEMINI_API_KEY'):
         client.select_hot([{'id': 'real'}])
     assert client.request.call_count == 1
+
+
+def test_hot_retryable_incomplete_uses_existing_three_call_fallback_reservation(monkeypatch):
+    client = make_client(monkeypatch)
+    unfinished = Mock(status_code=200)
+    unfinished.json.return_value = {'status': 'incomplete',
+        'errors': [{'code': 'api_error'}], 'usage': {'total_tokens': 42}}
+    client.session.post = Mock(side_effect=[unfinished,
+        api_response({'picks': [{'id': 'outside', 'reason_ko': '잘못된 응답'}], 'shortfall_reason_ko': ''}),
+        api_response({'picks': [{'id': 'real', 'reason_ko': '검증된 선정 이유'}], 'shortfall_reason_ko': ''})])
+    result = client.select_hot([{'id': 'real'}])
+    assert result['model_used'] == client.summary_model
+    assert result['picks'][0]['id'] == 'real'
+    assert client.calls == 3 and client.tokens == 126
+
+
+def test_hot_blocked_incomplete_does_not_retry_another_model(monkeypatch):
+    client = make_client(monkeypatch)
+    unfinished = Mock(status_code=200)
+    unfinished.json.return_value = {'status': 'incomplete', 'errors': [{'code': 'safety'}]}
+    client.session.post = Mock(return_value=unfinished)
+    with pytest.raises(GeminiIncompleteError) as error:
+        client.select_hot([{'id': 'real'}])
+    assert error.value.reason == 'SAFETY' and client.calls == 1
 
 
 def test_state_branch_across_two_runners(tmp_path, monkeypatch):

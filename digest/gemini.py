@@ -40,6 +40,22 @@ class GeminiResponseValidationError(GeminiError):
     """A completed model response failed the caller's semantic checks."""
 
 
+class GeminiIncompleteError(GeminiError):
+    """Unfinished/failed interaction with bounded, non-content diagnostics."""
+    def __init__(self, diagnostic: dict):
+        self.status = diagnostic['status']
+        self.reason = diagnostic['reason']
+        self.retryable = diagnostic['retryable']
+        self.diagnostic = diagnostic
+        parts = [f'status={self.status}', f'reason={self.reason}']
+        for name in ('output_tokens', 'thought_tokens', 'output_limit'):
+            if diagnostic.get(name) is not None:
+                parts.append(f'{name}={diagnostic[name]}')
+        if diagnostic['continuation_available']:
+            parts.append('continuation_available=true')
+        super().__init__('Gemini 응답 미완료: ' + ', '.join(parts))
+
+
 class BudgetExceeded(GeminiError):
     pass
 
@@ -69,6 +85,25 @@ class GeminiAuthenticationError(GeminiHTTPError):
 
 HOT_CHUNK_SIZE = 80
 TRANSIENT_HTTP_STATUSES = (429, 500, 502, 503, 504)
+RESPONSE_STATUSES = {'completed', 'incomplete', 'failed', 'cancelled', 'in_progress',
+                     'requires_action', 'budget_exceeded', 'queued'}
+BLOCKED_RESPONSE_REASONS = {'SAFETY', 'CONTENT_BLOCKED', 'RECITATION', 'LANGUAGE',
+    'PROHIBITED_CONTENT', 'SPII', 'BLOCKLIST', 'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT',
+    'IMAGE_RECITATION', 'IMAGE_OTHER'}
+TRANSIENT_RESPONSE_REASONS = {'RATE_LIMIT_EXCEEDED', 'TOO_MANY_REQUESTS', 'API_ERROR',
+                              'SERVICE_UNAVAILABLE', 'DEADLINE_EXCEEDED'}
+FATAL_RESPONSE_REASONS = {'AUTHENTICATION', 'PERMISSION_DENIED', 'PAYMENT_REQUIRED',
+    'QUOTA_EXCEEDED', 'INVALID_REQUEST', 'FAILED_PRECONDITION', 'PARAMETER_UNKNOWN',
+    'OUT_OF_RANGE', 'NOT_FOUND', 'UNSUPPORTED', 'RESOURCE_EXHAUSTED'}
+RESPONSE_REASON_ALIASES = {
+    'MAX_TOKENS': 'MAX_TOKENS', 'MAX_OUTPUT_TOKENS': 'MAX_TOKENS',
+    'TOKEN_LIMIT_EXCEEDED': 'MAX_TOKENS', 'TOKEN_BUDGET_EXCEEDED': 'MAX_TOKENS',
+    'OUTPUT_TOKEN_LIMIT_EXCEEDED': 'MAX_TOKENS',
+    'CONTENT_FILTER': 'CONTENT_BLOCKED', 'BLOCKED_BY_SAFETY': 'SAFETY',
+    'UNAVAILABLE': 'SERVICE_UNAVAILABLE', 'INTERNAL': 'API_ERROR', 'INTERNAL_ERROR': 'API_ERROR',
+    **{reason: reason for reason in BLOCKED_RESPONSE_REASONS | TRANSIENT_RESPONSE_REASONS
+       | FATAL_RESPONSE_REASONS},
+}
 DIAGNOSTIC_FIELDS = (
     'uniqueItems', 'additionalProperties', 'maxItems', 'minItems', 'maxLength',
     'minLength', 'maximum', 'minimum', 'exclusiveMaximum', 'exclusiveMinimum',
@@ -78,7 +113,7 @@ DIAGNOSTIC_FIELDS = (
     'responseSchema', 'generation_config', 'generationConfig', 'max_output_tokens',
     'maxOutputTokens', 'mime_type', 'mimeType', 'response_mime_type', 'model',
     'input', 'system_instruction', 'store', 'stream', 'temperature', 'top_p',
-    'top_k', 'thinking_config', 'thinking_budget', 'picks', 'scores',
+    'top_k', 'thinking_config', 'thinking_budget', 'thinking_level', 'thinking_summaries', 'picks', 'scores',
     'related_ids', 'social_impact', 'attention', 'issue_relevance', 'reason_ko',
     'shortfall_reason_ko', 'articles', 'cves', 'id', 'category', 'summary_ko',
 )
@@ -152,9 +187,97 @@ def safe_http_400_detail(response, api_key: str) -> str:
     return ' · '.join(labels)[:300]
 
 
-def response_text(payload: dict) -> str:
+def _response_reason(value) -> str:
+    if not isinstance(value, str) or len(value) > 1000:
+        return 'UNKNOWN'
+    # Interactions error codes may be URIs. Never expose their host/path/query.
+    code = value.rsplit('/', 1)[-1].upper().replace('-', '_')
+    return RESPONSE_REASON_ALIASES.get(code, 'UNKNOWN')
+
+
+def _token_count(value) -> int | None:
+    return value if type(value) is int and 0 <= value <= 1_000_000_000 else None
+
+
+def safe_response_diagnostic(payload: dict, max_output_tokens: int | None = None) -> dict:
+    """Read metadata only; never log partial output, provider prose or tokens.
+
+    Interactions documents status, errors[].code/message and continuation_token;
+    optional finish-reason fields are accepted only as exact known enum labels.
+    Status=incomplete alone is insufficient evidence for a retry or token limit.
+    """
+    if not isinstance(payload, dict):
+        payload = {}
+    raw_status = payload.get('status')
+    status = raw_status.lower() if isinstance(raw_status, str) else 'unknown'
+    if status not in RESPONSE_STATUSES:
+        status = 'unknown'
+    errors = payload.get('errors', [])
+    errors = list(errors[:8]) if isinstance(errors, list) else []
+    if isinstance(payload.get('error'), dict):
+        errors.append(payload['error'])
+    codes, messages = [], []
+    for error in errors:
+        if isinstance(error, dict):
+            codes.append(_response_reason(error.get('code')))
+            message = error.get('message')
+            if isinstance(message, str):
+                messages.append(message[:2000].lower())
+    for name in ('reason', 'finish_reason', 'finishReason', 'stop_reason'):
+        if name in payload:
+            codes.append(_response_reason(payload[name]))
+    for name in ('incomplete_details', 'incomplete'):
+        details = payload.get(name)
+        if isinstance(details, dict) and 'reason' in details:
+            codes.append(_response_reason(details['reason']))
+    steps = payload.get('steps', [])
+    for step in steps[:100] if isinstance(steps, list) else []:
+        if isinstance(step, dict) and step.get('type') == 'model_output':
+            for name in ('finish_reason', 'finishReason', 'stop_reason'):
+                if name in step:
+                    codes.append(_response_reason(step[name]))
+    usage = payload.get('usage')
+    usage = usage if isinstance(usage, dict) else {}
+    output = _token_count(usage.get('total_output_tokens'))
+    thoughts = _token_count(usage.get('total_thought_tokens'))
+    limit = _token_count(max_output_tokens)
+    reason = next((code for code in codes if code in BLOCKED_RESPONSE_REASONS), None)
+    if reason is None:
+        reason = next((code for code in codes if code in FATAL_RESPONSE_REASONS), None)
+    if reason is None:
+        reason = next((code for code in codes if code == 'MAX_TOKENS'), None)
+    if reason is None:
+        reason = next((code for code in codes if code in TRANSIENT_RESPONSE_REASONS), None)
+    # Provider messages are classified to fixed labels, never returned. Safety
+    # takes precedence over token hints in a combined error message.
+    message = ' '.join(messages)
+    if re.search(r'\b(?:safety|content[_ ]blocked|content[_ ]filter|prohibited[_ ]content)\b', message):
+        reason = 'CONTENT_BLOCKED'
+    elif reason is None and re.search(
+            r'\b(?:max(?:imum)?[_ ](?:output[_ ])?tokens?|token[_ ](?:budget|limit)(?:[_ ]exceeded)?)\b', message):
+        reason = 'MAX_TOKENS'
+    # Interactions reports output and thought tokens separately. The configured
+    # maximum applies to their combined total, so reasoning can exhaust it even
+    # when the visible output is short or empty.
+    generated = output + thoughts if output is not None and thoughts is not None else output
+    if (reason is None and not codes and status in ('incomplete', 'budget_exceeded')
+            and limit and generated is not None and generated >= limit):
+        reason = 'MAX_TOKENS'
+    reason = reason or 'UNKNOWN'
+    return {'status': status, 'reason': reason,
+            'retryable': status in ('incomplete', 'failed', 'budget_exceeded')
+                         and reason in TRANSIENT_RESPONSE_REASONS | {'MAX_TOKENS'},
+            'error_codes': list(dict.fromkeys(codes)),
+            'output_tokens': output, 'thought_tokens': thoughts, 'output_limit': limit,
+            'continuation_available': isinstance(payload.get('continuation_token'), str)
+                                      and bool(payload['continuation_token'])}
+
+
+def response_text(payload: dict, max_output_tokens: int | None = None) -> str:
+    if not isinstance(payload, dict):
+        raise GeminiResponseValidationError('Gemini 응답 형식 불일치')
     if payload.get('status') != 'completed':
-        raise GeminiError('Gemini가 완성된 응답을 반환하지 않았습니다')
+        raise GeminiIncompleteError(safe_response_diagnostic(payload, max_output_tokens))
     parts = [content.get('text', '') for step in payload.get('steps', [])
              if step.get('type') == 'model_output' for content in step.get('content', [])
              if content.get('type') == 'text']
@@ -185,12 +308,16 @@ class Gemini:
 
     def request(self, instruction: str, data: dict, schema: dict, model: str,
                 attempts: int = 3, validator: Callable[[dict], None] | None = None,
-                max_output_tokens: int = 8192) -> dict:
+                max_output_tokens: int = 8192, thinking_level: str | None = None) -> dict:
         payload = {'model': model, 'system_instruction': SYSTEM,
                    'input': instruction + '\n\nUNTRUSTED_DATA_JSON:\n' + json.dumps(data, ensure_ascii=False),
                    'store': False, 'stream': False,
                    'generation_config': {'max_output_tokens': max_output_tokens},
                    'response_format': {'type': 'text', 'mime_type': 'application/json', 'schema': schema}}
+        if thinking_level is not None:
+            if thinking_level not in ('minimal', 'low', 'medium', 'high'):
+                raise ValueError('지원하지 않는 Gemini thinking_level')
+            payload['generation_config']['thinking_level'] = thinking_level
         error = None
         for attempt in range(attempts):
             if self.remaining <= 0:
@@ -221,12 +348,28 @@ class Gemini:
                     detail = safe_http_400_detail(response, self.key) if response.status_code == 400 else ''
                     raise GeminiHTTPError(response.status_code, detail)
                 raw = response.json()
-                self.tokens += raw.get('usage', {}).get('total_tokens', 0)
-                result = json.loads(response_text(raw))
+                usage = raw.get('usage') if isinstance(raw, dict) else None
+                if isinstance(usage, dict):
+                    self.tokens += _token_count(usage.get('total_tokens')) or 0
+                result = json.loads(response_text(raw, payload['generation_config']['max_output_tokens']))
                 validate(result, schema)
                 if validator is not None:
                     validator(result)
                 return result
+            except GeminiIncompleteError as exc:
+                if not exc.retryable:
+                    raise
+                error = exc
+                if exc.reason in ('RATE_LIMIT_EXCEEDED', 'TOO_MANY_REQUESTS'):
+                    delay = min(60, 30 * 2 ** attempt) + random.uniform(0, 3)
+                    self.cooldown_until = max(self.cooldown_until, time.monotonic() + delay)
+                elif attempt < attempts - 1:
+                    if exc.reason == 'MAX_TOKENS' and model.startswith('gemini-3.'):
+                        current = payload['generation_config']['max_output_tokens']
+                        payload['generation_config']['max_output_tokens'] = min(65536, current * 2)
+                    time.sleep(5 * (attempt + 1))
+                if attempt < attempts - 1:
+                    print(f'[Gemini 응답 재시도] {exc}', flush=True)
             except GeminiResponseValidationError as exc:
                 error = exc
                 if attempt < attempts - 1:
@@ -328,13 +471,17 @@ class Gemini:
             result = self.request(instruction, data, schema, preferred_model,
                                   attempts=1, validator=validate_hot)
             model_used = preferred_model
-        except (GeminiHTTPError, GeminiResponseValidationError) as exc:
+        except (GeminiHTTPError, GeminiResponseValidationError, GeminiIncompleteError) as exc:
             if isinstance(exc, GeminiHTTPError) and (
                     exc.status_code not in TRANSIENT_HTTP_STATUSES or fallback_model == preferred_model):
                 raise
+            if isinstance(exc, GeminiIncompleteError) and not exc.retryable:
+                raise
             # Keep the reserved three physical calls: one preferred response,
             # then at most two validated responses from the fallback model.
-            reason = f'HTTP {exc.status_code}' if isinstance(exc, GeminiHTTPError) else '응답 검증 실패'
+            reason = (f'HTTP {exc.status_code}' if isinstance(exc, GeminiHTTPError)
+                      else f'{exc.status}/{exc.reason}' if isinstance(exc, GeminiIncompleteError)
+                      else '응답 검증 실패')
             print(f'[HOT 모델 대체] {preferred_model} {reason} → {fallback_model}', flush=True)
             result = self.request(instruction, data, schema, fallback_model,
                                   attempts=2, validator=validate_hot)

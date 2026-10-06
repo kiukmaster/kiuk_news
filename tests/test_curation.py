@@ -46,19 +46,22 @@ def payload_candidates(call):
 
 
 @pytest.mark.parametrize('kind,counts', [
-    ('news', {0: 0, 1: 2, 300: 2, 301: 6, 600: 6, 601: 8, 1801: 22}),
-    ('cve', {0: 0, 1: 2, 300: 2, 301: 6, 600: 6, 601: 8, 4501: 38}),
+    ('news', {0: 0, 1: 2, 200: 2, 201: 6, 400: 6, 401: 12,
+              557: 12, 600: 12, 601: 14, 607: 14, 1801: 42}),
+    ('cve', {0: 0, 1: 2, 200: 2, 201: 6, 400: 6, 401: 8,
+             557: 8, 600: 8, 601: 10, 607: 10, 4501: 54}),
 ])
 def test_call_bound_counts_all_rounds_and_both_physical_attempts(kind, counts):
     for count, expected in counts.items():
         assert curation_max_calls(count, kind) == expected
 
 
-def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypatch):
+@pytest.mark.parametrize('candidate_count', [557, 607, 1801])
+def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypatch, candidate_count):
     client = make_client(monkeypatch)
     categories = ('ai', 'security', 'tech', 'event', 'github')
     candidates = []
-    for number in range(1801):
+    for number in range(candidate_count):
         category = categories[number % 5]
         candidates.append({'id': str(number), 'category_hint': category,
                            'kind': category if category in ('event', 'github') else 'news'})
@@ -84,8 +87,66 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
     assert client.calls <= curation_max_calls(len(candidates), 'news')
     assert all(call.kwargs['json']['model'] == 'gemini-3.8-flash'
                for call in client.session.post.call_args_list)
-    assert all(call.kwargs['json']['generation_config']['max_output_tokens'] == 16384
+    assert all(call.kwargs['json']['generation_config']['max_output_tokens'] == 32768
                for call in client.session.post.call_args_list)
+    assert all(call.kwargs['json']['generation_config']['thinking_level'] == 'low'
+               for call in client.session.post.call_args_list)
+    assert candidates == original
+
+
+@pytest.mark.parametrize('candidate_count,physical_limit', [(557, 12), (607, 14)])
+def test_actual_failed_pool_sizes_stay_inside_budget_when_every_round_retries(
+        monkeypatch, candidate_count, physical_limit):
+    # Reproduce the two live backlog sizes, with a failed response and a valid
+    # response for every group. The complete tournament must still fit exactly
+    # in its advertised physical-call reservation and screen every original ID.
+    client = make_client(monkeypatch, budget=physical_limit)
+    categories = ('ai', 'security', 'tech', 'event', 'github')
+    candidates = [{'id': str(number), 'category_hint': categories[number % 5],
+                   'kind': categories[number % 5] if categories[number % 5] in ('event', 'github') else 'news'}
+                  for number in range(candidate_count)]
+    seen = set()
+
+    def choose(*args, **kwargs):
+        rows = payload_candidates(kwargs)
+        assert len(rows) <= 200
+        seen.update(row['id'] for row in rows)
+        if client.calls % 2:
+            return response(selection(pick('outside-current-group', 'ai')))
+        counts, picks = Counter(), []
+        for row in rows:
+            category = row['category_hint']
+            if counts[category] < 20:
+                picks.append(pick(row['id'], category))
+                counts[category] += 1
+        return response(selection(*picks))
+
+    client.session.post = Mock(side_effect=choose)
+    result = curate_candidates(client, candidates)
+    assert seen == {row['id'] for row in candidates}
+    assert Counter(row['category'] for row in result['picks']) == dict.fromkeys(categories, 20)
+    assert client.calls == client.session.post.call_count == physical_limit
+    assert curation_max_calls(candidate_count, 'news') == physical_limit
+    assert client.remaining == 0
+
+
+def test_later_preliminary_failure_cannot_expose_an_earlier_valid_selection(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number)} for number in range(557)]
+    original = copy.deepcopy(candidates)
+
+    def choose(*args, **kwargs):
+        rows = payload_candidates(kwargs)
+        if client.calls == 1:
+            return response(selection(pick(rows[0]['id'], 'ai')))
+        # ID zero was valid in the earlier group, but is outside this group.
+        # Neither this retry nor the completed earlier result may be returned.
+        return response(selection(pick('0', 'ai')))
+
+    client.session.post = Mock(side_effect=choose)
+    with pytest.raises(GeminiResponseValidationError, match='ID'):
+        curate_candidates(client, candidates)
+    assert client.calls == client.session.post.call_count == 3
     assert candidates == original
 
 

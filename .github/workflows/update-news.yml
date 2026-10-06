@@ -8,12 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'collect: 수집·배포 / rebuild: 재배포 / check-api: Gemini 키·모델 검사'
+        description: 'collect: 수집·배포 / rebuild: 재배포 / check-api: 연결 / check-curation: 저장 후보 전체 선별 검사'
         type: choice
         options:
           - collect
           - rebuild
           - check-api
+          - check-curation
         default: collect
       scheduled_slot:
         description: '외부 예약 실행용 게시 시각 (KST). 직접 실행은 manual'
@@ -42,15 +43,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: news-publish-${{ github.repository }}
+  group: news-${{ (inputs.mode == 'check-api' || inputs.mode == 'check-curation') && 'diagnostic' || 'publish' }}-${{ github.repository }}
   queue: max
   cancel-in-progress: false
 
 jobs:
   check-api:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'check-api'
+    if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'check-api' || inputs.mode == 'check-curation')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -65,14 +66,25 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
       - name: Check Gemini key, models and selection schemas without publishing
+        if: inputs.mode == 'check-api'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
         run: python -u -m digest --check-api
+      - name: Restore candidates for read-only selection diagnostic
+        if: inputs.mode == 'check-curation'
+        run: python scripts/state_branch.py restore --dir diagnostic-state
+      - name: Check full saved candidate pool without publishing
+        if: inputs.mode == 'check-curation'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_HOT_MODEL: ${{ vars.GEMINI_HOT_MODEL }}
+        run: python -u -m digest --check-curation --state-dir diagnostic-state
 
   publish:
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.mode != 'check-api' && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.mode != 'check-api' && inputs.mode != 'check-curation' && !(github.event_name == 'schedule' && vars.EXTERNAL_SCHEDULER_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:

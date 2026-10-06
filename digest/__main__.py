@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections import Counter
 from pathlib import Path
 
 from .common import ROOT, load_config, now_kst, read_json, write_json
@@ -27,6 +28,8 @@ def main():
     mode.add_argument('--build-only', action='store_true', help='API/수집 없이 현재 상태로 HTML만 생성')
     mode.add_argument('--check-sources', action='store_true', help='수집원·NVD 확인; Gemini 호출·상태 변경 없음')
     mode.add_argument('--check-api', action='store_true', help='설정한 Gemini 요약·선별·HOT 모델 연결 확인')
+    mode.add_argument('--check-curation', action='store_true',
+                      help='저장된 최신 후보 전체로 뉴스·CVE 선별 검사; 상태 변경·배포 없음')
     args = parser.parse_args()
     cfg, now = load_config(), now_kst()
     if args.check_sources:
@@ -56,6 +59,36 @@ def main():
                               model=cfg.get('curation_model', 'gemini-3.8-flash'), as_of=now.isoformat())
             print(f'{kind}: 실제 선별 요청 형식 확인')
         return 0
+    if args.check_curation:
+        # Read the checkpoint directly: never prune, collect, save or render
+        # during this diagnostic. Replays exercise production-size requests.
+        checkpoint = read_json(args.state_dir / 'state.json', {})
+        days = checkpoint.get('days', {})
+        if not days:
+            raise GeminiError('선별 검사에 사용할 저장된 후보가 없습니다')
+        date = max(days)
+        day = days[date]
+        client = Gemini(cfg)
+        failed = False
+        for kind in ('news', 'cve'):
+            candidates = list(day.get(f'{kind}_candidates', {}).values())
+            if not candidates:
+                print(f'{date} {kind}: 저장된 후보 없음')
+                continue
+            before = client.calls
+            try:
+                result = curate_candidates(client, candidates, kind=kind,
+                    model=cfg.get('curation_model', 'gemini-3.8-flash'),
+                    limit=cfg.get('category_daily_limit', 20), as_of=now.isoformat())
+                counts = Counter(pick.get('category', 'cve') for pick in result['picks'])
+                print(f'{date} {kind}: 후보 {len(candidates)}건 · 선정 {len(result["picks"])}건 · '
+                      f'분야별 {dict(counts)} · 요청 {client.calls - before}회')
+            except GeminiError as exc:
+                # Gemini errors use fixed diagnostic labels, never raw output.
+                print(f'{date} {kind}: 선별 검사 실패 · {exc}')
+                failed = True
+        print(f'선별 검사 합계: 요청 {client.calls}회 · API 보고 토큰 {client.tokens}')
+        return 1 if failed else 0
     state = load_state(args.state_dir)
     prune(state, now, cfg['keep_days'])
     if not args.build_only:

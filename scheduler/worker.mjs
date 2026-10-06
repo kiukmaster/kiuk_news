@@ -1,5 +1,4 @@
 // Cloudflare's scheduledTime is the original UTC event time, even on late delivery.
-const PREPARATION_LEAD_MS = 53 * 60 * 1000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 20_000;
 const GET_MAX_ATTEMPTS = 3;
@@ -8,12 +7,21 @@ const MAX_RETRY_AFTER_MS = 30_000;
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const GITHUB_API = 'https://api.github.com';
 const WORKFLOW_FILE = 'update-news.yml';
+const UTC_HOUR_SLOTS = Object.freeze({ 20: '06:00', 3: '13:00', 9: '19:00' });
 
-export const CRON_SLOTS = Object.freeze({
-  '7 20 * * *': '06:00',
-  '7 3 * * *': '13:00',
-  '7 9 * * *': '19:00',
+const CRON_PLANS = Object.freeze({
+  '7 20 * * *': { slot: '06:00', leadMinutes: 53, recovery: false },
+  '7 3 * * *': { slot: '13:00', leadMinutes: 53, recovery: false },
+  '7 9 * * *': { slot: '19:00', leadMinutes: 53, recovery: false },
+  // Group the three daily slots in two triggers to stay within Workers Free's
+  // five-cron account limit. scheduledTime's UTC hour selects the KST slot.
+  '27 3,9,20 * * *': { leadMinutes: 33, recovery: true },
+  '47 3,9,20 * * *': { leadMinutes: 13, recovery: true },
 });
+export const CRON_SLOTS = Object.freeze(Object.fromEntries(
+  Object.entries(CRON_PLANS).filter(([, plan]) => plan.slot)
+    .map(([cron, plan]) => [cron, plan.slot])
+));
 
 export class SchedulerError extends Error {
   constructor(code, status = null, retryAfterMs = null) {
@@ -37,21 +45,26 @@ export class SchedulerError extends Error {
 export function planPublication(event) {
   const cron = typeof event?.cron === 'string'
     ? event.cron.trim().replace(/\s+/g, ' ') : '';
-  const slot = CRON_SLOTS[cron];
+  const config = CRON_PLANS[cron];
   const timestamp = event?.scheduledTime;
-  if (!slot || !Number.isFinite(timestamp) || timestamp < 0) {
+  if (!config || !Number.isFinite(timestamp) || timestamp < 0) {
     throw new SchedulerError('SCHEDULE_INVALID');
   }
   const prepared = new Date(timestamp);
-  const [minute, hour] = cron.split(' ').map(Number);
-  if (!Number.isFinite(prepared.getTime()) || prepared.getUTCHours() !== hour
-      || prepared.getUTCMinutes() !== minute) {
+  const [minuteText, hourText] = cron.split(' ');
+  const minute = Number(minuteText);
+  const allowedHours = hourText.split(',').map(Number);
+  const hour = prepared.getUTCHours();
+  const slot = config.slot || UTC_HOUR_SLOTS[hour];
+  if (!Number.isFinite(prepared.getTime()) || !allowedHours.includes(hour)
+      || prepared.getUTCMinutes() !== minute || !slot) {
     throw new SchedulerError('SCHEDULE_INVALID');
   }
   prepared.setUTCSeconds(0, 0);
-  const localTarget = new Date(prepared.getTime() + PREPARATION_LEAD_MS + KST_OFFSET_MS);
+  const localTarget = new Date(prepared.getTime() + config.leadMinutes * 60_000 + KST_OFFSET_MS);
   const publishAt = `${localTarget.toISOString().slice(0, 19)}+09:00`;
-  return { slot, publishAt, displayTitle: `News ${slot} ${publishAt}` };
+  return { slot, publishAt, displayTitle: `News ${slot} ${publishAt}`,
+    recovery: config.recovery };
 }
 
 function configuration(env) {
@@ -145,15 +158,38 @@ export async function dispatchScheduled(event, env, fetchImpl = globalThis.fetch
     'User-Agent': 'kiuk-news-scheduler/1.0',
     'Cache-Control': 'no-cache',
   };
-  const query = new URLSearchParams({ event: 'workflow_dispatch', branch: ref, per_page: '20' });
+  const query = new URLSearchParams({ event: 'workflow_dispatch', branch: ref, per_page: '100' });
   const recent = await githubGet(`${workflow}/runs?${query}`, headers, fetchImpl, sleepImpl);
   if (!Array.isArray(recent?.workflow_runs)) {
     throw new SchedulerError('GITHUB_RESPONSE_INVALID');
   }
   // Every delivery checks the original full timestamp before mutating GitHub.
   // This also covers a prior dispatch accepted without a received HTTP ack.
-  if (recent.workflow_runs.some(run => run?.display_title === plan.displayTitle)) {
+  const matches = recent.workflow_runs.filter(run => run?.display_title === plan.displayTitle);
+  if (matches.length && !plan.recovery) {
     return { status: 'duplicate', ...plan };
+  }
+  if (matches.length > 1) {
+    // Ambiguous existing runs: never create a third run or rerun one blindly.
+    return { status: 'duplicate', ...plan };
+  }
+  if (matches.length === 1) {
+    const run = matches[0];
+    if (run.status !== 'completed'
+        || !['failure', 'cancelled', 'timed_out'].includes(run.conclusion)) {
+      return { status: 'duplicate', ...plan };
+    }
+    if (!Number.isSafeInteger(run.id) || run.id <= 0
+        || !Number.isSafeInteger(run.run_attempt) || run.run_attempt <= 0) {
+      throw new SchedulerError('GITHUB_RESPONSE_INVALID');
+    }
+    if (run.run_attempt >= 3) return { status: 'retry-limit', ...plan };
+    // Re-run the same original run, preserving its full publication timestamp.
+    // POST is intentionally never retried after an uncertain outcome.
+    await githubRequest(`${GITHUB_API}/repos/${repository}/actions/runs/${run.id}/rerun`, {
+      method: 'POST', headers,
+    }, fetchImpl, 201);
+    return { status: 'rerun', ...plan };
   }
   await githubRequest(`${workflow}/dispatches`, {
     method: 'POST',

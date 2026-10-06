@@ -7,20 +7,20 @@ const MAX_RETRY_AFTER_MS = 30_000;
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const GITHUB_API = 'https://api.github.com';
 const WORKFLOW_FILE = 'update-news.yml';
+const UTC_HOUR_SLOTS = Object.freeze({ 20: '06:00', 3: '13:00', 9: '19:00' });
 
 const CRON_PLANS = Object.freeze({
   '7 20 * * *': { slot: '06:00', leadMinutes: 53, recovery: false },
-  '27 20 * * *': { slot: '06:00', leadMinutes: 33, recovery: true },
-  '47 20 * * *': { slot: '06:00', leadMinutes: 13, recovery: true },
   '7 3 * * *': { slot: '13:00', leadMinutes: 53, recovery: false },
-  '27 3 * * *': { slot: '13:00', leadMinutes: 33, recovery: true },
-  '47 3 * * *': { slot: '13:00', leadMinutes: 13, recovery: true },
   '7 9 * * *': { slot: '19:00', leadMinutes: 53, recovery: false },
-  '27 9 * * *': { slot: '19:00', leadMinutes: 33, recovery: true },
-  '47 9 * * *': { slot: '19:00', leadMinutes: 13, recovery: true },
+  // Group the three daily slots in two triggers to stay within Workers Free's
+  // five-cron account limit. scheduledTime's UTC hour selects the KST slot.
+  '27 3,9,20 * * *': { leadMinutes: 33, recovery: true },
+  '47 3,9,20 * * *': { leadMinutes: 13, recovery: true },
 });
 export const CRON_SLOTS = Object.freeze(Object.fromEntries(
-  Object.entries(CRON_PLANS).map(([cron, plan]) => [cron, plan.slot])
+  Object.entries(CRON_PLANS).filter(([, plan]) => plan.slot)
+    .map(([cron, plan]) => [cron, plan.slot])
 ));
 
 export class SchedulerError extends Error {
@@ -51,16 +51,20 @@ export function planPublication(event) {
     throw new SchedulerError('SCHEDULE_INVALID');
   }
   const prepared = new Date(timestamp);
-  const [minute, hour] = cron.split(' ').map(Number);
-  if (!Number.isFinite(prepared.getTime()) || prepared.getUTCHours() !== hour
-      || prepared.getUTCMinutes() !== minute) {
+  const [minuteText, hourText] = cron.split(' ');
+  const minute = Number(minuteText);
+  const allowedHours = hourText.split(',').map(Number);
+  const hour = prepared.getUTCHours();
+  const slot = config.slot || UTC_HOUR_SLOTS[hour];
+  if (!Number.isFinite(prepared.getTime()) || !allowedHours.includes(hour)
+      || prepared.getUTCMinutes() !== minute || !slot) {
     throw new SchedulerError('SCHEDULE_INVALID');
   }
   prepared.setUTCSeconds(0, 0);
   const localTarget = new Date(prepared.getTime() + config.leadMinutes * 60_000 + KST_OFFSET_MS);
   const publishAt = `${localTarget.toISOString().slice(0, 19)}+09:00`;
-  return { slot: config.slot, publishAt,
-    displayTitle: `News ${config.slot} ${publishAt}`, recovery: config.recovery };
+  return { slot, publishAt, displayTitle: `News ${slot} ${publishAt}`,
+    recovery: config.recovery };
 }
 
 function configuration(env) {

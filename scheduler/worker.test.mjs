@@ -13,7 +13,7 @@ const event = (cron = '7 3 * * *', iso = '2026-10-01T03:07:00Z') => ({
 });
 const json = value => new Response(JSON.stringify(value), { status: 200 });
 const emptyRuns = () => json({ workflow_runs: [] });
-const recoveryEvent = (cron = '27 3 * * *', iso = '2026-10-01T03:27:00Z') => event(cron, iso);
+const recoveryEvent = (cron = '27 3,9,20 * * *', iso = '2026-10-01T03:27:00Z') => event(cron, iso);
 const matchingRun = (scheduled, fields = {}) => ({
   id: 12345, run_attempt: 1, status: 'completed', conclusion: 'failure',
   display_title: planPublication(scheduled).displayTitle, ...fields,
@@ -24,17 +24,17 @@ for (const [cron, iso, expected] of [
   ['7 3 * * *', '2026-10-01T03:07:00Z', '2026-10-01T13:00:00+09:00'],
   ['7 9 * * *', '2026-10-01T09:07:00Z', '2026-10-01T19:00:00+09:00'],
   ['7 20 * * *', '2026-12-31T20:07:00Z', '2027-01-01T06:00:00+09:00'],
-  ['27 20 * * *', '2026-09-30T20:27:00Z', '2026-10-01T06:00:00+09:00'],
-  ['47 20 * * *', '2026-12-31T20:47:00Z', '2027-01-01T06:00:00+09:00'],
-  ['27 3 * * *', '2026-10-01T03:27:00Z', '2026-10-01T13:00:00+09:00'],
-  ['47 3 * * *', '2026-10-01T03:47:00Z', '2026-10-01T13:00:00+09:00'],
-  ['27 9 * * *', '2026-10-01T09:27:00Z', '2026-10-01T19:00:00+09:00'],
-  ['47 9 * * *', '2026-10-01T09:47:00Z', '2026-10-01T19:00:00+09:00'],
+  ['27 3,9,20 * * *', '2026-09-30T20:27:00Z', '2026-10-01T06:00:00+09:00'],
+  ['47 3,9,20 * * *', '2026-12-31T20:47:00Z', '2027-01-01T06:00:00+09:00'],
+  ['27 3,9,20 * * *', '2026-10-01T03:27:00Z', '2026-10-01T13:00:00+09:00'],
+  ['47 3,9,20 * * *', '2026-10-01T03:47:00Z', '2026-10-01T13:00:00+09:00'],
+  ['27 3,9,20 * * *', '2026-10-01T09:27:00Z', '2026-10-01T19:00:00+09:00'],
+  ['47 3,9,20 * * *', '2026-10-01T09:47:00Z', '2026-10-01T19:00:00+09:00'],
 ]) {
   test(`UTC cron ${cron} preserves KST publication date ${expected}`, () => {
     const plan = planPublication(event(cron, iso));
     assert.equal(plan.publishAt, expected);
-    assert.equal(plan.slot, CRON_SLOTS[cron]);
+    assert.equal(plan.slot, expected.slice(11, 16));
     assert.equal(plan.displayTitle, `News ${plan.slot} ${expected}`);
   });
 }
@@ -313,7 +313,9 @@ test('worker has only a scheduled handler and configuration has no public URLs',
   assert.match(content, /"workers_dev": false/);
   assert.match(content, /"preview_urls": false/);
   assert.ok(!content.includes(ENV.GITHUB_TOKEN));
-  for (const cron of Object.keys(CRON_SLOTS)) assert.ok(content.includes(`"${cron}"`));
+  for (const cron of [...Object.keys(CRON_SLOTS), '27 3,9,20 * * *',
+    '47 3,9,20 * * *']) assert.ok(content.includes(`"${cron}"`));
+  assert.equal((content.match(/\"(?:7|27|47) [^\"]+\"/g) || []).length, 5);
 });
 
 test('scheduled handler logs only sanitized failure messages', async () => {

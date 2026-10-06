@@ -4,9 +4,11 @@
 
 | 한국시간 첫 준비 | 복구 점검 | 한국시간 공개 목표 | Cloudflare UTC cron (첫 준비 / 복구) |
 |---|---|---|---|
-| 05:07 | 05:27, 05:47 | 06:00 | `7 20 * * *` / `27 20 * * *`, `47 20 * * *` |
-| 12:07 | 12:27, 12:47 | 13:00 | `7 3 * * *` / `27 3 * * *`, `47 3 * * *` |
-| 18:07 | 18:27, 18:47 | 19:00 | `7 9 * * *` / `27 9 * * *`, `47 9 * * *` |
+| 05:07 | 05:27, 05:47 | 06:00 | `7 20 * * *` / 아래의 공유 복구 cron |
+| 12:07 | 12:27, 12:47 | 13:00 | `7 3 * * *` / 아래의 공유 복구 cron |
+| 18:07 | 18:27, 18:47 | 19:00 | `7 9 * * *` / 아래의 공유 복구 cron |
+
+복구 cron은 세 시간대를 묶은 `27 3,9,20 * * *`와 `47 3,9,20 * * *` 두 개입니다. Cloudflare 무료 플랜의 계정당 Cron Trigger 한도 5개에 맞춰 기존 3개와 합계 5개를 사용합니다.
 
 준비가 끝난 Actions runner가 공개 목표까지 기다렸다가 배포합니다. 복구 점검은 원래 목표 날짜·시각으로 GitHub 실행 기록을 조회합니다. 해당 실행이 없으면 같은 목표를 한 번 요청하고, 실행 중이거나 성공했으면 아무 작업도 하지 않습니다. 실패·취소·시간 초과로 끝났으면 원래 실행을 다시 시작하되 전체 시도를 최대 3회로 제한합니다. GitHub가 재실행 요청을 수락했는지 불확실할 때 POST를 반복하지 않습니다. 재실행은 원래 커밋과 입력값을 사용하며 Gemini 호출량이 추가될 수 있습니다.
 
@@ -31,7 +33,7 @@ GitHub 실행 기록을 조회하는 GET은 일시적인 5xx·429·통신 오류
 
    GitHub의 Settings → Developer settings → Fine-grained personal access tokens에서 `kiuk_news` 저장소만 선택하고 **Actions: Read and write**를 허용합니다. 만료 날짜를 기록하고 만료 전에 Worker Secret을 교체합니다. 토큰을 코드, 저장소, URL 또는 대화에 붙여 넣지 않습니다.
 
-3. Worker Settings → Triggers → Cron Triggers에 위 표의 UTC cron 아홉 개를 등록합니다. 기존 세 개를 유지하고 `27`분·`47`분 점검 여섯 개를 추가합니다. HTTP 공개 주소는 필요하지 않습니다. 새 트리거가 전파되는 데 최대 15분이 걸릴 수 있습니다.
+3. Worker Settings → Triggers → Cron Triggers에 위 표의 첫 준비 cron 세 개와 공유 복구 cron 두 개, 총 다섯 개를 등록합니다. 기존 세 개를 유지하고 공유 복구 두 개를 추가합니다. HTTP 공개 주소는 필요하지 않습니다. 새 트리거가 전파되는 데 최대 15분이 걸릴 수 있습니다.
 4. Worker 실행 로그와 GitHub의 `News 슬롯 전체시각` 실행을 확인합니다. `publish_at`은 `2026-10-01T19:00:00+09:00`처럼 날짜를 포함합니다. 같은 목표의 실행이 정상 진행 중이면 Worker는 새 요청을 보내지 않습니다. 실패한 실행의 재시도는 같은 실행 번호의 다음 attempt로 표시됩니다.
 5. 실제 외부 예약 요청이 확인된 후 GitHub 저장소 변수 `EXTERNAL_SCHEDULER_ENABLED=true`를 설정합니다. 확인 전에는 기본 예약을 끄지 않습니다.
 
@@ -60,4 +62,4 @@ node --test scheduler/worker.test.mjs
 .venv/Scripts/python.exe -X utf8 -m pytest -q
 ```
 
-운영 참고: [Cloudflare Cron Trigger](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [GitHub workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event), [GitHub 예약 지연](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+운영 참고: [Cloudflare Cron Trigger](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [Cloudflare 무료 플랜 Cron 한도](https://developers.cloudflare.com/workers/platform/limits/), [GitHub workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event), [GitHub 재실행 API](https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-workflow), [GitHub 예약 지연](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).

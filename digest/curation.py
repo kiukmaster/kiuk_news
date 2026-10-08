@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from jsonschema import ValidationError, validate
+
 from .gemini import BudgetExceeded, GeminiResponseValidationError
 
 # Leave room for the structured selection and the model's thinking. This must
@@ -18,6 +20,11 @@ CURATION_ATTEMPTS = 2
 CURATION_MODEL = 'gemini-3.8-flash'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')
+
+
+def fixed_category(candidate: dict) -> str | None:
+    """Use the source's structural kind for its fixed report section."""
+    return {'paper': 'tech', 'event': 'event', 'github': 'github'}.get(candidate.get('kind'))
 
 
 def _check_options(kind: str, limit: int) -> None:
@@ -62,6 +69,8 @@ def _compact_candidate(candidate: dict, kind: str, inherited: list[str]) -> dict
             'category_hint': candidate.get('category_hint') or candidate.get('category'),
             'evidence_kind': candidate.get('evidence_kind'),
             'stars_today': candidate.get('stars_today'),
+            'fixed_category': fixed_category(candidate),
+            'allowed_categories': sorted(_allowed_categories(candidate)),
         })
     else:
         row.update({
@@ -108,8 +117,8 @@ def _schema(kind: str, limit: int) -> dict:
 
 
 def _allowed_categories(candidate: dict) -> set[str]:
-    return {'github': {'github'}, 'event': {'event'}, 'paper': {'tech'}}.get(
-        candidate.get('kind'), {'ai', 'security', 'tech'})
+    fixed = fixed_category(candidate)
+    return {fixed} if fixed is not None else {'ai', 'security', 'tech'}
 
 
 def _korean_reason(value: Any, maximum: int, allow_empty: bool = False) -> bool:
@@ -119,45 +128,91 @@ def _korean_reason(value: Any, maximum: int, allow_empty: bool = False) -> bool:
         and any('\uac00' <= char <= '\ud7a3' for char in value))
 
 
-def _validate_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> None:
-    """Validate before any selection is exposed or inherited by another round."""
+def _validate_raw_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> None:
+    """Validate every model pick, including picks later removed by the quota."""
+    try:
+        validate(result, _schema(kind, limit))
+    except ValidationError as exc:
+        codes = {'category': 'CATEGORY', 'id': 'IDS', 'related_ids': 'DUPLICATES',
+                 'scores': 'SCORES', 'reason_ko': 'KOREAN_REASON',
+                 'shortfall_reason_ko': 'KOREAN_REASON'}
+        code = next((codes[field] for field in exc.absolute_path if field in codes), None)
+        raise GeminiResponseValidationError('선정 응답 JSON 형식 불일치', retry_code=code) from None
     try:
         picks = result['picks']
         if not isinstance(picks, list) or len(picks) > limit * (5 if kind == 'news' else 1):
-            raise GeminiResponseValidationError('선정 개수 상한 초과')
+            raise GeminiResponseValidationError('선정 개수 상한 초과', retry_code='COUNT')
         shortfall = result['shortfall_reason_ko']
         if not _korean_reason(shortfall, 500, allow_empty=bool(picks)):
-            raise GeminiResponseValidationError('선정 부족 사유가 유효하지 않습니다')
+            raise GeminiResponseValidationError('선정 부족 사유가 유효하지 않습니다', retry_code='KOREAN_REASON')
         by_id = {candidate['id']: candidate for candidate in candidates}
         ids = [pick['id'] for pick in picks]
         if len(ids) != len(set(ids)) or not set(ids).issubset(by_id):
-            raise GeminiResponseValidationError('선정 결과의 ID 누락·중복·변조')
-        represented, categories = set(ids), Counter()
+            raise GeminiResponseValidationError('선정 결과의 ID 누락·중복·변조', retry_code='IDS')
+        represented = set(ids)
         for pick in picks:
             if not _korean_reason(pick['reason_ko'], 200):
-                raise GeminiResponseValidationError('한국어 선정 이유가 유효하지 않습니다')
+                raise GeminiResponseValidationError('한국어 선정 이유가 유효하지 않습니다', retry_code='KOREAN_REASON')
             scores = pick['scores']
             if (not isinstance(scores, dict) or set(scores) != set(SCORE_KEYS)
                     or any(type(scores[key]) is not int or not 0 <= scores[key] <= 5
                            for key in SCORE_KEYS)):
-                raise GeminiResponseValidationError('선정 중요도 점수가 유효하지 않습니다')
+                raise GeminiResponseValidationError('선정 중요도 점수가 유효하지 않습니다', retry_code='SCORES')
             related = pick['related_ids']
             if (not isinstance(related, list) or len(related) != len(set(related))
                     or not set(related).issubset(by_id) or represented.intersection(related)):
-                raise GeminiResponseValidationError('중복으로 묶은 ID가 유효하지 않습니다')
+                raise GeminiResponseValidationError('중복으로 묶은 ID가 유효하지 않습니다', retry_code='DUPLICATES')
             represented.update(related)
             if kind == 'news':
                 category = pick['category']
-                if category not in _allowed_categories(by_id[pick['id']]):
-                    raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다')
-                categories[category] += 1
-                if categories[category] > limit:
-                    raise GeminiResponseValidationError('카테고리별 선정 개수 상한 초과')
+                candidate = by_id[pick['id']]
+                # The fixed source kinds define their section deterministically.
+                # Ordinary articles still require Gemini to choose a valid topic.
+                if fixed_category(candidate) is None and category not in _allowed_categories(candidate):
+                    raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
             elif (by_id[pick['id']].get('rejected')
                   or str(by_id[pick['id']].get('vuln_status', '')).lower() in ('reject', 'rejected')):
                 raise GeminiResponseValidationError('Rejected CVE는 선정할 수 없습니다')
     except (KeyError, TypeError, AttributeError):
         raise GeminiResponseValidationError('선정 응답 형식 불일치') from None
+
+
+def _validate_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> None:
+    """Require strict source sections and quotas on the canonical result."""
+    _validate_raw_selection(result, candidates, kind, limit)
+    if kind == 'news':
+        by_id = {candidate['id']: candidate for candidate in candidates}
+        counts = Counter()
+        for pick in result['picks']:
+            category = pick['category']
+            if category not in _allowed_categories(by_id[pick['id']]):
+                raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
+            counts[category] += 1
+            if counts[category] > limit:
+                raise GeminiResponseValidationError('카테고리별 선정 개수 상한 초과', retry_code='COUNT')
+
+
+def _normalize_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> dict:
+    """Apply source sections and daily quotas to Gemini's unchanged ordering.
+
+    Integrity checks precede every change: a corrupt later pick cannot be hidden
+    by a quota cut. No source candidate, model result or score order is mutated.
+    """
+    _validate_raw_selection(result, candidates, kind, limit)
+    by_id = {candidate['id']: candidate for candidate in candidates}
+    counts, picks = Counter(), []
+    for pick in result['picks']:
+        canonical = {**pick, 'scores': dict(pick['scores']), 'related_ids': list(pick['related_ids'])}
+        if kind == 'news':
+            category = fixed_category(by_id[pick['id']]) or pick['category']
+            canonical['category'] = category
+            if counts[category] >= limit:
+                continue
+            counts[category] += 1
+        picks.append(canonical)
+    canonical_result = {'picks': picks, 'shortfall_reason_ko': result['shortfall_reason_ko']}
+    _validate_selection(canonical_result, candidates, kind, limit)
+    return canonical_result
 
 
 def _instruction(kind: str, limit: int, preliminary: bool) -> str:
@@ -185,7 +240,9 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
         policy = (
             f'ai/security/tech/event/github 각 카테고리의 대표를 최대 {limit}개만 선정하라. '
             '일반 뉴스는 AI 모델·제품 ai, 공격·취약점·방어·AI 보안 security, 기타 컴퓨팅 신기술 tech다. '
-            'kind=paper는 tech, kind=github는 github, kind=event는 event로만 분류하라. '
+            'fixed_category가 있는 후보는 주제와 무관하게 해당 보고서 분야를 사용하라. '
+            'kind=paper는 AI·보안 연구여도 tech, kind=github는 github, kind=event는 event다. '
+            'fixed_category가 없는 일반 기사는 allowed_categories 안에서 ai/security/tech만 고른다. '
             '대학생·청년이 참여 가능한 국내 AI·보안·SW·데이터 해커톤·대회·행사 모집을 포함하라. '
             'as_of는 한국시간 평가 기준 시각이다. 그 시각과 공고 근거로 접수 마감이 확인된 행사는 제외하라. '
             '관련 없는 뉴스와 근거 없는 광고는 제외하라. '
@@ -229,12 +286,19 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
                                for candidate in group]}
         result = client.request(_instruction(kind, limit, preliminary), data, _schema(kind, limit), model,
             attempts=CURATION_ATTEMPTS,
-            validator=lambda result: _validate_selection(result, group, kind, limit),
+            validator=lambda result: _normalize_selection(result, group, kind, limit),
             max_output_tokens=32768, thinking_level='low')
-        # Defensively validate lightweight test/integration clients too.
-        _validate_selection(result, group, kind, limit)
-        output = {'picks': [], 'shortfall_reason_ko': result['shortfall_reason_ko']}
-        for pick in result['picks']:
+        # Defensively validate lightweight clients too, then transform a copy.
+        normalized = _normalize_selection(result, group, kind, limit)
+        by_id = {candidate['id']: candidate for candidate in group}
+        fixed_changes = sum(bool(fixed_category(by_id[pick['id']]))
+                            and fixed_category(by_id[pick['id']]) != pick['category']
+                            for pick in result['picks']) if kind == 'news' else 0
+        quota_removed = len(result['picks']) - len(normalized['picks'])
+        if fixed_changes or quota_removed:
+            print(f'[분야 계약 적용] 고정 종류 분류 {fixed_changes}건 보정 · 분야 상한 {quota_removed}건 제외', flush=True)
+        output = {'picks': [], 'shortfall_reason_ko': normalized['shortfall_reason_ko']}
+        for pick in normalized['picks']:
             expanded = list(grouped[pick['id']])
             for related_id in pick['related_ids']:
                 expanded.append(related_id)

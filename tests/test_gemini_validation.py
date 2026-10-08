@@ -8,7 +8,7 @@ from digest.common import load_config
 from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
                            GeminiHTTPError, GeminiIncompleteError,
                            GeminiResponseValidationError, response_text,
-                           safe_response_diagnostic)
+                           safe_response_diagnostic, SEMANTIC_RETRY_FEEDBACK)
 
 
 def make_client(monkeypatch, budget=80):
@@ -98,6 +98,156 @@ def test_semantic_retry_keeps_existing_interval(monkeypatch):
                    validator=require_source_id)
     assert call_times == [100.0, 110.0]
     assert sum(sleeps) == 10
+
+
+def test_category_retry_adds_trusted_correction_before_unchanged_source_data(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    data = {'candidates': [{'id': 'paper-id', 'kind': 'paper', 'allowed_categories': ['tech'],
+                            'title_original': 'Original 외부 제목'}]}
+    client.session.post = Mock(side_effect=[response({'id': 'paper-id', 'category': 'ai'}),
+                                             response({'id': 'paper-id', 'category': 'tech'})])
+
+    def category_contract(result):
+        if result['category'] != 'tech':
+            raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다',
+                                                 retry_code='CATEGORY')
+
+    result = client.request('Original trusted instruction', data, {'type': 'object'}, client.summary_model,
+                            attempts=2, validator=category_contract)
+    first, second = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
+    source_json = json.dumps(data, ensure_ascii=False)
+    assert first == 'Original trusted instruction\n\nUNTRUSTED_DATA_JSON:\n' + source_json
+    assert second == ('Original trusted instruction\n\nTRUSTED_VALIDATION_FEEDBACK:\n'
+                      + SEMANTIC_RETRY_FEEDBACK['CATEGORY'] + '\n\nUNTRUSTED_DATA_JSON:\n' + source_json)
+    assert second.index('TRUSTED_VALIDATION_FEEDBACK') < second.index('UNTRUSTED_DATA_JSON')
+    assert result == {'id': 'paper-id', 'category': 'tech'}
+    assert client.calls == client.session.post.call_count == 2 and client.tokens == 24
+    output = capsys.readouterr().out
+    assert output.strip() == '[Gemini 응답 보정 재시도] code=CATEGORY attempt=2/2'
+
+
+@pytest.mark.parametrize('retry_code', [None, 'unknown', 'SYNTHETIC-secret-code', ['IDS'], {'code': 'IDS'}])
+def test_unrecognized_retry_code_and_arbitrary_error_text_never_enter_prompt_or_log(
+        monkeypatch, capsys, retry_code):
+    client = make_client(monkeypatch)
+    secret = 'private-model-output-and-provider-message'
+    client.session.post = Mock(side_effect=[response({'id': secret}), response({'id': 'source-id'})])
+
+    def check(result):
+        if result['id'] != 'source-id':
+            raise GeminiResponseValidationError(secret + '\n' + client.key, retry_code=retry_code)
+
+    result = client.request('test', {'source': 'unchanged'}, {'type': 'object'}, client.summary_model,
+                            attempts=2, validator=check)
+    assert result == {'id': 'source-id'}
+    inputs = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
+    output = capsys.readouterr().out
+    assert 'code=GENERIC' in output
+    assert secret not in output and client.key not in output
+    assert all(secret not in text and client.key not in text for text in inputs)
+    assert 'SYNTHETIC-secret-code' not in output and all('SYNTHETIC-secret-code' not in text for text in inputs)
+    assert SEMANTIC_RETRY_FEEDBACK['GENERIC'] in inputs[-1]
+
+
+def test_semantic_feedback_is_replaced_instead_of_accumulated_across_attempts(monkeypatch):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(side_effect=[response({'id': 'one'}), response({'id': 'two'}),
+                                             response({'id': 'source-id'})])
+
+    def check(result):
+        if result['id'] == 'one':
+            raise GeminiResponseValidationError('first failure', retry_code='SCORES')
+        if result['id'] == 'two':
+            raise GeminiResponseValidationError('second failure', retry_code='IDS')
+
+    client.request('test', {'original': 'data'}, {'type': 'object'}, client.summary_model, validator=check)
+    inputs = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
+    assert 'TRUSTED_VALIDATION_FEEDBACK' not in inputs[0]
+    assert SEMANTIC_RETRY_FEEDBACK['SCORES'] in inputs[1]
+    assert SEMANTIC_RETRY_FEEDBACK['IDS'] in inputs[2]
+    assert SEMANTIC_RETRY_FEEDBACK['SCORES'] not in inputs[2]
+    assert inputs[2].count('TRUSTED_VALIDATION_FEEDBACK') == 1
+    assert len({text.split('UNTRUSTED_DATA_JSON:\n', 1)[1] for text in inputs}) == 1
+    assert client.calls == 3
+
+
+def test_authentication_failure_after_semantic_feedback_stops_at_second_call(monkeypatch):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(side_effect=[response({'id': 'invented'}), response({}, status=401)])
+    with pytest.raises(GeminiAuthenticationError):
+        client.request('test', {}, {'type': 'object'}, client.summary_model, validator=require_source_id)
+    assert client.calls == client.session.post.call_count == 2
+
+
+def test_retry_code_remains_safe_if_validator_changes_exception_attribute(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(side_effect=[response({'id': 'wrong'}), response({'id': 'source-id'})])
+
+    def check(result):
+        if result['id'] != 'source-id':
+            error = GeminiResponseValidationError('private-message')
+            error.retry_code = 'private-modified-retry-code'
+            raise error
+
+    client.request('test', {}, {'type': 'object'}, client.summary_model, validator=check)
+    assert 'code=GENERIC' in capsys.readouterr().out
+    assert 'private-modified-retry-code' not in client.session.post.call_args.kwargs['json']['input']
+
+
+@pytest.mark.parametrize('invalid', [
+    {'id': 'source-id', 'score': True, 'private': 'private-schema-value'},
+    {'score': 3, 'private': 'private-schema-value'},
+])
+def test_completed_schema_failure_gets_safe_corrective_retry(monkeypatch, capsys, invalid):
+    client = make_client(monkeypatch)
+    schema = {'type': 'object', 'properties': {'id': {'type': 'string'}, 'score': {'type': 'integer'}},
+              'required': ['id', 'score']}
+    client.session.post = Mock(side_effect=[response(invalid), response({'id': 'source-id', 'score': 3})])
+    result = client.request('test', {'original': 'data'}, schema, client.summary_model, attempts=2)
+    assert result == {'id': 'source-id', 'score': 3} and client.calls == 2
+    first, second = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
+    assert 'TRUSTED_VALIDATION_FEEDBACK' not in first
+    assert SEMANTIC_RETRY_FEEDBACK['GENERIC'] in second
+    assert first.split('UNTRUSTED_DATA_JSON:\n', 1)[1] == second.split('UNTRUSTED_DATA_JSON:\n', 1)[1]
+    output = capsys.readouterr().out
+    assert 'code=GENERIC' in output
+    assert 'private-schema-value' not in second and 'private-schema-value' not in output
+
+
+def test_completed_malformed_model_json_gets_safe_corrective_retry(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    malformed = Mock(status_code=200)
+    malformed.json.return_value = {'status': 'completed', 'steps': [
+        {'type': 'model_output', 'content': [{'type': 'text', 'text': '{"private":"private-json-value",'}]}],
+        'usage': {'total_tokens': 12}}
+    client.session.post = Mock(side_effect=[malformed, response({'id': 'source-id'})])
+    result = client.request('test', {}, {'type': 'object'}, client.summary_model, attempts=2)
+    assert result == {'id': 'source-id'} and client.calls == 2 and client.tokens == 24
+    second = client.session.post.call_args.kwargs['json']['input']
+    output = capsys.readouterr().out
+    assert SEMANTIC_RETRY_FEEDBACK['GENERIC'] in second and 'code=GENERIC' in output
+    assert 'private-json-value' not in second and 'private-json-value' not in output
+
+
+def test_repeated_schema_failure_exposes_fixed_error_without_private_values(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(return_value=response({'private': 'private-rejected-value'}))
+    with pytest.raises(GeminiResponseValidationError, match='스키마 검증 실패') as error:
+        client.request('test', {}, {'type': 'object', 'required': ['id']}, client.summary_model, attempts=2)
+    assert client.calls == 2
+    assert 'private-rejected-value' not in str(error.value)
+    assert 'private-rejected-value' not in capsys.readouterr().out
+
+
+def test_outer_response_json_failure_keeps_existing_connection_retry_path(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    malformed = Mock(status_code=200)
+    malformed.json.side_effect = ValueError('private-http-response-value')
+    client.session.post = Mock(side_effect=[malformed, response({'id': 'source-id'})])
+    assert client.request('test', {}, {'type': 'object'}, client.summary_model, attempts=2) == {'id': 'source-id'}
+    inputs = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
+    assert inputs[0] == inputs[1] and 'TRUSTED_VALIDATION_FEEDBACK' not in inputs[1]
+    assert 'private-http-response-value' not in capsys.readouterr().out
 
 
 def unfinished(status='incomplete', reason='MAX_TOKENS', tokens=12):

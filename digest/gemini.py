@@ -33,7 +33,7 @@ SUMMARY_SCHEMA = {
 
 SEMANTIC_RETRY_FEEDBACK = {
     'GENERIC': '직전 출력이 응답 검증을 통과하지 못했다. 원래 입력과 지정 JSON 스키마의 제약을 다시 확인하고 유효한 결과를 새로 작성하라.',
-    'CATEGORY': '카테고리 계약을 바로잡아라. 후보별 allowed_categories를 준수하라. kind=paper는 tech, kind=event는 event, kind=github는 github이며 일반 뉴스는 ai/security/tech만 허용된다.',
+    'CATEGORY': '카테고리 계약을 바로잡아라. 출력 category는 요청의 JSON 스키마와 후보별 allowed_categories를 준수하라. fixed_category는 코드가 적용할 보고서 분야이며 출력 주제와 구분하라.',
     'IDS': '결과의 모든 ID를 원래 입력에서 그대로 복사하라. 후보 밖 ID를 만들거나 ID를 변형하지 말고 지정된 필수 ID의 누락 여부를 확인하라.',
     'COUNT': '원래 지시의 전체 개수와 카테고리별 개수 제한을 준수하라. 적격 후보가 부족할 때는 허용된 실제 개수만 반환하고 지정된 부족 사유를 작성하라.',
     'DUPLICATES': '같은 ID를 결과에 반복하지 말라. related_ids가 있는 경우 대표 ID와 중복 ID가 겹치거나 같은 중복 ID가 여러 대표에 속하지 않도록 확인하라.',

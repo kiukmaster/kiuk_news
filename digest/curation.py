@@ -19,6 +19,7 @@ CURATION_CHUNK_SIZE = 200
 CURATION_ATTEMPTS = 2
 CURATION_MODEL = 'gemini-3.8-flash'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
+NEWS_TOPICS = ('ai', 'security', 'tech')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')
 
 
@@ -70,7 +71,9 @@ def _compact_candidate(candidate: dict, kind: str, inherited: list[str]) -> dict
             'evidence_kind': candidate.get('evidence_kind'),
             'stars_today': candidate.get('stars_today'),
             'fixed_category': fixed_category(candidate),
-            'allowed_categories': sorted(_allowed_categories(candidate)),
+            # The provider outputs only a topic; the source kind determines
+            # fixed report sections after the complete response is validated.
+            'allowed_categories': list(NEWS_TOPICS),
         })
     else:
         row.update({
@@ -91,7 +94,7 @@ def _compact_candidate(candidate: dict, kind: str, inherited: list[str]) -> dict
     return row
 
 
-def _schema(kind: str, limit: int) -> dict:
+def _schema(kind: str, limit: int, *, topic_only: bool = False) -> dict:
     properties = {
         'id': {'type': 'string'},
         'scores': {'type': 'object', 'properties': {
@@ -104,7 +107,7 @@ def _schema(kind: str, limit: int) -> dict:
     }
     required = list(properties)
     if kind == 'news':
-        properties['category'] = {'type': 'string', 'enum': list(NEWS_CATEGORIES)}
+        properties['category'] = {'type': 'string', 'enum': list(NEWS_TOPICS if topic_only else NEWS_CATEGORIES)}
         required.append('category')
     return {'type': 'object', 'properties': {
         # Combining large maxItems and nested numeric bounds is rejected by
@@ -238,11 +241,14 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
     )
     if kind == 'news':
         policy = (
-            f'ai/security/tech/event/github 각 카테고리의 대표를 최대 {limit}개만 선정하라. '
+            f'최종 보고서 ai/security/tech/event/github 각 분야의 대표를 최대 {limit}개만 선정하라. '
             '일반 뉴스는 AI 모델·제품 ai, 공격·취약점·방어·AI 보안 security, 기타 컴퓨팅 신기술 tech다. '
-            'fixed_category가 있는 후보는 주제와 무관하게 해당 보고서 분야를 사용하라. '
-            'kind=paper는 AI·보안 연구여도 tech, kind=github는 github, kind=event는 event다. '
-            'fixed_category가 없는 일반 기사는 allowed_categories 안에서 ai/security/tech만 고른다. '
+            '출력 category는 모든 종류의 후보에서 주제인 ai/security/tech 중 하나만 반환하라. '
+            '출력 category에 event 또는 github를 반환하지 말라. '
+            'fixed_category는 코드가 적용할 최종 보고서 분야이며 출력 category가 아니다. '
+            'kind=paper는 최종 tech, kind=github는 최종 github, kind=event는 최종 event로 코드가 복원한다. '
+            '이 고정 분야를 기준으로 20건 상한을 판단하며 AI 논문도 최종 tech 상한에 포함한다. '
+            '모든 출력 category는 후보별 allowed_categories와 응답 스키마의 세 주제만 사용하라. '
             '대학생·청년이 참여 가능한 국내 AI·보안·SW·데이터 해커톤·대회·행사 모집을 포함하라. '
             'as_of는 한국시간 평가 기준 시각이다. 그 시각과 공고 근거로 접수 마감이 확인된 행사는 제외하라. '
             '관련 없는 뉴스와 근거 없는 광고는 제외하라. '
@@ -284,7 +290,8 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
     def select_round(group: list[dict], preliminary: bool) -> dict:
         data = {'as_of': as_of, 'candidates': [_compact_candidate(candidate, kind, grouped[candidate['id']])
                                for candidate in group]}
-        result = client.request(_instruction(kind, limit, preliminary), data, _schema(kind, limit), model,
+        result = client.request(_instruction(kind, limit, preliminary), data,
+            _schema(kind, limit, topic_only=True), model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _normalize_selection(result, group, kind, limit),
             max_output_tokens=32768, thinking_level='low')

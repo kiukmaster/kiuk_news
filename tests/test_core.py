@@ -55,7 +55,7 @@ class FakeGemini:
             if counts.get(category, 0) >= 20:
                 continue
             counts[category] = counts.get(category, 0) + 1
-            picks.append({'id': row['id'], 'category': category,
+            picks.append({'id': row['id'], 'category': category if category in ('ai', 'security', 'tech') else 'tech',
                           'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
                           'reason_ko': '자동 테스트용 선정 결과입니다.', 'related_ids': []})
         result = {'picks': picks, 'shortfall_reason_ko': '테스트 후보만 선정했습니다.'}

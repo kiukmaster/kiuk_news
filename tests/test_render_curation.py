@@ -157,3 +157,40 @@ def test_public_counts_use_selected_cards_and_exclude_related_cve_links(tmp_path
     report = read_json(tmp_path / 'reports.json', {})['reports'][0]
     assert report['count'] == 100 and report['cve_count'] == 20
     assert 'CVE 20건' in (tmp_path / 'index.html').read_text(encoding='utf-8')
+
+
+def test_independent_latest_preserves_order_unique_counts_and_html_ids(tmp_path):
+    day = new_day(NOW.date().isoformat())
+    common = article('common', rank=1, published=NOW - timedelta(hours=2))
+    day['articles'][common['id']] = common
+    day['hot'] = [{'id': common['id'], 'reason_ko': '오프라인 HOT 선정'}]
+    latest = [article(f'fresh-{index}', rank=20 - index,
+                      published=NOW - timedelta(minutes=index)) for index in range(25)]
+    day['latest_articles'] = {row['id']: row for row in latest + [common]}
+    day['latest_curation'] = metadata(20)
+    page = render(day, tmp_path)
+    cards = page.select('#sec-latest [data-issue-card]')
+    assert [card['id'] for card in cards] == [f'latest-fresh-{index}' for index in range(20)]
+    assert not page.select('#sec-latest .pick-reason')
+    assert len(page.select('#sec-ai [data-issue-card]')) == 1
+    ids = [node['id'] for node in page.select('[id]')]
+    assert len(ids) == len(set(ids))
+    report = read_json(tmp_path / 'reports.json', {})['reports'][0]
+    assert report['count'] == 21 and report['section_count'] == 1
+    assert report['latest_count'] == report['counts']['latest'] == 20
+
+
+def test_historical_latest_uses_original_collection_time_and_excludes_undated(tmp_path):
+    day = new_day(NOW.date().isoformat())
+    good = article('good', published=NOW - timedelta(hours=1))
+    paper = article('paper'); paper['kind'] = 'paper'
+    missing = article('missing'); missing['published_at'] = None
+    rows = [good, paper, missing, article('future', published=NOW + timedelta(minutes=1)),
+            article('expired', published=NOW - timedelta(days=2)), article('repo', 'github')]
+    day['articles'] = {row['id']: row for row in rows}
+    day.pop('latest_articles', None)
+    day['updated_at'] = NOW.isoformat()
+    state = empty_state(); state['days'][day['date']] = day
+    render_site(state, tmp_path, NOW + timedelta(days=3), load_config())
+    page = BeautifulSoup((tmp_path / 'reports' / (day['date'] + '.html')).read_text(encoding='utf-8'), 'html.parser')
+    assert [node['id'] for node in page.select('#sec-latest [data-issue-card]')] == ['latest-good']

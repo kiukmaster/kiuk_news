@@ -36,12 +36,14 @@ def test_api_preflight_checks_both_selection_schemas_without_state_or_site(monke
         monkeypatch.setattr(cli, name, forbidden)
     assert cli.main() == 0
     selections = [call for call in calls if 'candidates' in call[0]]
-    assert len(selections) == 2
+    assert len(selections) == 3
     assert all(call[2] == 'gemini-3.8-flash' and call[3]['max_output_tokens'] == 32768
                and call[3]['thinking_level'] == 'low'
-               for call in selections)
+               for call in selections[:2])
     assert 'category' in selections[0][1]['properties']['picks']['items']['properties']
     assert 'category' not in selections[1][1]['properties']['picks']['items']['properties']
+    assert set(selections[2][1]['properties']['picks']['items']['properties']) == {'id', 'related_ids'}
+    assert selections[2][3]['max_output_tokens'] == 8192
 
 
 @pytest.mark.parametrize('failure', [False, True])

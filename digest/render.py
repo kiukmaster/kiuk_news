@@ -7,7 +7,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .common import ROOT, CATEGORIES, SLOTS, parse_date, write_json
+from .common import ROOT, KST, CATEGORIES, SLOTS, parse_date, write_json
+from .latest import latest_eligible
 
 
 def format_time(value, pattern='%m.%d %H:%M'):
@@ -32,6 +33,18 @@ def render_context(day: dict, today: str) -> dict:
     out['sections']['github'].sort(key=lambda a: a.get('stars_today') or 0, reverse=True)
     for section in out['sections'].values():
         section.sort(key=curation_order)
+    # Historical reports use their own collection time when rebuilt later.
+    latest_meta = day.get('latest_curation') or {}
+    as_of = parse_date(latest_meta.get('at') or day.get('updated_at'))
+    if as_of is None:
+        as_of = datetime.fromisoformat(day['date']).replace(hour=23, minute=59, second=59, tzinfo=KST)
+    latest_source = day.get('latest_articles', day['articles'])
+    out['latest_cards'] = sorted(
+        [row for row in latest_source.values() if latest_eligible(row, as_of)],
+        key=lambda row: (-parse_date(row['published_at']).timestamp(), row['id']))[:20]
+    out['latest_count'] = len(out['latest_cards'])
+    out['latest_curation'] = latest_meta
+    out['latest_as_of'] = as_of.isoformat()
     out['news_curation'] = day.get('news_curation') or {}
     out['cve_curation'] = day.get('cve_curation') or {}
     out['hot_cards'] = []
@@ -40,8 +53,10 @@ def render_context(day: dict, today: str) -> dict:
             card = dict(day['articles'][pick['id']])
             card.update({'rank': rank, 'reason_ko': pick['reason_ko']})
             out['hot_cards'].append(card)
-    out['count'] = len(articles)
+    out['section_count'] = len(articles)
+    out['count'] = len(set(day['articles']) | {row['id'] for row in out['latest_cards']})
     out['counts'] = {k: len(v) for k, v in out['sections'].items()}
+    out['counts']['latest'] = out['latest_count']
     cves = list(day.get('cves', {}).values())
     out['cve_cards'] = sorted(cves, key=lambda x: ((x.get('cvss') or {}).get('score', -1), x['published_at']), reverse=True)
     out['cve_cards'].sort(key=curation_order)
@@ -91,5 +106,7 @@ def render_site(state: dict, output: Path, now: datetime, cfg: dict) -> None:
     # Minimal metadata only; no original article bodies or API secrets.
     write_json(output / 'reports.json', {'generated_at': now.isoformat(), 'keep_days': cfg['keep_days'],
                'reports': [{'date': d['date'], 'url': 'reports/' + d['date'] + '.html',
-                            'count': d['count'], 'cve_count': d['cve_count'], 'hot_count': len(d['hot_cards']), 'updated_at': d['updated_at']}
+                            'count': d['count'], 'section_count': d['section_count'],
+                            'latest_count': d['latest_count'], 'counts': d['counts'],
+                            'cve_count': d['cve_count'], 'hot_count': len(d['hot_cards']), 'updated_at': d['updated_at']}
                            for d in days]})

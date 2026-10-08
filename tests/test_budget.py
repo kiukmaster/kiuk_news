@@ -54,6 +54,13 @@ def test_pending_rows_bound_possible_new_candidates():
     assert plan.reserved_calls == 16
 
 
+def test_independent_latest_summaries_do_not_expand_hot_ranking():
+    plan = plan_api_budget(80, 70, 30, 6, cve_calls=6, hot_pending_candidates=10)
+    assert plan.hot_candidates == 80
+    assert plan.hot_calls == 4
+    assert plan.news_calls + plan.reserved_calls == 80
+
+
 @pytest.mark.parametrize('budget', range(5))
 def test_tiny_budget_does_not_start_unfunded_news_batch(budget):
     plan = plan_api_budget(budget, 0, 1, 6)

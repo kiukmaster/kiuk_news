@@ -42,6 +42,12 @@ class FakeGemini:
 
     def request(self, instruction, data, schema, model, validator=None, **kwargs):
         self.calls += 1
+        if set(schema['properties']['picks']['items']['properties']) == {'id', 'related_ids'}:
+            result = {'picks': [{'id': row['id'], 'related_ids': []} for row in data['candidates']],
+                      'shortfall_reason_ko': ''}
+            if validator:
+                validator(result)
+            return result
         picks, counts = [], {}
         for row in data['candidates']:
             category = {'github': 'github', 'event': 'event', 'paper': 'tech'}.get(
@@ -78,6 +84,7 @@ def run(state, tmp_path, items, now=NOW, schedule='', client=None):
     cfg = load_config()
     cfg['fetch_article_body'] = False
     cfg['cve_enabled'] = False  # News-only regression tests never call external APIs.
+    cfg['latest_enabled'] = False  # Independent latest selection has its own integration tests.
     client = client or FakeGemini()
     run_pipeline(state, tmp_path, now, cfg, schedule=schedule, web=object(), gemini=client,
         source_loader=lambda *a: (deepcopy(items), [{'name': '테스트', 'status': 'ok', 'count': len(items), 'message': '테스트'}]),
@@ -283,7 +290,7 @@ def test_large_pending_backlog_still_summarizes_news(tmp_path):
         row = article(index)
         state['pending'][row['id']] = row
     cfg = load_config()
-    cfg.update(fetch_article_body=False, cve_enabled=False, max_new_articles_per_run=12)
+    cfg.update(fetch_article_body=False, cve_enabled=False, latest_enabled=False, max_new_articles_per_run=12)
     client = FakeGemini()
     run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=client,
                  source_loader=lambda *a: ([], []),

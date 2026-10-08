@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import threading
+from copy import deepcopy
 from datetime import timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -67,6 +68,35 @@ def fixture_state(now):
                                  'reason_ko': '실제 선정이 아닌 화면 검증용 이유입니다. 파급력과 화제성, 이슈성 설명의 배치를 확인합니다.',
                                  'related_ids': []}
             day['articles'][key] = a
+        if offset == 0:
+            # Half also appear in their original fields, half are independently
+            # selected recent articles. The latest view must not alter quotas,
+            # inflate unique issue totals, or reuse existing HTML IDs.
+            eligible = [row for row in day['articles'].values()
+                        if row['kind'] in ('article', 'event')][:10]
+            latest = []
+            for index in range(20):
+                if index < 10:
+                    row = eligible[index]
+                    row['published_at'] = (dt - timedelta(minutes=index)).isoformat()
+                    row = deepcopy(row)
+                else:
+                    row = deepcopy(eligible[0])
+                    row.update({'id': f'latest-only-{date}-{index}', 'category': 'ai', 'kind': 'article',
+                                'url': f'https://example.invalid/latest-test-{index}',
+                                'title_ko': f'[최신전용검증 {index}] 중요도 분야에 포함되지 않은 최신 기사 화면 검증',
+                                'published_at': (dt - timedelta(minutes=index)).isoformat()})
+                    row.pop('curation', None)
+                latest.append(row)
+            # Deliberately reverse saved order: the view must sort publication
+            # timestamps, rather than insertion order or Gemini importance.
+            day['latest_articles'] = {row['id']: row for row in reversed(latest)}
+            day['latest_curation'] = {'status': 'fresh', 'at': dt.isoformat(), 'limit': 20,
+                                     'candidate_count': 120, 'selected_count': 20}
+        else:
+            # Older fixtures exercise the derived view for pre-feature state.
+            day.pop('latest_articles', None)
+            day.pop('latest_curation', None)
         day['hot'] = [{'id':key, 'reason_ko':'실제 선정이 아닌 화면 검증용 항목입니다.'} for key in list(day['articles'])[:10]]
         for cve_index in range(cve_count):
             raw_cve = {'id':f'CVE-2099-{90000+cve_index}', 'published':dt.isoformat(),
@@ -112,6 +142,11 @@ def main():
         temp = Path(temp)
         output = temp / 'project-prefix'
         render_site(fixture_state(now), output, now, load_config())
+        manifest = json.loads((output / 'reports.json').read_text(encoding='utf-8'))
+        today_report = next(row for row in manifest['reports'] if row['date'] == now.date().isoformat())
+        assert today_report['section_count'] == 100
+        assert today_report['latest_count'] == today_report['counts']['latest'] == 20
+        assert today_report['count'] == 110
         handler = functools.partial(QuietHandler, directory=str(temp))
         server = ThreadingHTTPServer(('127.0.0.1', 0), handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -166,6 +201,25 @@ def main():
                             assert page.locator('[data-cve-more]').is_hidden()
                             for category in ('ai', 'security', 'tech', 'event', 'github'):
                                 assert page.locator(f'#sec-{category} [data-issue-card]').count() == 20
+                            assert page.locator('#sec-latest [data-issue-card]').count() == 20
+                            assert page.locator('#sec-latest .heading-count').inner_text() == '20'
+                            assert page.locator('.nav-tab[href="#sec-latest"] span').inner_text() == '20'
+                            latest = page.locator('#sec-latest').evaluate("""section => ({
+                                dates: [...section.querySelectorAll('time[datetime]')].map(e => Date.parse(e.dateTime)),
+                                ids: [...section.querySelectorAll('[data-issue-card]')].map(e => e.id),
+                                paperBadges: [...section.querySelectorAll('.badge')].filter(e => e.textContent.includes('논문')).length,
+                                repoLabels: section.querySelectorAll('.repo-label').length,
+                                order: [...document.querySelectorAll('[data-section]')].map(e => e.id)
+                            })""")
+                            assert latest['dates'] == sorted(latest['dates'], reverse=True)
+                            assert len(latest['dates']) == 20 and all(latest['dates'])
+                            assert all(ident.startswith('latest-') for ident in latest['ids'])
+                            assert latest['paperBadges'] == latest['repoLabels'] == 0
+                            assert latest['order'][:2] == ['sec-hot', 'sec-latest']
+                            assert page.evaluate("""() => {
+                                const ids = [...document.querySelectorAll('[id]')].map(e => e.id);
+                                return ids.length === new Set(ids).size;
+                            }"""), 'Duplicate HTML IDs'
                             assert page.locator('#cve-grid').evaluate('e => getComputedStyle(e).gridTemplateColumns.split(" ").length') == expected
 
                         if screenshots and width in (390,768):
@@ -198,7 +252,12 @@ def main():
                 page.locator('#issue-search').fill('존재하지않는검색어123456789')
                 assert page.locator('[data-issue-card]:visible').count() == 0
                 page.locator('#issue-search').fill('')
-                assert page.locator('[data-issue-card]:visible').count() == 130
+                assert page.locator('[data-issue-card]:visible').count() == 150
+                page.locator('#issue-search').fill('최신전용검증')
+                assert page.locator('[data-issue-card]:visible').count() == 10
+                assert page.locator('#sec-latest [data-issue-card]:visible').count() == 10
+                assert page.locator('#sec-ai [data-issue-card]:visible').count() == 0
+                page.locator('#issue-search').fill('')
                 assert page.locator('[data-cve-more]').is_hidden()
                 page.locator('#issue-search').fill('CVE-2099-99000')
                 assert page.locator('[data-cve-card]:visible').count() == 1
@@ -213,6 +272,13 @@ def main():
                         page.locator('#sec-cve').evaluate('e => e.scrollIntoView()')
                         page.screenshot(path=str(screenshots/f'cve-{width}.png'))
                 page.set_viewport_size({'width':390,'height':844})
+                if args.in_memory:
+                    page.locator('#sec-latest').evaluate('e => e.scrollIntoView()')
+                else:
+                    page.locator('.nav-tab[href="#sec-latest"]').click()
+                    assert page.url.endswith('#sec-latest')
+                    page.wait_for_timeout(80)
+                    assert page.locator('#sec-latest').bounding_box()['y'] >= 60
                 if args.in_memory:
                     page.locator('#sec-security').evaluate('e => e.scrollIntoView()')
                 else:
@@ -233,7 +299,8 @@ def main():
                     no_js = browser.new_context(java_script_enabled=False)
                     no_js_page = no_js.new_page()
                     no_js_page.goto(base+f'reports/{now.date().isoformat()}.html')
-                    assert no_js_page.locator('[data-issue-card]').count() == 130
+                    assert no_js_page.locator('[data-issue-card]').count() == 150
+                    assert no_js_page.locator('#sec-latest [data-issue-card]').count() == 20
                     assert no_js_page.locator('[data-cve-card]').count() == 20
                     for category in ('ai', 'security', 'tech', 'event', 'github'):
                         assert no_js_page.locator(f'#sec-{category} [data-issue-card]').count() == 20
@@ -263,6 +330,7 @@ def main():
               'local_storage_mocked':args.in_memory,
               'viewport_page_checks':len(results),'functional_checks':'bookmark/search/share/resize and static navigation links' if args.in_memory else 'navigation/bookmark/search/anchors/share/resize/no-JS',
               'cve_checks':'daily 20 per category/CVE; related CVE search; 12 viewport checks; legacy pagination and hidden-card search; details', 'page_errors':errors, 'viewports':results}
+    report['latest_checks'] = '20 publication-sorted cards; independent articles; unique totals and HTML IDs; section order, navigation, latest-only search and no-JS'
     if screenshots:
         (screenshots/'results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False,indent=2))

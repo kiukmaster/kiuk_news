@@ -2,7 +2,7 @@
 import json
 import warnings
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 from urllib.robotparser import RobotFileParser
 
@@ -13,7 +13,8 @@ from defusedxml.common import DefusedXmlException
 from digest.common import ROOT, KST, load_config
 from digest.network import PublicWeb, FetchError
 from digest.sources import (plain, parse_html_listing, parse_news_sitemap, collect_sources,
-                            source_entries, page_publication_date, prepare_article)
+                            source_entries, page_publication_date, prepare_article,
+                            parse_feed, in_news_window, news_window_start)
 
 NOW = datetime(2026, 9, 22, 13, 0, tzinfo=KST)
 SOURCES = {x['id']: x for x in json.loads((ROOT/'config/sources.json').read_text())}
@@ -201,3 +202,44 @@ def test_contestkorea_body_ignores_site_generated_tips():
     assert prepared['evidence_kind'] == 'body_excerpt'
     assert '검증되지 않은 추천 사항' not in prepared['excerpt']
     assert '전국 대학생' in prepared['excerpt']
+
+
+def test_news_window_is_yesterday_midnight_through_current_time_in_korea():
+    now = datetime(2026, 10, 9, 19, 0, tzinfo=KST)
+    assert news_window_start(now).isoformat() == '2026-10-08T00:00:00+09:00'
+    assert news_window_start(now.astimezone(timezone.utc)) == news_window_start(now)
+    for stamp in ('2026-10-07T15:00:00Z', '2026-10-09T18:59:59+09:00', now.isoformat()):
+        assert in_news_window({'published_at': stamp}, now, load_config())
+    for stamp in ('2026-10-07T14:59:59Z', '2026-10-09T19:00:01+09:00'):
+        assert not in_news_window({'published_at': stamp}, now, load_config())
+    # Paper candidates share the date rule even though latest excludes them.
+    assert not in_news_window({'kind': 'paper', 'published_at': '2026-10-07T20:00:00+09:00'},
+                              now, load_config())
+
+
+def test_undated_entries_are_provisional_without_invented_publication():
+    item = {'published_at': None, 'first_seen_at': NOW.isoformat()}
+    assert in_news_window(item, NOW, load_config())
+    assert item['published_at'] is None
+    assert not in_news_window({**item, 'first_seen_at': (NOW - timedelta(days=2)).isoformat()},
+                              NOW, load_config())
+    assert in_news_window({'kind': 'github', 'published_at': None, 'observed_at': NOW.isoformat()},
+                          NOW, load_config())
+    assert not in_news_window({'kind': 'github', 'observed_at': (NOW - timedelta(days=1)).isoformat()},
+                              NOW, load_config())
+
+
+def test_updated_only_atom_entry_has_no_known_publication_time():
+    data = b'<feed><entry><title>Modification is not a new publication</title><link href="https://example.com/news"/><summary>Body</summary><updated>2026-09-22T12:00:00+09:00</updated></entry></feed>'
+    source = {'url': 'https://example.com/feed', 'region': 'KR'}
+    assert parse_feed(data, source)[0]['published_at'] is None
+
+
+def test_json_ld_original_publication_precedes_modified_html_time():
+    soup = BeautifulSoup('<time itemprop="dateModified" datetime="2026-09-22T12:00:00+09:00"></time>'
+                         '<script type="application/ld+json">{"datePublished":"2026-09-20T09:00:00+09:00"}</script>',
+                         'html.parser')
+    assert page_publication_date(soup, 'KR').isoformat() == '2026-09-20T09:00:00+09:00'
+    soup = BeautifulSoup('<time itemprop="dateModified" datetime="2026-09-22T12:00:00+09:00"></time>',
+                         'html.parser')
+    assert page_publication_date(soup, 'KR') is None

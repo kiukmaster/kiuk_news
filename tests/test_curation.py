@@ -5,10 +5,11 @@ from collections import Counter
 from unittest.mock import Mock
 
 import pytest
+from jsonschema import ValidationError, validate
 
 from digest.common import load_config
 from digest.curation import (CURATION_CHUNK_SIZE, SCORE_KEYS, curate_candidates,
-                             curation_max_calls, fixed_category)
+                             curation_max_calls, fixed_category, _schema, _normalize_selection)
 from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
                            GeminiError, GeminiResponseValidationError)
 
@@ -45,6 +46,17 @@ def payload_candidates(call):
     return json.loads(call['json']['input'].split('UNTRUSTED_DATA_JSON:\n', 1)[1])['candidates']
 
 
+def provider_topic(category):
+    # event/github describe the final report field, not a provider topic.
+    return 'tech' if category in ('event', 'github') else category
+
+
+def assert_provider_topics(call):
+    schema = call['json']['response_format']['schema']
+    assert schema['properties']['picks']['items']['properties']['category']['enum'] == [
+        'ai', 'security', 'tech']
+
+
 @pytest.mark.parametrize('kind,counts', [
     ('news', {0: 0, 1: 2, 200: 2, 201: 6, 400: 6, 401: 12,
               557: 12, 600: 12, 601: 14, 607: 14, 1801: 42}),
@@ -69,13 +81,14 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
 
     def choose(*args, **kwargs):
         rows = payload_candidates(kwargs)
+        assert_provider_topics(kwargs)
         assert len(rows) <= CURATION_CHUNK_SIZE
         seen.update(row['id'] for row in rows)
         counts, picks = Counter(), []
         for row in rows:
             category = row['category_hint']
             if counts[category] < 20:
-                picks.append(pick(row['id'], category))
+                picks.append(pick(row['id'], provider_topic(category)))
                 counts[category] += 1
         return response(selection(*picks))
 
@@ -109,6 +122,7 @@ def test_actual_failed_pool_sizes_stay_inside_budget_when_every_round_retries(
 
     def choose(*args, **kwargs):
         rows = payload_candidates(kwargs)
+        assert_provider_topics(kwargs)
         assert len(rows) <= 200
         seen.update(row['id'] for row in rows)
         if client.calls % 2:
@@ -117,7 +131,7 @@ def test_actual_failed_pool_sizes_stay_inside_budget_when_every_round_retries(
         for row in rows:
             category = row['category_hint']
             if counts[category] < 20:
-                picks.append(pick(row['id'], category))
+                picks.append(pick(row['id'], provider_topic(category)))
                 counts[category] += 1
         return response(selection(*picks))
 
@@ -255,17 +269,18 @@ def test_fixed_source_kind_controls_section_without_discarding_gemini_selection(
     assert raw == original
     sent = payload_candidates(client.session.post.call_args.kwargs)[0]
     assert sent['fixed_category'] == canonical
-    assert sent['allowed_categories'] == [canonical]
+    assert sent['allowed_categories'] == ['ai', 'security', 'tech']
+    assert_provider_topics(client.session.post.call_args.kwargs)
 
 
 @pytest.mark.parametrize('category', ['github', 'event'])
 def test_ordinary_article_invalid_topic_remains_strict_and_has_safe_retry_code(monkeypatch, category):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response(selection(pick('one', category))))
-    with pytest.raises(GeminiResponseValidationError, match='카테고리') as failure:
+    with pytest.raises(GeminiResponseValidationError, match='스키마') as failure:
         curate_candidates(client, [{'id': 'one', 'kind': 'article'}])
-    assert failure.value.retry_code == 'CATEGORY'
-    assert client.calls == 2
+    assert failure.value.retry_code == 'GENERIC'
+    assert client.calls == client.session.post.call_count == 2
     sent = payload_candidates(client.session.post.call_args.kwargs)[0]
     assert sent['fixed_category'] is None
     assert sent['allowed_categories'] == ['ai', 'security', 'tech']
@@ -301,15 +316,16 @@ def test_live_six_hundred_thirty_four_pool_screens_every_candidate_with_papers_r
 
     def choose(*args, **kwargs):
         rows = payload_candidates(kwargs)
+        assert_provider_topics(kwargs)
         seen.update(row['id'] for row in rows)
         counts, picks = Counter(), []
         for row in rows:
-            category = 'ai' if row['kind'] == 'paper' else row['category_hint']
-            assert row['allowed_categories'] == ([fixed_category(row)] if fixed_category(row)
-                                                  else ['ai', 'security', 'tech'])
-            if counts[category] < 20:
-                picks.append(pick(row['id'], category))
-                counts[category] += 1
+            canonical = fixed_category(row) or row['category_hint']
+            topic = 'ai' if row['kind'] == 'paper' else provider_topic(row['category_hint'])
+            assert row['allowed_categories'] == ['ai', 'security', 'tech']
+            if counts[canonical] < 20:
+                picks.append(pick(row['id'], topic))
+                counts[canonical] += 1
         return response(selection(*picks))
 
     client.session.post = Mock(side_effect=choose)
@@ -321,6 +337,57 @@ def test_live_six_hundred_thirty_four_pool_screens_every_candidate_with_papers_r
     assert selected_papers and all(row['category'] == 'tech' for row in selected_papers)
     assert client.calls <= curation_max_calls(634, 'news')
     assert candidates == original
+
+
+def test_provider_topics_restore_all_five_sections_without_shared_topic_quota(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates, picks = [], []
+    for category, kind, topic in [('ai', 'article', 'ai'), ('security', 'article', 'security'),
+                                  ('tech', 'paper', 'ai'), ('event', 'event', 'ai'),
+                                  ('github', 'github', 'ai')]:
+        for number in range(20):
+            ident = f'{category}-{number}'
+            candidates.append({'id': ident, 'kind': kind, 'category_hint': category})
+            picks.append(pick(ident, topic))
+    raw = selection(*picks)
+    original = copy.deepcopy(raw)
+    client.session.post = Mock(return_value=response(raw))
+    result = curate_candidates(client, candidates)
+    assert Counter(row['category'] for row in raw['picks']) == {'ai': 80, 'security': 20}
+    assert Counter(row['category'] for row in result['picks']) == dict.fromkeys(
+        ('ai', 'security', 'tech', 'event', 'github'), 20)
+    assert [row['id'] for row in result['picks']] == [row['id'] for row in raw['picks']]
+    assert client.calls == client.session.post.call_count == 1
+    assert_provider_topics(client.session.post.call_args.kwargs)
+    validate(result, _schema('news', 20))
+    assert raw == original
+
+
+@pytest.mark.parametrize('kind,category', [('event', 'event'), ('github', 'github')])
+def test_provider_schema_rejects_fixed_section_names_even_for_fixed_source_kinds(
+        monkeypatch, kind, category):
+    client = make_client(monkeypatch)
+    raw = selection(pick('fixed', category))
+    # Canonical stored selections retain their five-section format, while
+    # actual HTTP model responses must use only the provider's three topics.
+    validate(raw, _schema('news', 20))
+    with pytest.raises(ValidationError):
+        validate(raw, _schema('news', 20, topic_only=True))
+    client.session.post = Mock(return_value=response(raw))
+    with pytest.raises(GeminiResponseValidationError) as failure:
+        curate_candidates(client, [{'id': 'fixed', 'kind': kind}])
+    assert failure.value.retry_code == 'GENERIC'
+    assert client.calls == client.session.post.call_count == 2
+
+
+def test_canonical_normalizer_preserves_saved_fixed_fields_but_checks_every_id():
+    candidates = [{'id': 'event', 'kind': 'event'}, {'id': 'repo', 'kind': 'github'}]
+    raw = selection(pick('event', 'event'), pick('repo', 'github'))
+    assert _normalize_selection(raw, candidates, 'news', 20) == raw
+    invalid = selection(pick('event', 'event'), pick('outside', 'github'))
+    with pytest.raises(GeminiResponseValidationError) as failure:
+        _normalize_selection(invalid, candidates, 'news', 20)
+    assert failure.value.retry_code == 'IDS'
 
 
 def test_fixed_category_normalization_preserves_transitive_duplicate_groups_between_rounds(monkeypatch):

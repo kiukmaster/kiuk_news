@@ -72,7 +72,7 @@ def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
 
     monkeypatch.setattr('digest.pipeline.prepare_article', prepare)
     cfg = load_config()
-    cfg.update(cve_enabled=False)
+    cfg.update(cve_enabled=False, latest_enabled=False)
     client = FakeGemini()
     run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=client,
                  source_loader=lambda *args: (items[:-25], []),
@@ -97,7 +97,7 @@ def test_fixed_kind_category_correction_publishes_fresh_scheduled_report(tmp_pat
     monkeypatch.setattr('digest.pipeline.prepare_article',
                         lambda fetcher, item, source, cfg: item)
     cfg = load_config()
-    cfg.update(cve_enabled=False, fetch_article_body=False)
+    cfg.update(cve_enabled=False, fetch_article_body=False, latest_enabled=False)
     client = WrongFixedCategoryGemini()
 
     report = run_pipeline(state, tmp_path, NOW, cfg, schedule='7 20 * * *',
@@ -129,7 +129,7 @@ def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp
     monkeypatch.setattr('digest.pipeline.prepare_article',
                         lambda fetcher, item, source, cfg: item)
     cfg = load_config()
-    cfg.update(cve_enabled=False, fetch_article_body=False)
+    cfg.update(cve_enabled=False, fetch_article_body=False, latest_enabled=False)
     source_loader = lambda *args: (papers, [{'status': 'ok'}])
     github_loader = lambda *args: (repos, {'status': 'ok'})
     run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=FakeGemini(),

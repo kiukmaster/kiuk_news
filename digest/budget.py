@@ -30,7 +30,8 @@ def hot_round_calls(candidate_count: int) -> int:
 
 def plan_api_budget(remaining_calls: int, current_candidates: int,
                     pending_candidates: int, batch_size: int,
-                    cve_calls: int = 0, max_new_articles: int = 0) -> BudgetPlan:
+                    cve_calls: int = 0, max_new_articles: int = 0,
+                    hot_pending_candidates: int | None = None) -> BudgetPlan:
     """Bound HOT candidates by summaries that can finish within this run's budget.
 
     Every possible news call may successfully summarize a full batch. Each HOT
@@ -51,6 +52,7 @@ def plan_api_budget(remaining_calls: int, current_candidates: int,
     cve_requested = max(0, int(cve_calls))
     if max_new_articles > 0:
         pending = min(pending, int(max_new_articles))
+    hot_pending = pending if hot_pending_candidates is None else min(pending, max(0, int(hot_pending_candidates)))
 
     if budget <= 4:
         return BudgetPlan(0, budget, 0, current,
@@ -60,7 +62,7 @@ def plan_api_budget(remaining_calls: int, current_candidates: int,
     # Defer some CVE summaries if necessary to leave room for news progress.
     cve_reserved = min(cve_requested, max(0, budget - minimum_hot - 1))
     for news in range(budget - cve_reserved - 4, 0, -1):
-        candidates = current + min(pending, news * batch)
+        candidates = current + min(hot_pending, news * batch)
         hot_required = max(4, hot_round_calls(candidates) * 3)
         if news + hot_required + cve_reserved <= budget:
             return BudgetPlan(news, budget - news - cve_reserved,
@@ -68,4 +70,4 @@ def plan_api_budget(remaining_calls: int, current_candidates: int,
 
     # Ranking all existing candidates may itself exceed the remaining budget.
     # Keep collection moving rather than growing an indefinitely blocked queue.
-    return BudgetPlan(1, budget - 1, 0, current + min(pending, batch), False)
+    return BudgetPlan(1, budget - 1, 0, current + min(hot_pending, batch), False)

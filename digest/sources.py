@@ -66,7 +66,8 @@ def parse_feed(data: bytes, source: dict) -> list[dict]:
         except ValueError:
             continue
         excerpt = plain(child_text(node, 'encoded', 'content', 'description', 'summary'))
-        date_text = child_text(node, 'pubdate', 'published', 'date', 'updated')
+        # Atom updated is a modification time, not original publication.
+        date_text = child_text(node, 'pubdate', 'published', 'date')
         published = parse_date(date_text, KST if source['region'] == 'KR' else None)
         items.append({'title_original': title, 'url': link, 'excerpt': excerpt,
                       'published_at': published.isoformat() if published else None})
@@ -127,6 +128,34 @@ def in_window(item: dict, now: datetime, hours: int) -> bool:
     return published is None or now - timedelta(hours=hours) <= published <= now + timedelta(minutes=15)
 
 
+def news_window_start(now: datetime) -> datetime:
+    """The beginning of yesterday in Korea, independent of runner timezone."""
+    return (now.astimezone(KST) - timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+
+
+def in_news_window(item: dict, now: datetime, cfg: dict | None = None) -> bool:
+    """Keep yesterday/today publications; an observation is never publication.
+
+    Undated listings remain provisional so the article body can supply its
+    original publication time. Their observation timestamp limits how long an
+    unresolved candidate stays queued, without inventing a published_at value.
+    GitHub Trending is an observation of today's daily delta, not a dated post.
+    """
+    if (cfg or {}).get('news_date_window', 'previous_day_to_now') != 'previous_day_to_now':
+        raise ValueError('지원하지 않는 뉴스 발행 날짜 범위입니다')
+    now = now.astimezone(KST)
+    if item.get('kind') == 'github':
+        observed = parse_date(item.get('observed_at'))
+        return observed is not None and observed.date() == now.date() and observed <= now
+    start = news_window_start(now)
+    published = parse_date(item.get('published_at'))
+    if published is not None:
+        return start <= published <= now
+    observed = parse_date(item.get('first_seen_at') or item.get('collected_at'))
+    return observed is None or start <= observed <= now
+
+
 def parse_news_sitemap(data: bytes, source: dict) -> list[dict]:
     """Read a publisher's news sitemap, not an invented third-party feed."""
     root = SafeET.fromstring(data)
@@ -182,7 +211,7 @@ def collect_sources(web: PublicWeb, sources: list[dict], now: datetime, cfg: dic
             entries, route_type, note, attempts = source_entries(web, source)
             count = 0
             for item in entries:
-                if not in_window(item, now, cfg['lookback_hours']):
+                if not in_news_window(item, now, cfg):
                     continue
                 # Do not accept off-publisher links/sponsors as article candidates.
                 host = urlsplit(item['url']).hostname or ''
@@ -214,7 +243,8 @@ def page_publication_date(soup, region: str):
     tz = KST if region == 'KR' else None
     for selector in ('meta[property="article:published_time"]', 'meta[name="date"]',
                      'meta[name="pubdate"]', 'meta[name="pub_date"]',
-                     'meta[itemprop="datePublished"]', 'time[datetime]'):
+                     'meta[itemprop="datePublished"]',
+                     'time[itemprop="datePublished"][datetime]', 'time[pubdate][datetime]'):
         tag = soup.select_one(selector)
         if tag:
             dt = parse_date(tag.get('content') or tag.get('datetime'), tz)
@@ -245,6 +275,12 @@ def page_publication_date(soup, region: str):
                 return dt
         except (ValueError, TypeError, RecursionError):
             pass
+    for tag in soup.select('time[datetime]'):
+        if 'datemodified' in str(tag.get('itemprop', '')).lower():
+            continue
+        dt = parse_date(tag.get('datetime'), tz)
+        if dt:
+            return dt
     if region == 'KR':
         match = re.search(r'(?:기사입력|입력)\s*(\d{4}[.-]\d{1,2}[.-]\d{1,2})\s+(\d{2}:\d{2}(?::\d{2})?)',
                           soup.get_text(' ', strip=True)[:15000])

@@ -18,6 +18,26 @@ class LatestFirstGemini(FakeGemini):
         return super().request(instruction, data, schema, model, **kwargs)
 
 
+class WrongFixedCategoryGemini(FakeGemini):
+    """Model returns valid JSON but ignores the source-kind category rule."""
+
+    def request(self, instruction, data, schema, model, validator=None, **kwargs):
+        self.calls += 1
+        picks = []
+        for row in data['candidates']:
+            # Keep model order and overfill both categories to exercise the
+            # policy cap after canonicalizing fixed source kinds.
+            category = {'paper': 'ai', 'github': 'tech'}.get(
+                row.get('kind'), row.get('category_hint') or 'ai')
+            picks.append({'id': row['id'], 'category': category,
+                          'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
+                          'reason_ko': '검증용 선정 이유입니다.', 'related_ids': []})
+        result = {'picks': picks, 'shortfall_reason_ko': ''}
+        if validator:
+            validator(result)
+        return result
+
+
 def test_three_batches_share_daily_quota_and_promote_new_issues(tmp_path):
     state = empty_state()
     original = [article(index) for index in range(40)]
@@ -63,6 +83,92 @@ def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
     assert len(fetched) == 80 and len(client.summarized) == 100
     assert not state['pending']
     assert client.calls <= cfg['max_api_calls_per_run']
+
+
+def test_fixed_kind_category_correction_publishes_fresh_scheduled_report(tmp_path, monkeypatch):
+    """100 raw model picks become the first 20 papers and 20 GitHub items."""
+    state = empty_state()
+    papers = [article(index) for index in range(50)]
+    for row in papers:
+        row.update(kind='paper', category_hint='tech')
+    repos = [article(index) for index in range(1000, 1050)]
+    for row in repos:
+        row.update(kind='github', category_hint='github', observed_at=NOW.isoformat())
+    monkeypatch.setattr('digest.pipeline.prepare_article',
+                        lambda fetcher, item, source, cfg: item)
+    cfg = load_config()
+    cfg.update(cve_enabled=False, fetch_article_body=False)
+    client = WrongFixedCategoryGemini()
+
+    report = run_pipeline(state, tmp_path, NOW, cfg, schedule='7 20 * * *',
+                          web=object(), gemini=client,
+                          source_loader=lambda *args: (papers, [{'status': 'ok'}]),
+                          github_loader=lambda *args: (repos, {'status': 'ok'}))
+    day = state['days'][NOW.date().isoformat()]
+    expected = {row['id'] for row in papers[:20] + repos[:20]}
+    assert set(day['articles']) == expected
+    assert Counter(row['category'] for row in day['articles'].values()) == {
+        'tech': 20, 'github': 20}
+    assert all(row['curation']['category'] == row['category'] for row in day['articles'].values())
+    assert set(client.summarized) == expected
+    assert day['news_curation']['status'] == 'fresh'
+    assert day['hot_status'] == 'fresh' and len(day['hot']) == 10
+    assert all(pick['id'] in expected for pick in day['hot'])
+    assert day['slots']['06:00']['status'] == 'ok'
+    assert report['new_count'] == 40 and not report['warnings']
+
+
+def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp_path, monkeypatch):
+    state = empty_state()
+    papers = [article(index) for index in range(4)]
+    for row in papers:
+        row.update(kind='paper', category_hint='tech')
+    repos = [article(index) for index in range(1000, 1004)]
+    for row in repos:
+        row.update(kind='github', category_hint='github', observed_at=NOW.isoformat())
+    monkeypatch.setattr('digest.pipeline.prepare_article',
+                        lambda fetcher, item, source, cfg: item)
+    cfg = load_config()
+    cfg.update(cve_enabled=False, fetch_article_body=False)
+    source_loader = lambda *args: (papers, [{'status': 'ok'}])
+    github_loader = lambda *args: (repos, {'status': 'ok'})
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=FakeGemini(),
+                 source_loader=source_loader, github_loader=github_loader)
+    day = state['days'][NOW.date().isoformat()]
+    for row in day['articles'].values():
+        row['category'] = 'ai'  # Simulate a pre-fix cached card.
+        row['curation']['category'] = 'ai'
+
+    run_pipeline(state, tmp_path, NOW.replace(hour=13), cfg, web=object(),
+                 gemini=WrongFixedCategoryGemini(), source_loader=source_loader,
+                 github_loader=github_loader)
+    assert day['news_curation']['status'] == 'fresh'
+    assert Counter(row['category'] for row in day['articles'].values()) == {
+        'tech': 4, 'github': 4}
+    assert all(row['curation']['category'] == row['category'] for row in day['articles'].values())
+    assert day['hot_status'] == 'fresh'
+    assert all(pick['id'] in day['articles'] for pick in day['hot'])
+
+
+def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_path):
+    class InvalidLateId(WrongFixedCategoryGemini):
+        def request(self, instruction, data, schema, model, validator=None, **kwargs):
+            result = super().request(instruction, data, schema, model, validator=None,
+                                     **kwargs)
+            result['picks'][20]['id'] = 'not-an-input-id'
+            if validator:
+                validator(result)
+            return result
+
+    papers = [article(index) for index in range(25)]
+    for row in papers:
+        row.update(kind='paper', category_hint='tech')
+    state = empty_state()
+    with pytest.raises(GeminiError, match='게시를 중단'):
+        run(state, tmp_path, papers, schedule='7 20 * * *', client=InvalidLateId())
+    day = state['days'][NOW.date().isoformat()]
+    assert day['news_curation']['status'] == 'unavailable'
+    assert day['articles'] == {} and day['hot'] == [] and not day['slots']
 
 
 def test_reselection_failure_preserves_previous_capped_result(tmp_path):

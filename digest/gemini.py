@@ -31,6 +31,20 @@ SUMMARY_SCHEMA = {
         'required': ['id', 'relevant', 'category', 'language', 'title_ko', 'summary_ko']}}},
     'required': ['articles']}
 
+SEMANTIC_RETRY_FEEDBACK = {
+    'GENERIC': '직전 출력이 응답 검증을 통과하지 못했다. 원래 입력과 지정 JSON 스키마의 제약을 다시 확인하고 유효한 결과를 새로 작성하라.',
+    'CATEGORY': '카테고리 계약을 바로잡아라. 후보별 allowed_categories를 준수하라. kind=paper는 tech, kind=event는 event, kind=github는 github이며 일반 뉴스는 ai/security/tech만 허용된다.',
+    'IDS': '결과의 모든 ID를 원래 입력에서 그대로 복사하라. 후보 밖 ID를 만들거나 ID를 변형하지 말고 지정된 필수 ID의 누락 여부를 확인하라.',
+    'COUNT': '원래 지시의 전체 개수와 카테고리별 개수 제한을 준수하라. 적격 후보가 부족할 때는 허용된 실제 개수만 반환하고 지정된 부족 사유를 작성하라.',
+    'DUPLICATES': '같은 ID를 결과에 반복하지 말라. related_ids가 있는 경우 대표 ID와 중복 ID가 겹치거나 같은 중복 ID가 여러 대표에 속하지 않도록 확인하라.',
+    'SCORES': '중요도 scores의 social_impact/attention/issue_relevance를 모두 제공된 근거에 기반한 0~5 정수로 작성하라. 문자열·불리언·범위 밖 수치는 허용되지 않는다.',
+    'KOREAN_REASON': '지정된 이유·요약은 원래 입력의 근거에 기반한 짧은 한국어로 작성하고 길이 제한을 준수하라. 부족 사유의 빈 문자열은 원래 지시가 허용하는 경우에만 사용하라.',
+}
+
+
+def _semantic_retry_code(value) -> str:
+    return value if isinstance(value, str) and value in SEMANTIC_RETRY_FEEDBACK else 'GENERIC'
+
 
 class GeminiError(RuntimeError):
     pass
@@ -38,6 +52,9 @@ class GeminiError(RuntimeError):
 
 class GeminiResponseValidationError(GeminiError):
     """A completed model response failed the caller's semantic checks."""
+    def __init__(self, message: str, *, retry_code: str | None = None):
+        self.retry_code = _semantic_retry_code(retry_code)
+        super().__init__(message)
 
 
 class GeminiIncompleteError(GeminiError):
@@ -309,8 +326,10 @@ class Gemini:
     def request(self, instruction: str, data: dict, schema: dict, model: str,
                 attempts: int = 3, validator: Callable[[dict], None] | None = None,
                 max_output_tokens: int = 8192, thinking_level: str | None = None) -> dict:
+        untrusted_data = json.dumps(data, ensure_ascii=False)
+        original_input = instruction + '\n\nUNTRUSTED_DATA_JSON:\n' + untrusted_data
         payload = {'model': model, 'system_instruction': SYSTEM,
-                   'input': instruction + '\n\nUNTRUSTED_DATA_JSON:\n' + json.dumps(data, ensure_ascii=False),
+                   'input': original_input,
                    'store': False, 'stream': False,
                    'generation_config': {'max_output_tokens': max_output_tokens},
                    'response_format': {'type': 'text', 'mime_type': 'application/json', 'schema': schema}}
@@ -351,8 +370,17 @@ class Gemini:
                 usage = raw.get('usage') if isinstance(raw, dict) else None
                 if isinstance(usage, dict):
                     self.tokens += _token_count(usage.get('total_tokens')) or 0
-                result = json.loads(response_text(raw, payload['generation_config']['max_output_tokens']))
-                validate(result, schema)
+                model_text = response_text(raw, payload['generation_config']['max_output_tokens'])
+                try:
+                    result = json.loads(model_text)
+                except json.JSONDecodeError:
+                    raise GeminiResponseValidationError('Gemini 결과 JSON 형식 불일치',
+                                                         retry_code='GENERIC') from None
+                try:
+                    validate(result, schema)
+                except ValidationError:
+                    raise GeminiResponseValidationError('Gemini 결과 스키마 검증 실패',
+                                                         retry_code='GENERIC') from None
                 if validator is not None:
                     validator(result)
                 return result
@@ -373,6 +401,15 @@ class Gemini:
             except GeminiResponseValidationError as exc:
                 error = exc
                 if attempt < attempts - 1:
+                    retry_code = _semantic_retry_code(getattr(exc, 'retry_code', None))
+                    # Only application-owned fixed instructions enter the next
+                    # prompt. Never reflect the error message or rejected output.
+                    # Rebuild from the original input so feedback cannot grow.
+                    payload = {**payload, 'input': instruction
+                        + '\n\nTRUSTED_VALIDATION_FEEDBACK:\n' + SEMANTIC_RETRY_FEEDBACK[retry_code]
+                        + '\n\nUNTRUSTED_DATA_JSON:\n' + untrusted_data}
+                    print(f'[Gemini 응답 보정 재시도] code={retry_code} attempt={attempt + 2}/{attempts}',
+                          flush=True)
                     time.sleep(5 * (attempt + 1))
             except (requests.RequestException, ValueError, ValidationError) as exc:
                 error = GeminiError(f'Gemini 응답/연결 검증 실패: {type(exc).__name__}')

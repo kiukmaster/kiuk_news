@@ -12,7 +12,7 @@ from .budget import hot_round_calls, plan_api_budget
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_window
 from .cves import collect_cves, merge_cves, translate_cves, apply_cve_selection
-from .curation import curate_candidates
+from .curation import curate_candidates, fixed_category
 from .publication import publication_target
 
 
@@ -131,12 +131,9 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
             'repo_name', 'stars_today', 'total_stars', 'programming_language', 'observed_at')
     output = {k: item.get(k) for k in keys}
     output.update({k: summary[k] for k in ('category', 'language', 'title_ko', 'summary_ko')})
-    if item['kind'] == 'github':
-        output['category'] = 'github'
-    elif item['kind'] == 'event':
-        output['category'] = 'event'
-    elif item['kind'] == 'paper':
-        output['category'] = 'tech'
+    source_category = fixed_category(item)
+    if source_category is not None:
+        output['category'] = source_category
     elif output['category'] == 'github':
         output['category'] = item['category_hint']
     output.update({'collected_at': now.isoformat(), 'summary_model': model,

@@ -8,7 +8,7 @@ import pytest
 
 from digest.common import load_config
 from digest.curation import (CURATION_CHUNK_SIZE, SCORE_KEYS, curate_candidates,
-                             curation_max_calls)
+                             curation_max_calls, fixed_category)
 from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
                            GeminiError, GeminiResponseValidationError)
 
@@ -167,15 +167,53 @@ def test_duplicate_members_are_preserved_when_representative_changes_between_rou
     assert client.calls == 3
 
 
-def test_cap_violation_is_retried_before_selection_is_returned(monkeypatch):
+def test_category_quota_preserves_gemini_order_without_requesting_another_ranking(monkeypatch):
     client = make_client(monkeypatch)
     candidates = [{'id': str(number)} for number in range(21)]
-    client.session.post = Mock(side_effect=[
-        response(selection(*(pick(row['id'], 'ai') for row in candidates))),
-        response(selection(*(pick(row['id'], 'ai') for row in candidates[:20]))),
-    ])
+    raw = selection(*(pick(row['id'], 'ai') for row in candidates))
+    client.session.post = Mock(return_value=response(raw))
     result = curate_candidates(client, candidates)
     assert len(result['picks']) == 20
+    assert [row['id'] for row in result['picks']] == [row['id'] for row in candidates[:20]]
+    assert client.calls == 1
+    assert len(raw['picks']) == 21
+
+
+@pytest.mark.parametrize('invalid_last', [
+    pick('outside', 'ai'),
+    pick('0', 'ai'),
+    dict(pick('20', 'ai'), scores=dict.fromkeys(SCORE_KEYS, True)),
+    dict(pick('20', 'ai'), reason_ko='Invalid English reason'),
+    pick('20', 'ai', related=['outside']),
+    pick('20', 'ai', related=['0']),
+    pick('20', 'ai', related=['outside', 'outside']),
+    pick('20', 'github'),
+    dict(pick('20', 'ai'), category='not-a-report-category'),
+    dict(pick('20', 'ai'), unexpected_field='not-in-schema'),
+])
+def test_invalid_twenty_first_pick_is_not_hidden_by_the_daily_quota(monkeypatch, invalid_last):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number)} for number in range(21)]
+    raw = selection(*(pick(str(number), 'ai') for number in range(20)), invalid_last)
+    original = copy.deepcopy(raw)
+    client.session.post = Mock(return_value=response(raw))
+    # JSON Schema can reject malformed types before the semantic callback;
+    # either failure path must reject the whole response instead of cutting it.
+    with pytest.raises(GeminiError):
+        curate_candidates(client, candidates)
+    assert client.calls == client.session.post.call_count == 2
+    assert raw == original
+
+
+def test_total_raw_one_hundred_pick_limit_cannot_be_hidden_by_category_cuts(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number)} for number in range(101)]
+    raw = selection(*(pick(str(number), ('ai', 'security', 'tech')[number % 3])
+                      for number in range(101)))
+    client.session.post = Mock(return_value=response(raw))
+    with pytest.raises(GeminiResponseValidationError, match='상한') as failure:
+        curate_candidates(client, candidates)
+    assert failure.value.retry_code == 'COUNT'
     assert client.calls == 2
 
 
@@ -201,15 +239,119 @@ def test_invalid_selection_is_rejected_atomically_after_only_two_attempts(monkey
     assert candidates == original
 
 
-@pytest.mark.parametrize('kind,category', [
-    ('paper', 'ai'), ('event', 'tech'), ('github', 'security'), ('news', 'github'),
+@pytest.mark.parametrize('kind,category,canonical', [
+    ('paper', 'ai', 'tech'), ('paper', 'security', 'tech'),
+    ('event', 'tech', 'event'), ('github', 'security', 'github'),
 ])
-def test_source_kind_restricts_category(monkeypatch, kind, category):
+def test_fixed_source_kind_controls_section_without_discarding_gemini_selection(
+        monkeypatch, kind, category, canonical):
+    client = make_client(monkeypatch)
+    raw = selection(pick('one', category))
+    original = copy.deepcopy(raw)
+    client.session.post = Mock(return_value=response(raw))
+    result = curate_candidates(client, [{'id': 'one', 'kind': kind}])
+    assert result['picks'] == [dict(raw['picks'][0], category=canonical)]
+    assert client.calls == 1
+    assert raw == original
+    sent = payload_candidates(client.session.post.call_args.kwargs)[0]
+    assert sent['fixed_category'] == canonical
+    assert sent['allowed_categories'] == [canonical]
+
+
+@pytest.mark.parametrize('category', ['github', 'event'])
+def test_ordinary_article_invalid_topic_remains_strict_and_has_safe_retry_code(monkeypatch, category):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response(selection(pick('one', category))))
-    with pytest.raises(GeminiResponseValidationError, match='카테고리'):
-        curate_candidates(client, [{'id': 'one', 'kind': kind}])
+    with pytest.raises(GeminiResponseValidationError, match='카테고리') as failure:
+        curate_candidates(client, [{'id': 'one', 'kind': 'article'}])
+    assert failure.value.retry_code == 'CATEGORY'
     assert client.calls == 2
+    sent = payload_candidates(client.session.post.call_args.kwargs)[0]
+    assert sent['fixed_category'] is None
+    assert sent['allowed_categories'] == ['ai', 'security', 'tech']
+
+
+def test_fifty_one_papers_in_three_model_topics_use_first_twenty_model_ranked_picks(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number), 'kind': 'paper'} for number in range(51)]
+    raw = selection(*(dict(pick(str(number), ('ai', 'security', 'tech')[number % 3]),
+                           scores=dict.fromkeys(SCORE_KEYS, 1 if number < 20 else 5))
+                      for number in range(51)))
+    original_candidates, original_response = copy.deepcopy(candidates), copy.deepcopy(raw)
+    client.session.post = Mock(return_value=response(raw))
+    result = curate_candidates(client, candidates)
+    assert [row['id'] for row in result['picks']] == [str(number) for number in range(20)]
+    assert all(row['category'] == 'tech' and row['scores'] == dict.fromkeys(SCORE_KEYS, 1)
+               for row in result['picks'])
+    assert client.calls == 1
+    assert candidates == original_candidates and raw == original_response
+
+
+def test_live_six_hundred_thirty_four_pool_screens_every_candidate_with_papers_returned_as_ai(monkeypatch):
+    client = make_client(monkeypatch)
+    # The failed day's actual structural distribution: 456 papers, 169 articles,
+    # 9 repositories. Reproduce topic-based AI labels for the selected papers.
+    candidates = []
+    for number in range(634):
+        kind = 'paper' if number < 456 else ('article' if number < 625 else 'github')
+        category = {'paper': 'tech', 'github': 'github'}.get(kind, ('ai', 'security', 'tech')[number % 3])
+        candidates.append({'id': str(number), 'kind': kind, 'category_hint': category})
+    original = copy.deepcopy(candidates)
+    seen = set()
+
+    def choose(*args, **kwargs):
+        rows = payload_candidates(kwargs)
+        seen.update(row['id'] for row in rows)
+        counts, picks = Counter(), []
+        for row in rows:
+            category = 'ai' if row['kind'] == 'paper' else row['category_hint']
+            assert row['allowed_categories'] == ([fixed_category(row)] if fixed_category(row)
+                                                  else ['ai', 'security', 'tech'])
+            if counts[category] < 20:
+                picks.append(pick(row['id'], category))
+                counts[category] += 1
+        return response(selection(*picks))
+
+    client.session.post = Mock(side_effect=choose)
+    result = curate_candidates(client, candidates)
+    assert seen == {row['id'] for row in candidates}
+    assert all(count <= 20 for count in Counter(row['category'] for row in result['picks']).values())
+    by_id = {candidate['id']: candidate for candidate in candidates}
+    selected_papers = [row for row in result['picks'] if by_id[row['id']]['kind'] == 'paper']
+    assert selected_papers and all(row['category'] == 'tech' for row in selected_papers)
+    assert client.calls <= curation_max_calls(634, 'news')
+    assert candidates == original
+
+
+def test_fixed_category_normalization_preserves_transitive_duplicate_groups_between_rounds(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number), 'kind': 'paper'} for number in range(201)]
+    client.session.post = Mock(side_effect=[
+        response(selection(pick('0', 'ai', related=['1']))),
+        response(selection(pick('200', 'security'))),
+        response(selection(pick('200', 'ai', related=['0']))),
+    ])
+    result = curate_candidates(client, candidates)
+    assert result['picks'][0]['id'] == '200'
+    assert result['picks'][0]['category'] == 'tech'
+    assert result['picks'][0]['related_ids'] == ['0', '1']
+    assert client.calls == 3
+
+
+def test_quota_removed_paper_groups_do_not_leak_into_the_retained_representative(monkeypatch):
+    client = make_client(monkeypatch)
+    candidates = [{'id': str(number), 'kind': 'paper'} for number in range(201)]
+    preliminary = selection(*(pick(str(number), ('ai', 'security', 'tech')[number % 3],
+                                   related=[str(number + 100)]) for number in range(50)))
+    client.session.post = Mock(side_effect=[
+        response(preliminary), response(selection(pick('200', 'ai'))),
+        response(selection(pick('200', 'security', related=['0']))),
+    ])
+    result = curate_candidates(client, candidates)
+    final_input = payload_candidates(client.session.post.call_args_list[-1].kwargs)
+    assert [row['id'] for row in final_input] == [str(number) for number in range(20)] + ['200']
+    assert result['picks'][0]['related_ids'] == ['0', '100']
+    assert not set(str(number) for number in range(20, 50)) & set(result['picks'][0]['related_ids'])
 
 
 def test_not_enough_budget_prevents_even_first_screening_call(monkeypatch):

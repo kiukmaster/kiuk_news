@@ -138,7 +138,7 @@ env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 ```
 
-2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 `GEMINI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 두 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
+2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 `GEMINI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 설정된 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
 
 키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.
 
@@ -151,14 +151,15 @@ env:
 | 역할 | 모델 |
 |---|---|
 | 번역·요약·분류 | `gemini-3.5-flash-lite` |
-| HOT 선정 | `gemini-3.8-flash` |
+| HOT 선정 | `gemini-3.5-flash-lite` |
+| 뉴스·최신·CVE 선별 | `gemini-3.5-flash-lite` |
 
 사용 프로젝트에서 해당 모델이 제공되지 않거나 다른 모델로 운영하려면 **Settings → Secrets and variables → Actions → Variables → New repository variable**에서 설정합니다.
 
 | Name | Value 예시 |
 |---|---|
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
-| `GEMINI_HOT_MODEL` | `gemini-3.8-flash` |
+| `GEMINI_HOT_MODEL` | `gemini-3.5-flash-lite` |
 
 모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Interactions API와 구조화된 JSON 출력**을 사용하므로 이를 지원하는 모델을 선택합니다.
 

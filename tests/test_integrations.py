@@ -49,7 +49,7 @@ def test_interactions_contract(monkeypatch):
 def test_interactions_optional_thinking_level_preserves_existing_defaults(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({'ok': True}))
-    client.request('test', {}, {'type': 'object'}, 'gemini-3.8-flash',
+    client.request('test', {}, {'type': 'object'}, 'gemini-3.5-flash-lite',
                    max_output_tokens=32768, thinking_level='low')
     config = client.session.post.call_args.kwargs['json']['generation_config']
     assert config == {'max_output_tokens': 32768, 'thinking_level': 'low'}
@@ -66,6 +66,7 @@ def test_429_retries_then_success(monkeypatch):
 
 def test_429_cooldown_is_shared_with_hot_fallback(monkeypatch):
     client = make_client(monkeypatch)
+    client.hot_model = 'offline-test-hot'
     delays = []
     monkeypatch.setattr('digest.gemini.time.sleep', delays.append)
     monkeypatch.setattr('digest.gemini.random.uniform', lambda _low, _high: 0)
@@ -270,6 +271,7 @@ def test_hot_ranks_every_candidate_in_bounded_gemini_rounds(monkeypatch):
 @pytest.mark.parametrize('status', [429, 503])
 def test_hot_transient_error_falls_back_to_other_gemini_model(monkeypatch, status):
     client = make_client(monkeypatch)
+    client.hot_model = 'offline-test-hot'
     calls = []
 
     def choose(_instruction, data, _schema, model, attempts=3, validator=None):

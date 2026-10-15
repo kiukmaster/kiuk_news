@@ -17,7 +17,7 @@ from .gemini import BudgetExceeded, GeminiResponseValidationError
 # stay above the maximum 100 news representatives so every round shrinks.
 CURATION_CHUNK_SIZE = 200
 CURATION_ATTEMPTS = 2
-CURATION_MODEL = 'gemini-3.8-flash'
+CURATION_MODEL = 'gemini-3.5-flash-lite'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
 NEWS_TOPICS = ('ai', 'security', 'tech')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')

@@ -46,7 +46,7 @@ def main():
     if args.check_api:
         client = Gemini(cfg)
         schema = {'type': 'object', 'properties': {'ok': {'type': 'boolean'}}, 'required': ['ok']}
-        for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gemini-3.8-flash'), client.hot_model)):
+        for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gemini-3.5-flash-lite'), client.hot_model)):
             client.request('연결 시험입니다. {"ok":true}만 반환하세요.', {}, schema, model)
             print(f'{model}: 연결 확인')
         # Test the production selection schemas with tiny synthetic inputs too.
@@ -57,13 +57,13 @@ def main():
             ('cve', {'id': 'CVE-2026-00001', 'description': 'Synthetic API connectivity test only.'}),
         ):
             curate_candidates(client, [candidate], kind=kind,
-                              model=cfg.get('curation_model', 'gemini-3.8-flash'), as_of=now.isoformat())
+                              model=cfg.get('curation_model', 'gemini-3.5-flash-lite'), as_of=now.isoformat())
             print(f'{kind}: 실제 선별 요청 형식 확인')
         select_latest_candidates(client, [{'id': 'diagnostic-latest', 'kind': 'article',
             'url': 'https://example.invalid/diagnostic', 'published_at': now.isoformat(),
             'title_original': '실제 뉴스가 아닌 API 연결 검사 자료',
             'excerpt': '실제 뉴스가 아닌 가상의 연결 검사 자료입니다.'}], now,
-            model=cfg.get('curation_model', 'gemini-3.8-flash'))
+            model=cfg.get('curation_model', 'gemini-3.5-flash-lite'))
         print('latest: 실제 최신 선별 요청 형식 확인')
         return 0
     if args.check_curation:
@@ -85,7 +85,7 @@ def main():
             before = client.calls
             try:
                 result = curate_candidates(client, candidates, kind=kind,
-                    model=cfg.get('curation_model', 'gemini-3.8-flash'),
+                    model=cfg.get('curation_model', 'gemini-3.5-flash-lite'),
                     limit=cfg.get('category_daily_limit', 20), as_of=now.isoformat())
                 counts = Counter(pick.get('category', 'cve') for pick in result['picks'])
                 print(f'{date} {kind}: 후보 {len(candidates)}건 · 선정 {len(result["picks"])}건 · '
@@ -99,7 +99,7 @@ def main():
         before = client.calls
         try:
             result = select_latest_candidates(client, list(day.get('news_candidates', {}).values()), now,
-                model=cfg.get('curation_model', 'gemini-3.8-flash'), limit=cfg.get('latest_daily_limit', 20))
+                model=cfg.get('curation_model', 'gemini-3.5-flash-lite'), limit=cfg.get('latest_daily_limit', 20))
             print(f'{date} latest: 적격 {result["candidate_count"]}건 · '
                   f'최신 {result["considered_count"]}건 확인 · 선정 {len(result["picks"])}건 · '
                   f'요청 {client.calls - before}회')

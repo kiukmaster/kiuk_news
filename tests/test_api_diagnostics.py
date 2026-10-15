@@ -37,7 +37,7 @@ def test_api_preflight_checks_both_selection_schemas_without_state_or_site(monke
     assert cli.main() == 0
     selections = [call for call in calls if 'candidates' in call[0]]
     assert len(selections) == 3
-    assert all(call[2] == 'gemini-3.8-flash' and call[3]['max_output_tokens'] == 32768
+    assert all(call[2] == 'gemini-3.5-flash-lite' and call[3]['max_output_tokens'] == 32768
                and call[3]['thinking_level'] == 'low'
                for call in selections[:2])
     assert 'category' in selections[0][1]['properties']['picks']['items']['properties']
@@ -81,7 +81,7 @@ def test_saved_pool_diagnostic_is_read_only_and_returns_failure(monkeypatch, tmp
     assert path.read_bytes() == original
     assert [call[1]['kind'] for call in calls] == ['news', 'cve']
     assert calls[0][0] == list(checkpoint['days']['2026-10-06']['news_candidates'].values())
-    assert all(call[1]['model'] == 'gemini-3.8-flash' and call[1]['limit'] == 20 for call in calls)
+    assert all(call[1]['model'] == 'gemini-3.5-flash-lite' and call[1]['limit'] == 20 for call in calls)
     assert '선별 검사 합계' in capsys.readouterr().out
 
 

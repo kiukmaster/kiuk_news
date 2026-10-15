@@ -8,7 +8,7 @@ from jsonschema import ValidationError, validate
 from .common import KST, canonical_url, parse_date, text_key
 from .gemini import BudgetExceeded, GeminiResponseValidationError
 
-LATEST_MODEL = 'gemini-3.8-flash'
+LATEST_MODEL = 'gemini-3.5-flash-lite'
 LATEST_ATTEMPTS = 2
 
 

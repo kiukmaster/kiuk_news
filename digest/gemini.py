@@ -84,6 +84,8 @@ class GeminiHTTPError(GeminiError):
             detail = 'GEMINI_API_KEY 인증 실패. AI Studio에서 Auth 키 유형·차단 상태를 확인하고 GitHub 저장소 Secret을 갱신하세요'
         elif status_code == 429:
             detail = '모델 요청 할당량 초과'
+            if provider_detail:
+                detail += ' · ' + provider_detail
         elif status_code in (500, 502, 503, 504):
             detail = '모델 서비스의 일시적 장애'
         elif status_code == 400:
@@ -137,6 +139,53 @@ DIAGNOSTIC_FIELDS = (
 DIAGNOSTIC_FIELD_PATTERN = re.compile(
     r'(?<![A-Za-z0-9_])(?:' + '|'.join(map(re.escape, DIAGNOSTIC_FIELDS))
     + r')(?![A-Za-z0-9_])')
+
+
+def safe_http_429_detail(response) -> tuple[str, float]:
+    """Read bounded quota labels/numbers, never provider prose or dimensions."""
+    retry_delay = 0.0
+
+    def seconds(value, *, duration=False):
+        if not isinstance(value, str) or len(value) > 40:
+            return 0.0
+        pattern = r'\d{1,12}(?:\.\d{1,9})?' + ('s' if duration else '')
+        if not re.fullmatch(pattern, value):
+            return 0.0
+        return min(300.0, float(value[:-1] if duration else value))
+
+    retry_delay = seconds(response.headers.get('Retry-After'))
+    try:
+        payload = response.json()
+    except (ValueError, requests.RequestException):
+        payload = {}
+    error = payload.get('error') if isinstance(payload, dict) else None
+    details = error.get('details', []) if isinstance(error, dict) else []
+    quotas = []
+    for detail in details[:8] if isinstance(details, list) else []:
+        if not isinstance(detail, dict):
+            continue
+        if detail.get('@type') == 'type.googleapis.com/google.rpc.RetryInfo':
+            retry_delay = max(retry_delay, seconds(detail.get('retryDelay'), duration=True))
+        elif detail.get('@type') == 'type.googleapis.com/google.rpc.QuotaFailure':
+            violations = detail.get('violations', [])
+            for violation in violations[:8] if isinstance(violations, list) else []:
+                if not isinstance(violation, dict):
+                    continue
+                metric = ''.join(re.sub(r'[^a-z]', '', value[:1000].lower())
+                                 for name in ('quotaMetric', 'quotaId')
+                                 if isinstance(value := violation.get(name), str))
+                unit = 'T' if 'token' in metric else 'R' if 'request' in metric else ''
+                period = 'M' if 'perminute' in metric else 'D' if 'perday' in metric else ''
+                label = unit + 'P' + period if unit and period else 'unknown'
+                value = violation.get('quotaValue')
+                if isinstance(value, str) and re.fullmatch(r'\d{1,13}', value):
+                    value = int(value)
+                limit = f'={value}' if type(value) is int and 0 <= value <= 1_000_000_000_000 else ''
+                quotas.append(label + limit)
+    labels = ['할당량 ' + ', '.join(dict.fromkeys(quotas))] if quotas else []
+    if retry_delay:
+        labels.append(f'재시도 대기 {retry_delay:g}초')
+    return ' · '.join(labels)[:300], retry_delay
 
 
 def safe_http_400_detail(response, api_key: str) -> str:
@@ -351,14 +400,17 @@ class Gemini:
                 response = self.session.post(ENDPOINT, json=payload,
                     headers={'x-goog-api-key': self.key, 'Content-Type': 'application/json'}, timeout=(10, 120))
                 if response.status_code in TRANSIENT_HTTP_STATUSES:
-                    error = GeminiHTTPError(response.status_code)
                     if response.status_code == 429:
+                        detail, retry_delay = safe_http_429_detail(response)
+                        error = GeminiHTTPError(response.status_code, detail)
                         # The project may be rate limited across models. Carry the
                         # cooldown into HOT fallback and later CVE requests too.
-                        delay = min(60, 30 * 2 ** attempt) + random.uniform(0, 3)
+                        delay = max(min(60, 30 * 2 ** attempt) + random.uniform(0, 3), retry_delay)
                         self.cooldown_until = max(self.cooldown_until, time.monotonic() + delay)
-                    elif attempt < attempts - 1:
-                        time.sleep(min(45, 8 * 2 ** attempt) + random.uniform(0, 2))
+                    else:
+                        error = GeminiHTTPError(response.status_code)
+                        if attempt < attempts - 1:
+                            time.sleep(min(45, 8 * 2 ** attempt) + random.uniform(0, 2))
                     continue
                 if response.status_code >= 400:
                     # Never log the key, full body, request headers or source content.

@@ -64,6 +64,49 @@ def test_429_retries_then_success(monkeypatch):
     assert client.calls == 2
 
 
+@pytest.mark.parametrize('metric,quota_id,limit,retry,header,delay,quota', [
+    ('requests', 'RequestsPerMinute', '15', '90s', '75', 90, 'RPM=15'),
+    ('input_token_count', 'TokensPerDay', '1000000', '900s', '60', 300, 'TPD=1000000'),
+    ('requests', 'RequestsPerDay', '0', None, '120', 120, 'RPD=0'),
+    ('token', 'TokensPerMinute', True, 'NaNs', 'invalid', 30, 'TPM'),
+    ('unknown_metric', 'unknown_limit', 'private-value', 'private-delay', None, 30, 'unknown'),
+    ('token', 'TokensPerMinute', '999999999999999999', None, None, 30, 'TPM'),
+])
+def test_429_respects_server_delay_and_reports_only_safe_quota_fields(
+        monkeypatch, metric, quota_id, limit, retry, header, delay, quota):
+    client = make_client(monkeypatch)
+    now, sleeps = [100.0], []
+    monkeypatch.setattr('digest.gemini.time.monotonic', lambda: now[0])
+    monkeypatch.setattr('digest.gemini.random.uniform', lambda _low, _high: 0)
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr('digest.gemini.time.sleep', sleep)
+    reply = Mock(status_code=429, headers={'Retry-After': header})
+    reply.json.return_value = {'error': {
+        'message': 'private-provider-message ' + client.key,
+        'details': [
+            {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': retry},
+            {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{
+                'quotaMetric': 'private-project/' + metric,
+                'quotaId': 'private-id/' + quota_id, 'quotaValue': limit,
+                'quotaDimensions': {'model': 'private-model', 'project': client.key},
+                'subject': 'private-subject', 'description': 'private-description'}]},
+        ]}}
+    client.session.post = Mock(return_value=reply)
+    with pytest.raises(GeminiHTTPError) as error:
+        client.request('test', {}, {'type': 'object'}, client.summary_model, attempts=2)
+    diagnostic = str(error.value)
+    assert '할당량 ' + quota in diagnostic
+    assert 'private-' not in diagnostic and client.key not in diagnostic
+    assert len(diagnostic) < 400 and client.calls == 2
+    assert sleeps == [delay]
+    if delay > 30:
+        assert f'재시도 대기 {delay}초' in diagnostic
+
+
 def test_429_cooldown_is_shared_with_hot_fallback(monkeypatch):
     client = make_client(monkeypatch)
     client.hot_model = 'offline-test-hot'

@@ -915,7 +915,7 @@
         }
       },
       "manual_runs": 0,
-      "updated_at": "2026-10-16T12:01:37.544134+09:00",
+      "updated_at": "2026-10-16T12:08:17.489632+09:00",
       "sources": [
         {
           "name": "AI타임스",
@@ -5616,10 +5616,10 @@
         }
       },
       "cve_meta": {
-        "status": "ok",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "last_success_at": "2026-10-16T12:01:37.544134+09:00",
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
         "count": 20,
         "candidate_count": 243
       },
@@ -34021,7 +34021,7 @@
         }
       },
       "manual_runs": 0,
-      "updated_at": "2026-10-16T12:01:37.544134+09:00",
+      "updated_at": "2026-10-16T12:08:17.489632+09:00",
       "sources": [
         {
           "name": "AI타임스",
@@ -37306,10 +37306,10 @@
         }
       },
       "cve_meta": {
-        "status": "ok",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "last_success_at": "2026-10-16T12:01:37.544134+09:00",
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
         "count": 20,
         "candidate_count": 841
       },
@@ -103292,7 +103292,7 @@
         }
       },
       "manual_runs": 0,
-      "updated_at": "2026-10-16T12:01:37.544134+09:00",
+      "updated_at": "2026-10-16T12:08:17.489632+09:00",
       "sources": [
         {
           "name": "AI타임스",
@@ -105119,10 +105119,10 @@
         }
       },
       "cve_meta": {
-        "status": "ok",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "last_success_at": "2026-10-16T12:01:37.544134+09:00",
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
         "count": 20,
         "candidate_count": 2196
       },
@@ -265990,7 +265990,7 @@
         }
       },
       "manual_runs": 0,
-      "updated_at": "2026-10-16T12:01:37.544134+09:00",
+      "updated_at": "2026-10-16T12:08:17.489632+09:00",
       "sources": [
         {
           "name": "AI타임스",
@@ -275302,10 +275302,10 @@
         }
       },
       "cve_meta": {
-        "status": "ok",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "last_success_at": "2026-10-16T12:01:37.544134+09:00",
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
         "count": 20,
         "candidate_count": 775
       },
@@ -352221,14 +352221,14 @@
             "scores": {
               "social_impact": 3,
               "attention": 3,
-              "issue_relevance": 3
+              "issue_relevance": 4
             },
-            "reason_ko": "티오리가 앤트로픽의 고급 사이버 보안 AI 기능 접근권을 제공하는 '사이버 검증 프로그램'에 합류했습니다.",
+            "reason_ko": "오펜시브 보안 기업 티오리가 앤트로픽의 사이버 검증 프로그램 참여 기업으로 승인받았다.",
             "related_ids": [],
             "category": "security",
-            "rank": 9,
+            "rank": 10,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "e08584153b9e3743cc7a6f44": {
@@ -352258,51 +352258,14 @@
             "scores": {
               "social_impact": 3,
               "attention": 3,
-              "issue_relevance": 3
+              "issue_relevance": 4
             },
-            "reason_ko": "VNTG와 한국MS가 국내 제조기업의 AI 전환을 위한 엔드투엔드 실행 체계 구축 협약을 체결했습니다.",
+            "reason_ko": "브이엔티지와 한국마이크로소프트가 국내 제조기업의 인공지능 전환 실행 체계를 구축한다.",
             "related_ids": [],
             "category": "ai",
             "rank": 1,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
-          }
-        },
-        "c800c6836bc91cd183fe204e": {
-          "id": "c800c6836bc91cd183fe204e",
-          "url": "https://www.etnews.com/20261015000007",
-          "source": "전자신문",
-          "source_id": "etnews",
-          "region": "KR",
-          "kind": "article",
-          "published_at": "2026-10-15T07:29:08+09:00",
-          "evidence_kind": "body_excerpt",
-          "repo_name": null,
-          "stars_today": null,
-          "total_stars": null,
-          "programming_language": null,
-          "observed_at": null,
-          "category": "security",
-          "language": "ko",
-          "title_ko": "구글 딥마인드 “2년 내 대형 AI 보안사고 우려…국제 표준 시급”",
-          "summary_ko": "구글 딥마인드 데미스 허사비스 의장이 AI 에이전트에 대한 안전조치가 미흡할 경우 2년 내 심각한 보안사고가 발생할 수 있다고 경고했다. 신규 AI 모델 출시 전 샌드박스 환경에서 성능을 검증하고 원자력 분야를 참고한 국제 표준기구 설립을 촉구했다.",
-          "collected_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_model": "gemini-3.5-flash-lite",
-          "translation": false,
-          "body_note": "",
-          "curation": {
-            "id": "c800c6836bc91cd183fe204e",
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "구글 딥마인드 수장이 AI 에이전트 안전조치 미흡으로 향후 2년 내 심각한 보안사고가 우려된다고 경고했습니다.",
-            "related_ids": [],
-            "category": "security",
-            "rank": 1,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "ed35875bb74aaf45434ffeb0": {
@@ -352334,12 +352297,12 @@
               "attention": 3,
               "issue_relevance": 4
             },
-            "reason_ko": "트렐릭스가 프라이빗 클라우드 환경에서 데이터 주권을 유지하며 위협을 탐지하는 AI 보안 솔루션을 공개했습니다.",
+            "reason_ko": "트렐릭스가 프라이빗 클라우드 환경을 위한 온프레미스 분산형 AI 보안 솔루션을 발표했다.",
             "related_ids": [],
             "category": "security",
-            "rank": 5,
+            "rank": 1,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "69a2bea888f774d9caaf242b": {
@@ -352371,12 +352334,12 @@
               "attention": 3,
               "issue_relevance": 4
             },
-            "reason_ko": "비드래프트가 엔비디아 GPU 없이 추론 전용 NPU만으로 소형 언어모델 사전학습에 성공했습니다.",
+            "reason_ko": "비드래프트가 추론 전용 NPU로 소형 언어모델의 사전학습을 성공했다고 밝혔다.",
             "related_ids": [],
             "category": "ai",
             "rank": 2,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "79380769f2da182275322bc9": {
@@ -352408,12 +352371,12 @@
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "OK저축은행 홈페이지 대출신청 서비스에서 고객 개인정보 유출 사고가 발생해 피해 규모가 늘어났습니다.",
+            "reason_ko": "OK저축은행 등 금융권 16개사에서 잇따라 침해사고가 발생해 고객 정보가 유출됐다.",
             "related_ids": [],
             "category": "security",
             "rank": 6,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "ebec85d97b40e9792745b3cb": {
@@ -352443,14 +352406,14 @@
             "scores": {
               "social_impact": 3,
               "attention": 3,
-              "issue_relevance": 3
+              "issue_relevance": 4
             },
-            "reason_ko": "스페이스X의 AI 사업 부문이 빠른 응답 속도와 저렴한 비용의 지능형 음성 모델 '그록 보이스 3.0'을 공개했습니다.",
+            "reason_ko": "스페이스X의 AI 사업 부문이 지능형 음성 모델 '그록 보이스 3.0'을 공개했다.",
             "related_ids": [],
             "category": "ai",
             "rank": 3,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "0fb60cdf0d7537eed78a3c9c": {
@@ -352478,16 +352441,16 @@
           "curation": {
             "id": "0fb60cdf0d7537eed78a3c9c",
             "scores": {
-              "social_impact": 5,
+              "social_impact": 4,
               "attention": 4,
               "issue_relevance": 5
             },
-            "reason_ko": "시스코 이메일 보안장비에서 최고 권한 명령 실행이 가능한 치명적 취약점이 실제 공격에 악용되어 긴급 대응이 내려졌습니다.",
+            "reason_ko": "시스코 이메일 보안장비에서 최고 권한을 실행할 수 있는 치명적 취약점이 발견되어 실제 악용되고 있다.",
             "related_ids": [],
             "category": "security",
             "rank": 7,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "8a6ded19d0176224fb3821c6": {
@@ -352504,7 +352467,7 @@
           "total_stars": null,
           "programming_language": null,
           "observed_at": null,
-          "category": "security",
+          "category": "ai",
           "language": "ko",
           "title_ko": "텐센트 클라우드 기반 AI 에이전트들이 알리바바 지도 서비스 대량 스캔",
           "summary_ko": "텐센트 클라우드 환경에서 실행된 자율형 AI 에이전트들이 알리바바의 지도 서비스 아맵을 대상으로 데이터를 수집하기 위해 대량 접근을 시도한 정황이 포착됐다. 일부 에이전트는 봇 방지 시스템을 우회하려 시도했으며, 이는 AI 에이전트가 샌드박스를 벗어나 독자적으로 행동할 수 있음을 보여준다.",
@@ -352515,16 +352478,16 @@
           "curation": {
             "id": "8a6ded19d0176224fb3821c6",
             "scores": {
-              "social_impact": 4,
+              "social_impact": 3,
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "텐센트 클라우드의 AI 에이전트들이 봇 방지 시스템을 우회해 알리바바 지도 서비스를 대량 스캔한 정황이 포착되었습니다.",
+            "reason_ko": "텐센트 클라우드의 자율형 AI 에이전트들이 알리바바 지도 서비스를 대량 스캔한 정황이 포착됐다.",
             "related_ids": [],
-            "category": "security",
-            "rank": 2,
+            "category": "ai",
+            "rank": 4,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "4a46fec838c693f283fd03c5": {
@@ -352552,16 +352515,16 @@
           "curation": {
             "id": "4a46fec838c693f283fd03c5",
             "scores": {
-              "social_impact": 4,
+              "social_impact": 3,
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "보안기업 엑스보우가 오픈AI 모델을 활용해 크롬 취약점 3개를 연결한 공격 체인을 6일 만에 개발해 포상금을 받았습니다.",
+            "reason_ko": "보안기업 엑스보우가 오픈AI 모델을 활용해 6일 만에 크롬 공격 체인을 개발해 포상금을 받았다.",
             "related_ids": [],
             "category": "security",
             "rank": 8,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "4863dac9b05dd6da51c2d26d": {
@@ -352578,7 +352541,7 @@
           "total_stars": null,
           "programming_language": null,
           "observed_at": null,
-          "category": "security",
+          "category": "ai",
           "language": "ko",
           "title_ko": "미국 8개 주 정부, 챗GPT가 자해와 폭력 부추긴다며 오픈AI 상대로 집단 소송",
           "summary_ko": "미국 8개 주 법무장관이 챗GPT가 청소년을 포함한 사용자에게 자해와 폭력을 부추기고 주민 안전을 위협한다며 오픈AI를 상대로 각각 소송을 제기했다. 주 정부들은 챗봇의 과도한 동조 성향과 위험한 행동 유도를 지적하며 작동 방식 변경 및 금전 제재를 요구했다.",
@@ -352593,22 +352556,190 @@
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "미국 8개 주 법무장관이 챗GPT가 자해와 폭력을 부추긴다며 오픈AI를 상대로 대규모 집단 소송을 제기했습니다.",
+            "reason_ko": "미국 8개 주 정부가 챗GPT가 자해와 폭력을 부추긴다며 오픈AI를 상대로 소송을 제기했다.",
             "related_ids": [],
-            "category": "security",
-            "rank": 3,
+            "category": "ai",
+            "rank": 5,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
-        "9fdcc0352e3202b9bb424e8f": {
-          "id": "9fdcc0352e3202b9bb424e8f",
-          "url": "https://www.aitimes.com/news/articleView.html?idxno=216295",
-          "source": "AI타임스",
-          "source_id": "aitimes",
+        "22f5d41bfd3c4d4223336864": {
+          "title_original": "ASML의 수주 호조, AI 투자 붐 둔화 우려 완화",
+          "url": "https://news.hada.io/topic?id=35363",
+          "excerpt": "ASML 고객들이 2028년 장비 주문을 대거 넣는 데 이어 2029~2030년 주문에도 관심을 보이면서, AI 투자 붐의 동력이 약해지고 있다는 우려가 완화됨 생산능력 확대 는 기존 계획을 넘어설 전망임. ASML은 2027년과 2028년에 각각 30%씩 늘리기로 했지만, CEO Christ...",
+          "published_at": "2026-10-15T04:47:54+09:00",
+          "id": "22f5d41bfd3c4d4223336864",
+          "source_id": "geeknews",
+          "source": "GeekNews",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "tech",
+          "kind": "article",
+          "evidence_kind": "rss",
+          "first_seen_at": "2026-10-15T05:08:23.322964+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "ASML의 수주 호조로 AI 투자 둔화 우려 완화",
+          "summary_ko": "ASML 고객들이 2028년 및 2029~2030년 장비 주문을 대거 넣으면서 AI 투자 붐의 동력이 약해진다는 우려가 완화되었다. 생산능력 확대 계획 또한 기존보다 더욱 늘어날 전망이다.",
+          "collected_at": "2026-10-15T05:08:23.322964+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "22f5d41bfd3c4d4223336864",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "ASML 고객들의 장비 주문 호조로 AI 투자 붐 둔화 우려가 완화되었다.",
+            "related_ids": [],
+            "category": "tech",
+            "rank": 1,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "a73005236bad7e5015e465d4": {
+          "title_original": "Google이 로그인된 모든 계정에 전화번호를 조용히 연결하고 있음",
+          "url": "https://news.hada.io/topic?id=35361",
+          "excerpt": "Google은 Android 기기에 로그인된 모든 Google 계정 에 전화번호를 자동으로 인증하고 연결하며, 별도의 명시적 확인을 요청하지 않음 전화번호 인증은 기본 활성화 되는 옵트아웃 방식이며, Google은 2025년 8~10월 사이 지원 문서에 이 동작을 반영함 연...",
+          "published_at": "2026-10-15T04:41:53+09:00",
+          "id": "a73005236bad7e5015e465d4",
+          "source_id": "geeknews",
+          "source": "GeekNews",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "tech",
+          "kind": "article",
+          "evidence_kind": "rss",
+          "first_seen_at": "2026-10-15T05:08:23.322964+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "구글, 로그인된 모든 계정에 전화번호 자동 연결 논란",
+          "summary_ko": "구글이 안드로이드 기기에 로그인된 모든 구글 계정에 전화번호를 별도의 명시적 확인 없이 자동으로 인증하고 연결하고 있다. 해당 인증은 기본으로 활성화되는 옵트아웃 방식으로 운영된다.",
+          "collected_at": "2026-10-15T05:08:23.322964+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "a73005236bad7e5015e465d4",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "구글이 안드로이드 기기에 로그인된 모든 계정에 전화번호를 자동으로 연결하는 방식이 논란이 되고 있다.",
+            "related_ids": [],
+            "category": "tech",
+            "rank": 2,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "6b772b2ce4c3ba0bbcf77d73": {
+          "title_original": "사이버공격으로 덴마크와 독일을 잇는 터널 건설 중단",
+          "url": "https://news.hada.io/topic?id=35354",
+          "excerpt": "덴마크와 독일을 연결하는 Fehmarn Belt 해협의 도로/철도 터널 건설이 시공을 맡은 국제 FLC 컨소시엄에 대한 사이버공격으로 중단됨 공격으로 근로자 신분증 카드 가 작동하지 않고 해상 작업용 선박, 크레인, 플랫폼도 멈췄으며, 덴마크 현지 매체에 따르면 공사...",
+          "published_at": "2026-10-15T02:36:53+09:00",
+          "id": "6b772b2ce4c3ba0bbcf77d73",
+          "source_id": "geeknews",
+          "source": "GeekNews",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "tech",
+          "kind": "article",
+          "evidence_kind": "rss",
+          "first_seen_at": "2026-10-15T05:08:23.322964+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "사이버공격으로 덴마크와 독일을 잇는 터널 건설 중단",
+          "summary_ko": "덴마크와 독일을 연결하는 해저 터널 건설 현장이 시공사를 겨냥한 사이버공격으로 인해 중단되었습니다. 이 공격으로 인해 근로자 신분증 카드가 작동하지 않고 해상 작업용 선박과 크레인 등이 멈춰 섰습니다.",
+          "collected_at": "2026-10-15T05:08:23.322964+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "6b772b2ce4c3ba0bbcf77d73",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "덴마크와 독일을 잇는 해저 터널 건설 현장이 시공사를 겨냥한 사이버공격으로 중단되었다.",
+            "related_ids": [],
+            "category": "tech",
+            "rank": 3,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "a80462bd86ff2730f098a809": {
+          "title_original": "FBI, 북한 IT 인력 ‘노트북 팜’ 대규모 단속…미국인 조력자 2명 체포",
+          "url": "https://www.dailysecu.com/news/articleView.html?idxno=208902",
+          "excerpt": "미국 수사당국이 북한 IT 인력의 위장 취업을 지원한 현지 거점을 대규모로 단속했다. 해외에서 미국 기업 직원으로 일하는 것처럼 위장할 수 있도록 회사 지급 노트북을 대신 받아 관리해 주던 이른바 ‘노트북 팜’이 대상이다.미 법무부는 10월 13일(현지시간) 북한 원격 IT 인력의 불법 수익 활동에 대응해 텍사스주 거점 단속과 오하이오주 연방 기소 등 일련의 조치를 발표했다. 전체 조치에는 14명 기소, 미국인 2명 체포, 노트북과 원격제어 장비 약 187대 압수가 포함됐다. 체포된 2명은 오하이오 기소 사건의 피고인이다. 미국에",
+          "published_at": "2026-10-16T10:52:41+09:00",
+          "id": "a80462bd86ff2730f098a809",
+          "source_id": "dailysecu",
+          "source": "데일리시큐",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "security",
+          "kind": "article",
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "미 FBI, 북한 IT 인력 위장 취업을 돕는 '노트북 팜' 대규모 단속",
+          "summary_ko": "미국 수사당국이 북한 IT 인력의 위장 취업을 지원하기 위해 회사 지급 노트북을 대신 관리해 온 '노트북 팜' 거점을 대규모로 단속했다. 이번 작전으로 다수의 장비가 압수되고 미국인 조력자 등이 기소되었으며, 70개가 넘는 미국 기업이 위장 취업 피해를 입은 것으로 확인됐다.",
+          "collected_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "a80462bd86ff2730f098a809",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 4
+            },
+            "reason_ko": "미 FBI가 북한 IT 인력의 위장 취업을 지원한 '노트북 팜' 거점을 대규모로 단속했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 9,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "d9ae352b69820327a0ea0cae": {
+          "id": "d9ae352b69820327a0ea0cae",
+          "url": "https://www.dailysecu.com/news/articleView.html?idxno=208884",
+          "source": "데일리시큐",
+          "source_id": "dailysecu",
           "region": "KR",
           "kind": "article",
-          "published_at": "2026-10-15T16:46:46+09:00",
+          "published_at": "2026-10-15T15:58:43+09:00",
           "evidence_kind": "body_excerpt",
           "repo_name": null,
           "stars_today": null,
@@ -352617,72 +352748,260 @@
           "observed_at": null,
           "category": "security",
           "language": "ko",
-          "title_ko": "오픈AI와 앤트로픽, 통제 어려운 중국산 오픈 AI 모델의 사이버 보안 위험 경고",
-          "summary_ko": "오픈AI와 앤트로픽 고위 관계자들이 국제 AI 정상회담에서 사용자가 직접 내려받아 수정할 수 있는 중국산 오픈 AI 모델의 보안 위험성을 경고했다. 이들은 통제가 어려운 오픈 모델이 악용될 위험이 크며 사이버 보안 관점에서 서구권 모델이 더 바람직하다고 주장했다.",
-          "collected_at": "2026-10-16T12:01:37.544134+09:00",
+          "title_ko": "티오리, AI 해킹 도구 ARTEX 심층 분석 백서 및 탐지 룰셋 공개",
+          "summary_ko": "티오리 연구팀이 AI 기반 오펜시브 보안 도구 'ARTEX'의 실증 분석 백서를 발간하고 관련 탐지 룰셋을 무료로 공개했습니다. 공격 AI의 행위 패턴을 식별하고 자동 대응 체계를 갖추기 위한 가이드를 제공합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
           "summary_model": "gemini-3.5-flash-lite",
           "translation": false,
           "body_note": "",
           "curation": {
-            "id": "9fdcc0352e3202b9bb424e8f",
+            "id": "d9ae352b69820327a0ea0cae",
             "scores": {
-              "social_impact": 4,
+              "social_impact": 3,
               "attention": 3,
               "issue_relevance": 4
             },
-            "reason_ko": "오픈AI와 앤트로픽이 통제가 어려운 중국산 오픈 모델이 사이버 보안에 구멍이 될 수 있다고 경고했습니다.",
+            "reason_ko": "티오리가 국내 금융권 침해사고에서 사용된 AI 해킹 도구 심층 분석 백서를 발간했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 2,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "4de1f27dab3f36e78db982cc": {
+          "id": "4de1f27dab3f36e78db982cc",
+          "url": "https://www.bleepingcomputer.com/news/security/hackers-exploit-collabora-rce-flaw-to-backdoor-nextcloud-servers/",
+          "source": "BleepingComputer",
+          "source_id": "bleeping",
+          "region": "GLOBAL",
+          "kind": "article",
+          "published_at": "2026-10-16T05:25:04+09:00",
+          "evidence_kind": "body_excerpt",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "en",
+          "title_ko": "Nextcloud 콜라보라 서버에서 명령 실행 취약점 악용 발생",
+          "summary_ko": "Nextcloud의 Collabora Online 내장 CODE 서버 애플리케이션에서 운영체제 명령 주입이 가능한 치명적인 취약점인 CVE-2026-110447이 악용되고 있다. 공격자는 인증 없이 프록시 엔드포인트에 악성 요청을 보내 PHP 웹셸을 심고 비밀번호 데이터베이스 등을 탐색하고 있는 것으로 나타났다. 관리자들은 최신 버전인 26.4.303 이상으로 업그레이드하거나 불필요한 경우 서버 앱을 제거해야 한다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": true,
+          "body_note": "",
+          "curation": {
+            "id": "4de1f27dab3f36e78db982cc",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 5
+            },
+            "reason_ko": "넥스트클라우드 서버를 겨냥한 콜라보라 RCE 취약점 악용 공격이 발생했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 11,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "e9d0fda1780ed2ddc7382a30": {
+          "id": "e9d0fda1780ed2ddc7382a30",
+          "url": "https://www.aitimes.com/news/articleView.html?idxno=216309",
+          "source": "AI타임스",
+          "source_id": "aitimes",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-16T06:17:00+09:00",
+          "evidence_kind": "body_excerpt",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "메타, 개인용 환경 및 에이전트 작업에 초점 맞춘 '뮤즈 스파크 오픈' 공개",
+          "summary_ko": "메타가 복잡한 코딩과 장시간 에이전트 작업을 수행할 수 있는 8,160억 개의 매개변수를 가진 멀티모달 오픈웨이트 모델 '뮤즈 스파크 오픈'을 공개했다. 애플과의 협력을 통해 맥 스튜디오 환경에 최적화되었으며, 100만 토큰의 컨텍스트 창과 전문가 혼합(MoE) 구조를 적용했다. 벤치마크에서 뛰어난 도구 사용 능력을 입증했으나, 대형 API 사업자의 별도 계약 의무 등 상업적 조건이 붙는다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "e9d0fda1780ed2ddc7382a30",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 4
+            },
+            "reason_ko": "메타가 맥 두 대로 구동 가능한 대규모 오픈웨이트 멀티모달 모델 '뮤즈 스파크 오픈'을 공개했다.",
+            "related_ids": [
+              "3f69d671af5b3bf3ac9589e1",
+              "d223e77bf605037cc5cfa258"
+            ],
+            "category": "ai",
+            "rank": 6,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "875ff92092c94a3e6a3c69c0": {
+          "id": "875ff92092c94a3e6a3c69c0",
+          "url": "https://www.dailysecu.com/news/articleView.html?idxno=208883",
+          "source": "데일리시큐",
+          "source_id": "dailysecu",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-15T15:51:36+09:00",
+          "evidence_kind": "body_excerpt",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "라온시큐어, 피지컬AI 안전망 구축 정부 과제 주관사 선정",
+          "summary_ko": "라온시큐어가 과학기술정보통신부 등이 지원하는 피지컬AI 다중계층 보안기술 개발 과제의 주관기관으로 선정되었다. 분산신원인증 기술을 활용해 로봇 에이전트에 디지털 신분증을 부여하고 권한과 활동 이력을 통합 관리하는 기술을 개발할 예정이다. 센스톤, 틸론, 디사일로 등 산학연 기관이 함께 참여해 제조 및 물류 현장의 로봇 보안성을 검증한다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "875ff92092c94a3e6a3c69c0",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "라온시큐어가 협업지능 시스템을 위한 피지컬AI 기반 다중계층 보안기술 개발 과제 주관사로 선정됐다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 3,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "a7689a35826245b8694c72fc": {
+          "id": "a7689a35826245b8694c72fc",
+          "url": "https://www.dailysecu.com/news/articleView.html?idxno=208882",
+          "source": "데일리시큐",
+          "source_id": "dailysecu",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-15T15:47:14+09:00",
+          "evidence_kind": "body_excerpt",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "샌즈랩, 바이러스블러틴 2026서 AI 변종 악성코드 분석 연구 성과 발표",
+          "summary_ko": "샌즈랩이 국제 보안 컨퍼런스 '바이러스블러틴 2026'에서 생성형 AI로 변형된 악성코드의 모델별 코드 작성 흔적을 확인하고 계보를 추적하는 연구 성과를 공개했다. 자체 개발한 프레임워크 'GHOST'를 활용해 코드가 변형되더라도 함수 구조와 데이터 처리 방식에 남는 모델별 특징을 분석했다. 이번 성과는 기존 악성코드 분석 역량을 AI가 생성한 위협 탐지 영역으로 확장했다는 평가를 받는다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "a7689a35826245b8694c72fc",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "샌즈랩이 바이러스블러틴 2026에서 AI 기반 변종 악성코드 분석 연구 성과를 발표했다.",
             "related_ids": [],
             "category": "security",
             "rank": 4,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
+        },
+        "298cf86f292c3743ef27dc8d": {
+          "id": "298cf86f292c3743ef27dc8d",
+          "url": "https://www.dailysecu.com/news/articleView.html?idxno=208880",
+          "source": "데일리시큐",
+          "source_id": "dailysecu",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-15T15:36:36+09:00",
+          "evidence_kind": "body_excerpt",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "파이오링크, 자체 개발 CTEM 플랫폼으로 미공개 오픈소스 취약점 28건 발굴",
+          "summary_ko": "파이오링크가 지속적 위협 노출 관리 플랫폼인 '블루헌터'를 활용해 미공개 오픈소스 소프트웨어 취약점 28건을 발견했다고 밝혔다. 이 중 2건은 CVE 번호를 할당받았으며, 리눅스 환경에서 쓰이는 오픈소스 서비스들의 메모리 접근 오류 등을 확인했다. 회사는 책임 있는 공개 원칙에 따라 개발사에 먼저 취약점을 알려 수정 시간을 부여하고 소프트웨어 공급망 보안 강화를 추진하고 있다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "298cf86f292c3743ef27dc8d",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "파이오링크가 자체 개발한 위협 관리 플랫폼으로 미공개 오픈소스 취약점 28건을 발굴했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 5,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         }
       },
       "hot": [
         {
           "id": "0fb60cdf0d7537eed78a3c9c",
-          "reason_ko": "시스코 이메일 보안장비에서 최고 권한 실행 취약점이 발견되어 실제 악용 중임."
+          "reason_ko": "시스코 이메일 보안장비에서 인증 없는 루트 권한 명령 실행 취약점이 발견돼 주의가 필요하다."
+        },
+        {
+          "id": "4de1f27dab3f36e78db982cc",
+          "reason_ko": "Nextcloud 콜라보라 서버에서 웹셸을 심을 수 있는 치명적 명령 주입 취약점이 악용되고 있다."
         },
         {
           "id": "79380769f2da182275322bc9",
-          "reason_ko": "국내 금융권 16개사에서 잇따른 침해사고로 개인정보가 유출되어 대응책 추진 중."
+          "reason_ko": "OK저축은행 등 국내 금융권 16개사에서 잇따라 침해사고가 발생해 개인정보가 유출됐다."
         },
         {
-          "id": "c800c6836bc91cd183fe204e",
-          "reason_ko": "구글 딥마인드 의장이 2년 내 AI 보안사고 우려를 표명하며 국제 표준을 촉구함."
+          "id": "a80462bd86ff2730f098a809",
+          "reason_ko": "미 FBI가 북한 IT 인력의 위장 취업을 지원한 대규모 노트북 팜 거점을 단속했다."
+        },
+        {
+          "id": "6b772b2ce4c3ba0bbcf77d73",
+          "reason_ko": "덴마크와 독일을 잇는 해저 터널 건설 현장이 사이버공격으로 인해 일시 중단됐다."
         },
         {
           "id": "4a46fec838c693f283fd03c5",
-          "reason_ko": "보안기업이 오픈AI 모델을 활용해 크롬 공격 체인을 6일 만에 개발함."
-        },
-        {
-          "id": "8a6ded19d0176224fb3821c6",
-          "reason_ko": "AI 에이전트들이 봇 방지 시스템을 우회해 지도 서비스를 대량 스캔한 정황 포착."
-        },
-        {
-          "id": "4863dac9b05dd6da51c2d26d",
-          "reason_ko": "미국 8개 주 정부가 챗GPT의 자해·폭력 조장 위험을 들어 오픈AI 상대 소송 제기."
-        },
-        {
-          "id": "9fdcc0352e3202b9bb424e8f",
-          "reason_ko": "오픈AI와 앤트로픽이 통제 어려운 중국산 오픈 AI 모델의 사이버 보안 위험 경고."
-        },
-        {
-          "id": "ed35875bb74aaf45434ffeb0",
-          "reason_ko": "트렐릭스가 프라이빗 클라우드 환경을 위한 온프레미스 AI 보안 솔루션 공개."
+          "reason_ko": "보안기업이 오픈AI 모델을 활용해 6일 만에 크롬 풀체인 익스플로잇 개발에 성공했다."
         },
         {
           "id": "2ef86a9ca6d091d3d73dfa1d",
-          "reason_ko": "티오리가 앤트로픽의 사이버 검증 프로그램 참여 기업으로 승인받음."
+          "reason_ko": "오펜시브 보안 기업 티오리가 앤트로픽의 사이버 검증 프로그램 참여 기업으로 승인됐다."
         },
         {
-          "id": "69a2bea888f774d9caaf242b",
-          "reason_ko": "비드래프트가 추론 전용 NPU로 언어모델 사전학습 구현에 성공함."
+          "id": "d9ae352b69820327a0ea0cae",
+          "reason_ko": "티오리 연구팀이 AI 기반 해킹 도구 ARTEX의 실증 분석 백서와 탐지 룰셋을 공개했다."
+        },
+        {
+          "id": "a7689a35826245b8694c72fc",
+          "reason_ko": "샌즈랩이 AI 변종 악성코드의 모델별 코드 작성 흔적을 추적하는 연구 성과를 발표했다."
+        },
+        {
+          "id": "298cf86f292c3743ef27dc8d",
+          "reason_ko": "파이오링크가 자체 CTEM 플랫폼을 통해 미공개 오픈소스 취약점 28건을 발굴했다."
         }
       ],
       "hot_status": "fresh",
-      "hot_at": "2026-10-16T12:01:37.544134+09:00",
+      "hot_at": "2026-10-16T12:08:17.489632+09:00",
       "hot_shortfall": "",
       "slots": {
         "06:00": {
@@ -352690,10 +353009,16 @@
           "publish_at": "2026-10-16T06:00:00+09:00",
           "status": "ok",
           "new_count": 24
+        },
+        "13:00": {
+          "at": "2026-10-16T12:08:17.489632+09:00",
+          "publish_at": "2026-10-16T13:00:00+09:00",
+          "status": "partial",
+          "new_count": 13
         }
       },
       "manual_runs": 0,
-      "updated_at": "2026-10-16T12:01:37.544134+09:00",
+      "updated_at": "2026-10-16T12:08:17.489632+09:00",
       "sources": [
         {
           "name": "AI타임스",
@@ -352805,20 +353130,88 @@
         },
         {
           "name": "NVD · 일별 CVE",
-          "status": "ok",
-          "count": 4415,
-          "total": 4439,
-          "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
-          "at": "2026-10-16T12:01:37.544134+09:00",
+          "status": "error",
+          "count": 0,
+          "total": 0,
+          "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
+          "at": "2026-10-16T12:08:17.489632+09:00",
           "start": "2026-10-12T00:00:00+09:00",
-          "end": "2026-10-16T12:01:37.544134+09:00",
-          "pages": 3,
+          "end": "2026-10-16T12:08:17.489632+09:00",
+          "pages": 0,
           "invalid_count": 0
         }
       ],
-      "warnings": [],
+      "warnings": [
+        "1개 수집원이 응답하지 않거나 수집을 제한했습니다. 수집 상태를 확인하세요."
+      ],
       "pending_count": 0,
       "cves": {
+        "CVE-2026-111357": {
+          "id": "CVE-2026-111357",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111357",
+          "published_at": "2026-10-16T06:17:13.190000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T06:17:13.190000+09:00",
+          "vuln_status": "Received",
+          "rejected": false,
+          "description": "Ivanti Connect Secure 22.8R2.4 mishandles the manner in which the dsinvoked broker trusts DSCache configuration data, leading to privilege escalation to root, as exploited in the wild in October 2026.",
+          "description_language": "en",
+          "description_hash": "2290ef1781edcf96e5c0afc2d4b5ff0ac4bf8689804ba3430fa4e71de7765adc",
+          "cvss": {
+            "version": "3.1",
+            "score": 7.0,
+            "severity": "HIGH",
+            "source": "cve@mitre.org",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 7.0,
+              "severity": "HIGH",
+              "source": "cve@mitre.org",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-829"
+          ],
+          "references": [
+            {
+              "url": "https://hub.ivanti.com/s/article/Security-Advisory-Ivanti-Connect-Secure-CVE-2026-104935",
+              "source": "cve@mitre.org",
+              "tags": []
+            },
+            {
+              "url": "https://www.volexity.com/blog/2026/10/13/a-series-of-unauthenticated-events-chained-exploitation-of-ivanti-connect-secure-zero-days/",
+              "source": "cve@mitre.org",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Ivanti Connect Secure의 DSCache 구성 데이터 처리 결함으로 인해 root 권한으로의 권한 상승이 발생할 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 5,
+              "attention": 5,
+              "issue_relevance": 5
+            },
+            "reason_ko": "Ivanti Connect Secure 제품에서 활발히 악용되는 root 권한 상승 취약점입니다.",
+            "rank": 1,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
         "CVE-2026-84731": {
           "id": "CVE-2026-84731",
           "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-84731",
@@ -352896,79 +353289,13 @@
           "curation": {
             "scores": {
               "social_impact": 5,
-              "attention": 5,
+              "attention": 4,
               "issue_relevance": 5
             },
-            "reason_ko": "Nutanix Prism Element 인증 우회 및 관리자 API 접근 취약점",
-            "rank": 1,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-111357": {
-          "id": "CVE-2026-111357",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111357",
-          "published_at": "2026-10-16T06:17:13.190000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T06:17:13.190000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "Ivanti Connect Secure 22.8R2.4 mishandles the manner in which the dsinvoked broker trusts DSCache configuration data, leading to privilege escalation to root, as exploited in the wild in October 2026.",
-          "description_language": "en",
-          "description_hash": "2290ef1781edcf96e5c0afc2d4b5ff0ac4bf8689804ba3430fa4e71de7765adc",
-          "cvss": {
-            "version": "3.1",
-            "score": 7.0,
-            "severity": "HIGH",
-            "source": "cve@mitre.org",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 7.0,
-              "severity": "HIGH",
-              "source": "cve@mitre.org",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-829"
-          ],
-          "references": [
-            {
-              "url": "https://hub.ivanti.com/s/article/Security-Advisory-Ivanti-Connect-Secure-CVE-2026-104935",
-              "source": "cve@mitre.org",
-              "tags": []
-            },
-            {
-              "url": "https://www.volexity.com/blog/2026/10/13/a-series-of-unauthenticated-events-chained-exploitation-of-ivanti-connect-secure-zero-days/",
-              "source": "cve@mitre.org",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Ivanti Connect Secure의 DSCache 구성 데이터 처리 결함으로 인해 root 권한으로의 권한 상승이 발생할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 5,
-              "attention": 5,
-              "issue_relevance": 5
-            },
-            "reason_ko": "Ivanti Connect Secure 권한 상승 제로데이 악용 취약점",
+            "reason_ko": "Nutanix Prism Element에서 인증 우회로 클러스터 파괴 및 원격 명령 실행이 가능합니다.",
             "rank": 2,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
@@ -353039,931 +353366,88 @@
           "summary_model": "gemini-3.5-flash-lite",
           "curation": {
             "scores": {
-              "social_impact": 4,
+              "social_impact": 5,
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "OPNsense GeoIP 임포터 경로 순회 및 원격 코드 실행 취약점",
+            "reason_ko": "OPNsense 방화벽의 GeoIP 수집 기능에서 임의 파일 쓰기 및 root 권한 실행 취약점이 존재합니다.",
             "rank": 3,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
           "related_cves": []
         },
-        "CVE-2026-110812": {
-          "id": "CVE-2026-110812",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-110812",
-          "published_at": "2026-10-16T02:17:16.110000+09:00",
+        "CVE-2026-111283": {
+          "id": "CVE-2026-111283",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111283",
+          "published_at": "2026-10-16T07:19:29.747000+09:00",
           "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T04:17:23.697000+09:00",
+          "last_modified_at": "2026-10-16T07:19:29.747000+09:00",
           "vuln_status": "Received",
           "rejected": false,
-          "description": "Deserialization of untrusted data in the Gremlin graph data import component in Amazon Neptune engine might allow an authenticated remote actor with standard database permissions to execute arbitrary code and access internal service credentials. To remediate this issue, users not enrolled in auto-update should upgrade to Amazon Neptune engine version 1.5.0.0.(Backports to 1.4.8.1 and 1.4.7.1)",
+          "description": "BMC Helix Network Management on-prem before 26.3.01 contains an authentication bypass vulnerability that allows unauthenticated attackers to log in as the local administrator with any password when SAML single sign-on is configured. Attackers can submit the administrator username with an arbitrary password on the web login page to obtain a SuperAdmin session, modify device credentials, run device commands, and alter audit records.",
           "description_language": "en",
-          "description_hash": "7cb37e765c8bfa5ce1af118b0cf5bb8c8588706a570464a4b6c218740768ca86",
+          "description_hash": "005992a8962d51edc492f1bcf1b78b85e0ae56c19a2c2ae71cd6cdef17c69c59",
           "cvss": {
             "version": "4.0",
-            "score": 9.4,
+            "score": 9.5,
             "severity": "CRITICAL",
-            "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 9.4,
-              "severity": "CRITICAL",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            },
-            {
-              "version": "3.1",
-              "score": 9.9,
-              "severity": "CRITICAL",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-502",
-            "CWE-918"
-          ],
-          "references": [
-            {
-              "url": "https://aws.amazon.com/security/security-bulletins/2026-136-aws/",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "tags": []
-            },
-            {
-              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.4.7.1.html",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "tags": []
-            },
-            {
-              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.4.8.1.html",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "tags": []
-            },
-            {
-              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.5.0.0.html",
-              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Amazon Neptune 엔진의 Gremlin 그래프 데이터 가져오기 구성 요소에서 신뢰할 수 없는 데이터 역직렬화로 인해 임의 코드 실행이 발생할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Amazon Neptune 그래프 데이터 임포트 역직렬화 취약점",
-            "rank": 4,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-102946": {
-          "id": "CVE-2026-102946",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-102946",
-          "published_at": "2026-10-16T04:17:13.423000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T05:17:05.407000+09:00",
-          "vuln_status": "Deferred",
-          "rejected": false,
-          "description": "joserfc is a Python library that provides an implementation of several JSON Object Signing and Encryption (JOSE) standards. Prior to 1.7.4, joserfc.jws.deserialize_json() accepts a JWS General JSON Serialization with an empty signatures array as authenticated. The verify_general_json() loop performs no iterations for the empty array and returns success because no signature check failed, allowing an attacker without a signing key to supply an arbitrary payload that relying applications may treat as authentic. The issue affects the General JSON Serialization path; compact JWS and JWT decoding, Flattened JSON serialization, and JWE JSON processing do not follow this vulnerable path. This issue is fixed in version 1.7.4.",
-          "description_language": "en",
-          "description_hash": "e02aac5342c34d461f1b15fb2d42b795930b75ff4d8fe97415e7ca57f608369c",
-          "cvss": {
-            "version": "3.1",
-            "score": 9.1,
-            "severity": "CRITICAL",
-            "source": "security-advisories@github.com",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 9.1,
-              "severity": "CRITICAL",
-              "source": "security-advisories@github.com",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-290",
-            "CWE-345",
-            "CWE-347"
-          ],
-          "references": [
-            {
-              "url": "https://github.com/authlib/joserfc/commit/f409f8f058225d7686acab6546c94593e4c1bfbe",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/authlib/joserfc/releases/tag/1.7.4",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/authlib/joserfc/security/advisories/GHSA-4pp3-559j-c5c2",
-              "source": "security-advisories@github.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "joserfc Python 라이브러리에서 빈 서명 배열을 가진 일반 JSON 직렬화 JWS를 인증된 것으로 잘못 처리하여 서명 검증이 우회될 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "joserfc 라이브러리 빈 서명 배열 검증 우회 취약점",
-            "rank": 5,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-108082": {
-          "id": "CVE-2026-108082",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-108082",
-          "published_at": "2026-10-16T00:17:22.583000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T04:17:19.470000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "Symfony is a PHP framework for web and console applications and a set of reusable PHP components. Prior to versions 5.4.54, 6.4.46, 7.4.19, and 8.1.7, HeaderUtils::split() parsed header values with a pattern whose token alternative also matched whitespace, followed by a (?<!\\s) lookbehind. A run of whitespace placed before a separator could be divided among the iterations of the enclosing repetition in exponentially many ways, and the engine tried all of them before settling. HeaderBag calls it for the Cache-Control header whenever a Request is built, so any application handling HTTP requests is reachable, with no authentication. A single request carrying such a header costs close to a second of CPU (813 ms for a run of 17 spaces in an 8 KB header on PHP 8.5, doubling with each extra space). From 18 spaces on, preg_match_all() gives up at pcre.backtrack_limit and split() returns an empty array, so every directive of the header is silently dropped. This issue affects symfony/http-foundation v4.1.0-BETA1 through v5.4.53, v6.0.0-BETA1 through v6.4.45, v7.0.0-BETA1 through v7.4.18, and v8.0.0-BETA1 through v8.1.6.",
-          "description_language": "en",
-          "description_hash": "a076ba342cb124c7c29018db84ae4a2f98cadef2f6de34b6d96e4b9b28062745",
-          "cvss": {
-            "version": "4.0",
-            "score": 8.7,
-            "severity": "HIGH",
-            "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 8.7,
-              "severity": "HIGH",
-              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-1333"
-          ],
-          "references": [
-            {
-              "url": "https://github.com/symfony/symfony/pull/66048",
-              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/symfony/symfony/pull/66491",
-              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/symfony/symfony/security/advisories/GHSA-r925-mgvr-h9cc",
-              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-              "tags": []
-            },
-            {
-              "url": "https://symfony.com/blog/cve-2026-108082-redos-in-headerutils-split-reachable-through-the-cache-control-request-header",
-              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Symfony PHP 프레임워크의 헤더 구문 분석 과정에서 취약한 패턴으로 인해 정규식 역추적이 과도하게 발생하여 서비스 거부 상태가 유발될 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Symfony HeaderUtils 정규식 서비스 거부 취약점",
-            "rank": 6,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-47168": {
-          "id": "CVE-2026-47168",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-47168",
-          "published_at": "2026-10-16T00:17:34.917000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T00:17:35.037000+09:00",
-          "vuln_status": "Deferred",
-          "rejected": false,
-          "description": "EspoCRM is an open source customer relationship management application. Prior to 9.3.7, an authenticated administrator can supply crafted serialized PHP object data that is stored in background MassAction or Export parameters and later deserialized by the application. The deserialization paths do not restrict allowed classes, allowing attacker-controlled object instantiation and arbitrary code execution on the server. This issue is fixed in version 9.3.7.",
-          "description_language": "en",
-          "description_hash": "7fd484f1a439c40b0ff621b026abb436e25cf939e1d08bbe9d3f461407a73f8a",
-          "cvss": {
-            "version": "3.1",
-            "score": 9.1,
-            "severity": "CRITICAL",
-            "source": "security-advisories@github.com",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 9.1,
-              "severity": "CRITICAL",
-              "source": "security-advisories@github.com",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-502"
-          ],
-          "references": [
-            {
-              "url": "https://github.com/espocrm/espocrm/commit/f48d1d26ffa05eac07ef72bb7f00f67a851184e1",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/espocrm/espocrm/releases/tag/9.3.7",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/espocrm/espocrm/security/advisories/GHSA-7q78-jjr9-mqcg",
-              "source": "security-advisories@github.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "EspoCRM에서 인증된 관리자가 백그라운드 작업 매개변수에 조작된 PHP 객체를 주입하여 임의 코드를 실행할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "EspoCRM 백그라운드 매스액션 역직렬화 취약점",
-            "rank": 7,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-92982": {
-          "id": "CVE-2026-92982",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-92982",
-          "published_at": "2026-10-16T01:18:23.657000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T01:33:26.290000+09:00",
-          "vuln_status": "Awaiting Analysis",
-          "rejected": false,
-          "description": "A flaw was found in Ansible Operator Plugins. A low-privileged Kubernetes user can exploit a Jinja2 template injection vulnerability by crafting malicious custom resource (CR) specification values. These values are processed by Ansible without proper sanitization, allowing embedded Jinja2 expressions to be executed within the operator pod. This can lead to arbitrary code execution and privilege escalation, granting the attacker control over the operator's service account with cluster-wide permissions.",
-          "description_language": "en",
-          "description_hash": "742c52b124039a824e325ac9d7eaaa12c0fea66c0981ec04bfc79392910e9b5c",
-          "cvss": {
-            "version": "3.1",
-            "score": 8.5,
-            "severity": "HIGH",
-            "source": "secalert@redhat.com",
-            "type": "Primary",
-            "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 8.5,
-              "severity": "HIGH",
-              "source": "secalert@redhat.com",
-              "type": "Primary",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-1336"
-          ],
-          "references": [
-            {
-              "url": "https://access.redhat.com/security/cve/CVE-2026-92982",
-              "source": "secalert@redhat.com",
-              "tags": []
-            },
-            {
-              "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2522227",
-              "source": "secalert@redhat.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Ansible Operator 플러그인에서 악의적인 사용자 정의 리소스 값으로 인해 Jinja2 템플릿 주입 및 임의 코드 실행이 발생할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Ansible Operator Plugins Jinja2 템플릿 인젝션 취약점",
-            "rank": 8,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-9703": {
-          "id": "CVE-2026-9703",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-9703",
-          "published_at": "2026-10-16T00:17:39.180000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T00:17:39.180000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "Grafana's data source proxy did not apply role-based access control to write requests forwarded to Loki data sources. A user holding only the Viewer role on an affected Grafana instance could send POST, PUT and DELETE requests through the proxy to the Loki rules API (/loki/api/v1/rules), allowing them to create, modify and delete Loki alerting rules. Because those rules are stored by Loki rather than by Grafana, the change took effect for every user of that Loki data source, not only for the Viewer who made the request. Exploitation requires an authenticated Viewer account on the Grafana instance and a configured Loki data source; no other privileges are needed. Both Grafana OSS and Grafana Enterprise are affected. The defect is in Grafana's data source proxy; Loki itself is not vulnerable and does not need to be patched.",
-          "description_language": "en",
-          "description_hash": "79b3de996186f5dc0a04f99ac15ed7deff177ba5d7e9c970bc46028ca1577660",
-          "cvss": {
-            "version": "3.1",
-            "score": 7.1,
-            "severity": "HIGH",
-            "source": "security@grafana.com",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:L"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 7.1,
-              "severity": "HIGH",
-              "source": "security@grafana.com",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:L"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-284"
-          ],
-          "references": [
-            {
-              "url": "https://grafana.com/security/security-advisories/cve-2026-9703",
-              "source": "security@grafana.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Grafana 데이터 소스 프록시가 Loki 데이터 소스로 전달되는 쓰기 요청에 역할 기반 접근 제어를 적용하지 않아, 뷰어 권한으로 경고 규칙을 조작할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Grafana 데이터 소스 프록시 Loki 규칙 접근 제어 우회 취약점",
-            "rank": 9,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-109383": {
-          "id": "CVE-2026-109383",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-109383",
-          "published_at": "2026-10-16T04:17:20.853000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T05:38:04.303000+09:00",
-          "vuln_status": "Awaiting Analysis",
-          "rejected": false,
-          "description": "undici is an HTTP client library for Node.js. In versions 4.0.0 through 6.29.0, 7.0.0 through 7.30.0, and 8.0.0 through 8.12.1, its Agent dispatcher passes its constructor options through a JSON-based deep clone before forwarding them to each per-origin pool, and because JSON cannot represent functions, a caller-supplied tls option containing a checkServerIdentity callback is silently dropped before it reaches the TLS layer. As a result, a TLS peer whose certificate a custom checkServerIdentity was written to reject, but which passes Node's default hostname and chain checks, is silently accepted. Because Agent is the default dispatcher behind request, fetch, and setGlobalDispatcher, this affects the path most applications use, and EnvHttpProxyAgent is affected on its direct and no-proxy routes as well, while only applications that pass a function-valued tls option such as a custom checkServerIdentity for certificate or public-key pinning are at risk. The issue is fixed in undici 6.29.1, 7.30.1, and 8.12.2, which preserve the tls option outside the JSON clone so custom verification callbacks are forwarded unchanged, and users should upgrade to one of those versions or later. As a workaround, pass the TLS options through connect instead of tls, or for proxied destinations use requestTls and proxyTls.",
-          "description_language": "en",
-          "description_hash": "608c5765c9ce51a2ecd03c3df6707787d8ae387d4a093841d07a3ac72420b615",
-          "cvss": {
-            "version": "3.1",
-            "score": 7.4,
-            "severity": "HIGH",
-            "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 7.4,
-              "severity": "HIGH",
-              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-295"
-          ],
-          "references": [
-            {
-              "url": "https://cna.openjsf.org/security-advisories.html",
-              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/nodejs/undici/security/advisories/GHSA-2m5v-pch6-74hx",
-              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Node.js HTTP 클라이언트 라이브러리인 undici에서 JSON 기반 심층 복사로 인해 사용자 정의 TLS 확인 콜백이 누락되어 인증서 검증이 우회될 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Node.js undici 클라이언트 TLS 인증 콜백 누락 취약점",
-            "rank": 10,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-97712": {
-          "id": "CVE-2026-97712",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-97712",
-          "published_at": "2026-10-16T01:18:26.137000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T02:17:34.200000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "Sonatype Nexus Repository 3 allows a user that holds the role create or role update permission to grant roles and privileges that the account does not hold. This can give the user more access than intended, up to full administrative access.",
-          "description_language": "en",
-          "description_hash": "f3497cec9e709136d9f2e7e416120a303d5dd35a8dfdd8d74cc21f1445a80e47",
-          "cvss": {
-            "version": "4.0",
-            "score": 8.7,
-            "severity": "HIGH",
-            "source": "103e4ec9-0a87-450b-af77-479448ddef11",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 8.7,
-              "severity": "HIGH",
-              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-862"
-          ],
-          "references": [
-            {
-              "url": "https://help.sonatype.com/en/sonatype-nexus-repository-3-97-0-release-notes.html",
-              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
-              "tags": []
-            },
-            {
-              "url": "https://support.sonatype.com/hc/en-us/articles/56207076233619/",
-              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Sonatype Nexus Repository 3에서 역할 생성 또는 수정 권한을 가진 사용자가 보유하지 않은 권한을 스스로 부여하여 접근 권한을 확장할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Sonatype Nexus Repository 3 권한 부여 취약점",
-            "rank": 11,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-111094": {
-          "id": "CVE-2026-111094",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111094",
-          "published_at": "2026-10-16T01:17:48.993000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T02:17:16.680000+09:00",
-          "vuln_status": "Undergoing Analysis",
-          "rejected": false,
-          "description": "In JetBrains TeamCity before 2026.2, 2026.1.4, 2025.11.8 remote code execution via a whitelist bypass in the build messages protocol was possible",
-          "description_language": "en",
-          "description_hash": "d7da01aeba84f10502474294036daf6f268112849a5fc580e0698d50ccc826df",
-          "cvss": {
-            "version": "3.1",
-            "score": 8.1,
-            "severity": "HIGH",
-            "source": "cve@jetbrains.com",
-            "type": "Secondary",
-            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
-          },
-          "cvss_all": [
-            {
-              "version": "3.1",
-              "score": 8.1,
-              "severity": "HIGH",
-              "source": "cve@jetbrains.com",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-502"
-          ],
-          "references": [
-            {
-              "url": "https://www.jetbrains.com/privacy-security/issues-fixed/",
-              "source": "cve@jetbrains.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "JetBrains TeamCity의 빌드 메시지 프로토콜 내 화이트리스트 우회 결함으로 인해 원격 코드 실행이 발생할 수 있습니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "JetBrains TeamCity 빌드 메시지 프로토콜 원격 코드 실행 취약점",
-            "rank": 12,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-62679": {
-          "id": "CVE-2026-62679",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-62679",
-          "published_at": "2026-10-16T02:17:26.820000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T06:08:49.703000+09:00",
-          "vuln_status": "Deferred",
-          "rejected": false,
-          "description": "Lychee is a free, open-source photo-management tool. Prior to 7.6.4, SecurePathController, which serves GET /image/{path}, concatenates the attacker-controlled path with the local storage root and performs a string-prefix check before canonicalizing dot segments. Under the supported non-default configuration with temporary_image_link_enabled enabled, temporary_image_link_when_logged_in disabled, and secure_image_link_enabled disabled, any authenticated user can submit encoded traversal segments that pass the prefix check and are later resolved by filesystem operations. This permits reading files available to the web process, including application configuration and other users' private images, and disclosed APP_KEY or database credentials can enable further compromise. This issue is fixed in version 7.6.4.",
-          "description_language": "en",
-          "description_hash": "b9dcb7455e5700dea9f95728d8b752b820a24108c9b2150389f62ed409094ff0",
-          "cvss": {
-            "version": "4.0",
-            "score": 8.9,
-            "severity": "HIGH",
-            "source": "security-advisories@github.com",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 8.9,
-              "severity": "HIGH",
-              "source": "security-advisories@github.com",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-22"
-          ],
-          "references": [
-            {
-              "url": "https://github.com/LycheeOrg/Lychee/commit/f4553f6e0145ec4e02360c6121bd169e87b5d05f",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/LycheeOrg/Lychee/pull/4465",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/LycheeOrg/Lychee/releases/tag/v7.6.4",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/LycheeOrg/Lychee/security/advisories/GHSA-j5ff-34x8-xxqg",
-              "source": "security-advisories@github.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "무료 오픈소스 사진 관리 도구 Lychee에서 인증된 사용자가 경로 조작 세그먼트를 제출해 웹 프로세스가 접근 가능한 파일을 읽을 수 있는 취약점이 존재합니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Lychee 사진 관리 도구 경로 순회 파일 노출 취약점",
-            "rank": 13,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-105474": {
-          "id": "CVE-2026-105474",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-105474",
-          "published_at": "2026-10-16T01:17:34.373000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T02:17:12.287000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "A server-side template injection exists in SolusVM 2 up to version 2.0.0-44576 that allows remote authenticated users to execute arbitrary code as root.",
-          "description_language": "en",
-          "description_hash": "6d1aa9a5990a8685489a7705116e83d71717c90ebd1b04212e20560ba338de1a",
-          "cvss": {
-            "version": "4.0",
-            "score": 9.4,
-            "severity": "CRITICAL",
-            "source": "support@hackerone.com",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 9.4,
-              "severity": "CRITICAL",
-              "source": "support@hackerone.com",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-1336"
-          ],
-          "references": [
-            {
-              "url": "https://support.solusvm.com/hc/en-us/articles/44057968061591-CVE-2026-105474-Server-Side-Template-Injection-in-SolusVM-2",
-              "source": "support@hackerone.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "SolusVM 2에서 원격 인증된 사용자가 루트 권한으로 임의 코드를 실행할 수 있는 서버 측 템플릿 인젝션 취약점이 존재합니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "SolusVM 2 서버 측 템플릿 인젝션 취약점",
-            "rank": 14,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-110874": {
-          "id": "CVE-2026-110874",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-110874",
-          "published_at": "2026-10-16T04:17:24.353000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T05:17:09.127000+09:00",
-          "vuln_status": "Deferred",
-          "rejected": false,
-          "description": "Dolibarr before 23.0.4 contains a PHP object injection vulnerability in jsonOrUnserialize() in functions.lib.php, which calls unserialize() without class restrictions when json_decode() fails. Attackers able to write stored extrafields, export configurations or blocked log entries can plant serialized objects that trigger gadget chains for code execution or file manipulation.",
-          "description_language": "en",
-          "description_hash": "3f663811b7252a42ba354fa82ac4affd574fe2c79667c354455f8ccc36483bd1",
-          "cvss": {
-            "version": "4.0",
-            "score": 7.5,
-            "severity": "HIGH",
             "source": "disclosure@vulncheck.com",
             "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
           },
           "cvss_all": [
             {
               "version": "4.0",
-              "score": 7.5,
-              "severity": "HIGH",
+              "score": 9.5,
+              "severity": "CRITICAL",
               "source": "disclosure@vulncheck.com",
               "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
             },
             {
               "version": "3.1",
-              "score": 6.6,
-              "severity": "MEDIUM",
-              "source": "disclosure@vulncheck.com",
-              "type": "Secondary",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H"
-            }
-          ],
-          "cpes": [],
-          "products": [],
-          "weaknesses": [
-            "CWE-502"
-          ],
-          "references": [
-            {
-              "url": "https://github.com/Dolibarr/dolibarr",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/Dolibarr/dolibarr/commit/17658fcaefdaabe13685e566e5f12d5fbd4f4a5c",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/Dolibarr/dolibarr/pull/38530",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://www.vulncheck.com/advisories/dolibarr-before-23.0.4-php-object-injection-via-jsonorunserialize",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            }
-          ],
-          "known_exploited": null,
-          "kev": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "Dolibarr의 functions.lib.php에 있는 jsonOrUnserialize() 함수에서 클래스 제한 없이 unserialize()를 호출하여 코드 실행이나 파일 조작을 유발할 수 있는 PHP 객체 인젝션 취약점이 존재합니다.",
-          "summary_model": "gemini-3.5-flash-lite",
-          "curation": {
-            "scores": {
-              "social_impact": 4,
-              "attention": 4,
-              "issue_relevance": 4
-            },
-            "reason_ko": "Dolibarr PHP 객체 인젝션 취약점",
-            "rank": 15,
-            "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
-            "related_ids": []
-          },
-          "related_ids": [],
-          "related_cves": []
-        },
-        "CVE-2026-47218": {
-          "id": "CVE-2026-47218",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-47218",
-          "published_at": "2026-10-16T04:17:39.257000+09:00",
-          "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T05:17:13.510000+09:00",
-          "vuln_status": "Received",
-          "rejected": false,
-          "description": "runwasi facilitates running Wasm and WASI workloads managed by containerd. Prior to 0.6.1, containerd-shim-wasmtime-v1 can treat Wasmtime precompiled bytes supplied directly in an OCI image layer as a trusted artifact from the precompile-cache path and deserialize them as native code. An attacker who causes a victim to run a crafted image can bypass WebAssembly validation and execute native code in the shim zygote process, gaining the filesystem, environment, credentials, networking, and Linux syscall access available to the workload container. Downstream shims built with runwasi's containerd-shim-wasm precompile-cache API are also affected if they implement Compiler and trust executable precompiled artifacts from OCI image layers; the 0.6.1 boundary applies specifically to containerd-shim-wasmtime and does not independently certify downstream product releases. The flaw escapes the WASI sandbox to the workload container boundary, but it does not by itself bypass container isolation or provide direct host code execution. This issue is fixed in version 0.6.1.",
-          "description_language": "en",
-          "description_hash": "026c2700309e460c929d6075e04ba1952bcb31d28584f17acfd932f1e3652ee0",
-          "cvss": {
-            "version": "4.0",
-            "score": 9.3,
-            "severity": "CRITICAL",
-            "source": "security-advisories@github.com",
-            "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-          },
-          "cvss_all": [
-            {
-              "version": "4.0",
-              "score": 9.3,
+              "score": 9.0,
               "severity": "CRITICAL",
-              "source": "security-advisories@github.com",
-              "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+              "source": "disclosure@vulncheck.com",
+              "type": "Primary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H"
             }
           ],
           "cpes": [],
           "products": [],
           "weaknesses": [
-            "CWE-502"
+            "CWE-305"
           ],
           "references": [
             {
-              "url": "https://github.com/containerd/runwasi/commit/d28ab73c2c8a6c50d1927078821bd418b9e51638",
-              "source": "security-advisories@github.com",
+              "url": "https://docs.helixops.ai/bin/IT-Operations-Management/Operations-Management/BMC-Helix-Network-Management/NetworkManagement/Release-Notes/On-prem-Release-Notes/BMC-Helix-Network-Management-26-3-01-On-prem-Release-Notes/",
+              "source": "disclosure@vulncheck.com",
               "tags": []
             },
             {
-              "url": "https://github.com/containerd/runwasi/releases/tag/containerd-shim-wasmtime/v0.6.1",
-              "source": "security-advisories@github.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/containerd/runwasi/security/advisories/GHSA-cc25-vq59-rcjx",
-              "source": "security-advisories@github.com",
+              "url": "https://www.vulncheck.com/advisories/bmc-helix-network-management-before-26.3.01-authentication-bypass-via-saml-configuration",
+              "source": "disclosure@vulncheck.com",
               "tags": []
             }
           ],
           "known_exploited": null,
           "kev": null,
           "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "containerd-shim-wasmtime-v1이 OCI 이미지 레이어에 포함된 미리 컴파일된 바이트를 신뢰하여 역직렬화함으로써 웹어셈블리 검증을 우회하고 시림 지고트 프로세스에서 네이티브 코드를 실행할 수 있는 취약점이 존재합니다.",
+          "summary_ko": "온프레미스 BMC Helix Network Management에서 SAML 싱글 사인온이 설정된 경우 인증되지 않은 공격자가 임의의 비밀번호로 로컬 관리자 로그인을 우회하여 슈퍼관리자 세션을 획득할 수 있는 취약점이 존재합니다.",
           "summary_model": "gemini-3.5-flash-lite",
           "curation": {
             "scores": {
-              "social_impact": 4,
+              "social_impact": 5,
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "runwasi precompile-cache 역직렬화 코드 실행 취약점",
-            "rank": 16,
+            "reason_ko": "BMC Helix Network Management에서 SAML 설정 시 인증 우회로 관리자 로그인이 가능합니다.",
+            "rank": 4,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
@@ -354034,10 +353518,10 @@
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "Jooan IP 카메라 하드코딩된 자격 증명 원격 코드 실행 취약점",
-            "rank": 17,
+            "reason_ko": "Jooan IP 카메라에서 하드코딩된 자격 증명을 이용한 원격 root 명령 실행 취약점이 있습니다.",
+            "rank": 5,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
@@ -354128,73 +353612,84 @@
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "Archon AI 코딩 에이전트 제어 API 인증 누락 취약점",
-            "rank": 18,
+            "reason_ko": "Archon AI 코딩 Agent 제어 API에서 인증 누락으로 호스트 명령 실행이 가능합니다.",
+            "rank": 6,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
           "related_cves": []
         },
-        "CVE-2026-111283": {
-          "id": "CVE-2026-111283",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111283",
-          "published_at": "2026-10-16T07:19:29.747000+09:00",
+        "CVE-2026-110812": {
+          "id": "CVE-2026-110812",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-110812",
+          "published_at": "2026-10-16T02:17:16.110000+09:00",
           "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T07:19:29.747000+09:00",
+          "last_modified_at": "2026-10-16T04:17:23.697000+09:00",
           "vuln_status": "Received",
           "rejected": false,
-          "description": "BMC Helix Network Management on-prem before 26.3.01 contains an authentication bypass vulnerability that allows unauthenticated attackers to log in as the local administrator with any password when SAML single sign-on is configured. Attackers can submit the administrator username with an arbitrary password on the web login page to obtain a SuperAdmin session, modify device credentials, run device commands, and alter audit records.",
+          "description": "Deserialization of untrusted data in the Gremlin graph data import component in Amazon Neptune engine might allow an authenticated remote actor with standard database permissions to execute arbitrary code and access internal service credentials. To remediate this issue, users not enrolled in auto-update should upgrade to Amazon Neptune engine version 1.5.0.0.(Backports to 1.4.8.1 and 1.4.7.1)",
           "description_language": "en",
-          "description_hash": "005992a8962d51edc492f1bcf1b78b85e0ae56c19a2c2ae71cd6cdef17c69c59",
+          "description_hash": "7cb37e765c8bfa5ce1af118b0cf5bb8c8588706a570464a4b6c218740768ca86",
           "cvss": {
             "version": "4.0",
-            "score": 9.5,
+            "score": 9.4,
             "severity": "CRITICAL",
-            "source": "disclosure@vulncheck.com",
+            "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
             "type": "Secondary",
-            "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
           },
           "cvss_all": [
             {
               "version": "4.0",
-              "score": 9.5,
+              "score": 9.4,
               "severity": "CRITICAL",
-              "source": "disclosure@vulncheck.com",
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
               "type": "Secondary",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
             },
             {
               "version": "3.1",
-              "score": 9.0,
+              "score": 9.9,
               "severity": "CRITICAL",
-              "source": "disclosure@vulncheck.com",
-              "type": "Primary",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H"
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H"
             }
           ],
           "cpes": [],
           "products": [],
           "weaknesses": [
-            "CWE-305"
+            "CWE-502",
+            "CWE-918"
           ],
           "references": [
             {
-              "url": "https://docs.helixops.ai/bin/IT-Operations-Management/Operations-Management/BMC-Helix-Network-Management/NetworkManagement/Release-Notes/On-prem-Release-Notes/BMC-Helix-Network-Management-26-3-01-On-prem-Release-Notes/",
-              "source": "disclosure@vulncheck.com",
+              "url": "https://aws.amazon.com/security/security-bulletins/2026-136-aws/",
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
               "tags": []
             },
             {
-              "url": "https://www.vulncheck.com/advisories/bmc-helix-network-management-before-26.3.01-authentication-bypass-via-saml-configuration",
-              "source": "disclosure@vulncheck.com",
+              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.4.7.1.html",
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
+              "tags": []
+            },
+            {
+              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.4.8.1.html",
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
+              "tags": []
+            },
+            {
+              "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases-1.5.0.0.html",
+              "source": "ff89ba41-3aa1-4d27-914a-91399e9639e5",
               "tags": []
             }
           ],
           "known_exploited": null,
           "kev": null,
           "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "온프레미스 BMC Helix Network Management에서 SAML 싱글 사인온이 설정된 경우 인증되지 않은 공격자가 임의의 비밀번호로 로컬 관리자 로그인을 우회하여 슈퍼관리자 세션을 획득할 수 있는 취약점이 존재합니다.",
+          "summary_ko": "Amazon Neptune 엔진의 Gremlin 그래프 데이터 가져오기 구성 요소에서 신뢰할 수 없는 데이터 역직렬화로 인해 임의 코드 실행이 발생할 수 있습니다.",
           "summary_model": "gemini-3.5-flash-lite",
           "curation": {
             "scores": {
@@ -354202,31 +353697,594 @@
               "attention": 4,
               "issue_relevance": 4
             },
-            "reason_ko": "BMC Helix Network Management 인증 우회 취약점",
-            "rank": 19,
+            "reason_ko": "Amazon Neptune 엔진에서 역직렬화 결함으로 인한 임의 코드 실행 취약점이 발견되었습니다.",
+            "rank": 7,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
           "related_cves": []
         },
-        "CVE-2026-111352": {
-          "id": "CVE-2026-111352",
-          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111352",
-          "published_at": "2026-10-16T07:19:33.043000+09:00",
+        "CVE-2026-105474": {
+          "id": "CVE-2026-105474",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-105474",
+          "published_at": "2026-10-16T01:17:34.373000+09:00",
           "published_day": "2026-10-16",
-          "last_modified_at": "2026-10-16T07:19:33.043000+09:00",
+          "last_modified_at": "2026-10-16T02:17:12.287000+09:00",
           "vuln_status": "Received",
           "rejected": false,
-          "description": "ThinkCMF through 8.0.1 contains an incorrect authorization vulnerability in RestAdminBaseController that allows restricted backend administrators to call every admin REST API endpoint because Auth::check() fails open when no admin_api rule exists. Attackers with a valid admin-type API token can list member emails and mobile numbers, disable members, and call PUT admin/roles/{id}/authorize to grant themselves full administrator rights.",
+          "description": "A server-side template injection exists in SolusVM 2 up to version 2.0.0-44576 that allows remote authenticated users to execute arbitrary code as root.",
           "description_language": "en",
-          "description_hash": "0ef59728a94ae0359045616475d0856b9fbf0521f37b0df2a1a81a1b03eff856",
+          "description_hash": "6d1aa9a5990a8685489a7705116e83d71717c90ebd1b04212e20560ba338de1a",
+          "cvss": {
+            "version": "4.0",
+            "score": 9.4,
+            "severity": "CRITICAL",
+            "source": "support@hackerone.com",
+            "type": "Secondary",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+          },
+          "cvss_all": [
+            {
+              "version": "4.0",
+              "score": 9.4,
+              "severity": "CRITICAL",
+              "source": "support@hackerone.com",
+              "type": "Secondary",
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-1336"
+          ],
+          "references": [
+            {
+              "url": "https://support.solusvm.com/hc/en-us/articles/44057968061591-CVE-2026-105474-Server-Side-Template-Injection-in-SolusVM-2",
+              "source": "support@hackerone.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "SolusVM 2에서 원격 인증된 사용자가 루트 권한으로 임의 코드를 실행할 수 있는 서버 측 템플릿 인젝션 취약점이 존재합니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "SolusVM 2에서 서버 측 템플릿 인젝션을 통해 루트 권한 코드를 실행할 수 있습니다.",
+            "rank": 8,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-47218": {
+          "id": "CVE-2026-47218",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-47218",
+          "published_at": "2026-10-16T04:17:39.257000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T05:17:13.510000+09:00",
+          "vuln_status": "Received",
+          "rejected": false,
+          "description": "runwasi facilitates running Wasm and WASI workloads managed by containerd. Prior to 0.6.1, containerd-shim-wasmtime-v1 can treat Wasmtime precompiled bytes supplied directly in an OCI image layer as a trusted artifact from the precompile-cache path and deserialize them as native code. An attacker who causes a victim to run a crafted image can bypass WebAssembly validation and execute native code in the shim zygote process, gaining the filesystem, environment, credentials, networking, and Linux syscall access available to the workload container. Downstream shims built with runwasi's containerd-shim-wasm precompile-cache API are also affected if they implement Compiler and trust executable precompiled artifacts from OCI image layers; the 0.6.1 boundary applies specifically to containerd-shim-wasmtime and does not independently certify downstream product releases. The flaw escapes the WASI sandbox to the workload container boundary, but it does not by itself bypass container isolation or provide direct host code execution. This issue is fixed in version 0.6.1.",
+          "description_language": "en",
+          "description_hash": "026c2700309e460c929d6075e04ba1952bcb31d28584f17acfd932f1e3652ee0",
+          "cvss": {
+            "version": "4.0",
+            "score": 9.3,
+            "severity": "CRITICAL",
+            "source": "security-advisories@github.com",
+            "type": "Secondary",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+          },
+          "cvss_all": [
+            {
+              "version": "4.0",
+              "score": 9.3,
+              "severity": "CRITICAL",
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-502"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/containerd/runwasi/commit/d28ab73c2c8a6c50d1927078821bd418b9e51638",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/containerd/runwasi/releases/tag/containerd-shim-wasmtime/v0.6.1",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/containerd/runwasi/security/advisories/GHSA-cc25-vq59-rcjx",
+              "source": "security-advisories@github.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "containerd-shim-wasmtime-v1이 OCI 이미지 레이어에 포함된 미리 컴파일된 바이트를 신뢰하여 역직렬화함으로써 웹어셈블리 검증을 우회하고 시림 지고트 프로세스에서 네이티브 코드를 실행할 수 있는 취약점이 존재합니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "runwasi에서 신뢰되지 않은 WASM 아티팩트 역직렬화로 네이티브 코드 실행이 가능합니다.",
+            "rank": 9,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-108082": {
+          "id": "CVE-2026-108082",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-108082",
+          "published_at": "2026-10-16T00:17:22.583000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T04:17:19.470000+09:00",
+          "vuln_status": "Received",
+          "rejected": false,
+          "description": "Symfony is a PHP framework for web and console applications and a set of reusable PHP components. Prior to versions 5.4.54, 6.4.46, 7.4.19, and 8.1.7, HeaderUtils::split() parsed header values with a pattern whose token alternative also matched whitespace, followed by a (?<!\\s) lookbehind. A run of whitespace placed before a separator could be divided among the iterations of the enclosing repetition in exponentially many ways, and the engine tried all of them before settling. HeaderBag calls it for the Cache-Control header whenever a Request is built, so any application handling HTTP requests is reachable, with no authentication. A single request carrying such a header costs close to a second of CPU (813 ms for a run of 17 spaces in an 8 KB header on PHP 8.5, doubling with each extra space). From 18 spaces on, preg_match_all() gives up at pcre.backtrack_limit and split() returns an empty array, so every directive of the header is silently dropped. This issue affects symfony/http-foundation v4.1.0-BETA1 through v5.4.53, v6.0.0-BETA1 through v6.4.45, v7.0.0-BETA1 through v7.4.18, and v8.0.0-BETA1 through v8.1.6.",
+          "description_language": "en",
+          "description_hash": "a076ba342cb124c7c29018db84ae4a2f98cadef2f6de34b6d96e4b9b28062745",
           "cvss": {
             "version": "4.0",
             "score": 8.7,
             "severity": "HIGH",
+            "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+            "type": "Secondary",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+          },
+          "cvss_all": [
+            {
+              "version": "4.0",
+              "score": 8.7,
+              "severity": "HIGH",
+              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+              "type": "Secondary",
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-1333"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/symfony/symfony/pull/66048",
+              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/symfony/symfony/pull/66491",
+              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/symfony/symfony/security/advisories/GHSA-r925-mgvr-h9cc",
+              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+              "tags": []
+            },
+            {
+              "url": "https://symfony.com/blog/cve-2026-108082-redos-in-headerutils-split-reachable-through-the-cache-control-request-header",
+              "source": "596c5446-0ce5-4ba2-aa66-48b3b757a647",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Symfony PHP 프레임워크의 헤더 구문 분석 과정에서 취약한 패턴으로 인해 정규식 역추적이 과도하게 발생하여 서비스 거부 상태가 유발될 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "Symfony 헤더 구문 분석 과정에서 정규식 역추적으로 인한 서비스 거부 취약점이 있습니다.",
+            "rank": 10,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-102946": {
+          "id": "CVE-2026-102946",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-102946",
+          "published_at": "2026-10-16T04:17:13.423000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T05:17:05.407000+09:00",
+          "vuln_status": "Deferred",
+          "rejected": false,
+          "description": "joserfc is a Python library that provides an implementation of several JSON Object Signing and Encryption (JOSE) standards. Prior to 1.7.4, joserfc.jws.deserialize_json() accepts a JWS General JSON Serialization with an empty signatures array as authenticated. The verify_general_json() loop performs no iterations for the empty array and returns success because no signature check failed, allowing an attacker without a signing key to supply an arbitrary payload that relying applications may treat as authentic. The issue affects the General JSON Serialization path; compact JWS and JWT decoding, Flattened JSON serialization, and JWE JSON processing do not follow this vulnerable path. This issue is fixed in version 1.7.4.",
+          "description_language": "en",
+          "description_hash": "e02aac5342c34d461f1b15fb2d42b795930b75ff4d8fe97415e7ca57f608369c",
+          "cvss": {
+            "version": "3.1",
+            "score": 9.1,
+            "severity": "CRITICAL",
+            "source": "security-advisories@github.com",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 9.1,
+              "severity": "CRITICAL",
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-290",
+            "CWE-345",
+            "CWE-347"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/authlib/joserfc/commit/f409f8f058225d7686acab6546c94593e4c1bfbe",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/authlib/joserfc/releases/tag/1.7.4",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/authlib/joserfc/security/advisories/GHSA-4pp3-559j-c5c2",
+              "source": "security-advisories@github.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "joserfc Python 라이브러리에서 빈 서명 배열을 가진 일반 JSON 직렬화 JWS를 인증된 것으로 잘못 처리하여 서명 검증이 우회될 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "joserfc 라이브러리에서 빈 서명 배열을 가진 JWS 인증이 잘못 처리되는 결함이 있습니다.",
+            "rank": 11,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-47168": {
+          "id": "CVE-2026-47168",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-47168",
+          "published_at": "2026-10-16T00:17:34.917000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T00:17:35.037000+09:00",
+          "vuln_status": "Deferred",
+          "rejected": false,
+          "description": "EspoCRM is an open source customer relationship management application. Prior to 9.3.7, an authenticated administrator can supply crafted serialized PHP object data that is stored in background MassAction or Export parameters and later deserialized by the application. The deserialization paths do not restrict allowed classes, allowing attacker-controlled object instantiation and arbitrary code execution on the server. This issue is fixed in version 9.3.7.",
+          "description_language": "en",
+          "description_hash": "7fd484f1a439c40b0ff621b026abb436e25cf939e1d08bbe9d3f461407a73f8a",
+          "cvss": {
+            "version": "3.1",
+            "score": 9.1,
+            "severity": "CRITICAL",
+            "source": "security-advisories@github.com",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 9.1,
+              "severity": "CRITICAL",
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-502"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/espocrm/espocrm/commit/f48d1d26ffa05eac07ef72bb7f00f67a851184e1",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/espocrm/espocrm/releases/tag/9.3.7",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/espocrm/espocrm/security/advisories/GHSA-7q78-jjr9-mqcg",
+              "source": "security-advisories@github.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "EspoCRM에서 인증된 관리자가 백그라운드 작업 매개변수에 조작된 PHP 객체를 주입하여 임의 코드를 실행할 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "EspoCRM에서 관리자 권한으로 PHP 객체 역직렬화를 통한 임의 코드 실행이 가능합니다.",
+            "rank": 12,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-110874": {
+          "id": "CVE-2026-110874",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-110874",
+          "published_at": "2026-10-16T04:17:24.353000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T05:17:09.127000+09:00",
+          "vuln_status": "Deferred",
+          "rejected": false,
+          "description": "Dolibarr before 23.0.4 contains a PHP object injection vulnerability in jsonOrUnserialize() in functions.lib.php, which calls unserialize() without class restrictions when json_decode() fails. Attackers able to write stored extrafields, export configurations or blocked log entries can plant serialized objects that trigger gadget chains for code execution or file manipulation.",
+          "description_language": "en",
+          "description_hash": "3f663811b7252a42ba354fa82ac4affd574fe2c79667c354455f8ccc36483bd1",
+          "cvss": {
+            "version": "4.0",
+            "score": 7.5,
+            "severity": "HIGH",
             "source": "disclosure@vulncheck.com",
+            "type": "Secondary",
+            "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+          },
+          "cvss_all": [
+            {
+              "version": "4.0",
+              "score": 7.5,
+              "severity": "HIGH",
+              "source": "disclosure@vulncheck.com",
+              "type": "Secondary",
+              "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            },
+            {
+              "version": "3.1",
+              "score": 6.6,
+              "severity": "MEDIUM",
+              "source": "disclosure@vulncheck.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-502"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/Dolibarr/dolibarr",
+              "source": "disclosure@vulncheck.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/Dolibarr/dolibarr/commit/17658fcaefdaabe13685e566e5f12d5fbd4f4a5c",
+              "source": "disclosure@vulncheck.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/Dolibarr/dolibarr/pull/38530",
+              "source": "disclosure@vulncheck.com",
+              "tags": []
+            },
+            {
+              "url": "https://www.vulncheck.com/advisories/dolibarr-before-23.0.4-php-object-injection-via-jsonorunserialize",
+              "source": "disclosure@vulncheck.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Dolibarr의 functions.lib.php에 있는 jsonOrUnserialize() 함수에서 클래스 제한 없이 unserialize()를 호출하여 코드 실행이나 파일 조작을 유발할 수 있는 PHP 객체 인젝션 취약점이 존재합니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "Dolibarr에서 제한 없는 unserialize 호출로 인한 PHP 객체 인젝션 취약점이 존재합니다.",
+            "rank": 13,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-92982": {
+          "id": "CVE-2026-92982",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-92982",
+          "published_at": "2026-10-16T01:18:23.657000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T01:33:26.290000+09:00",
+          "vuln_status": "Awaiting Analysis",
+          "rejected": false,
+          "description": "A flaw was found in Ansible Operator Plugins. A low-privileged Kubernetes user can exploit a Jinja2 template injection vulnerability by crafting malicious custom resource (CR) specification values. These values are processed by Ansible without proper sanitization, allowing embedded Jinja2 expressions to be executed within the operator pod. This can lead to arbitrary code execution and privilege escalation, granting the attacker control over the operator's service account with cluster-wide permissions.",
+          "description_language": "en",
+          "description_hash": "742c52b124039a824e325ac9d7eaaa12c0fea66c0981ec04bfc79392910e9b5c",
+          "cvss": {
+            "version": "3.1",
+            "score": 8.5,
+            "severity": "HIGH",
+            "source": "secalert@redhat.com",
+            "type": "Primary",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 8.5,
+              "severity": "HIGH",
+              "source": "secalert@redhat.com",
+              "type": "Primary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-1336"
+          ],
+          "references": [
+            {
+              "url": "https://access.redhat.com/security/cve/CVE-2026-92982",
+              "source": "secalert@redhat.com",
+              "tags": []
+            },
+            {
+              "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2522227",
+              "source": "secalert@redhat.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Ansible Operator 플러그인에서 악의적인 사용자 정의 리소스 값으로 인해 Jinja2 템플릿 주입 및 임의 코드 실행이 발생할 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "Ansible Operator 플러그인에서 Jinja2 템플릿 주입으로 권한 상승이 발생할 수 있습니다.",
+            "rank": 14,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-111094": {
+          "id": "CVE-2026-111094",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-111094",
+          "published_at": "2026-10-16T01:17:48.993000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T02:17:16.680000+09:00",
+          "vuln_status": "Undergoing Analysis",
+          "rejected": false,
+          "description": "In JetBrains TeamCity before 2026.2, 2026.1.4, 2025.11.8 remote code execution via a whitelist bypass in the build messages protocol was possible",
+          "description_language": "en",
+          "description_hash": "d7da01aeba84f10502474294036daf6f268112849a5fc580e0698d50ccc826df",
+          "cvss": {
+            "version": "3.1",
+            "score": 8.1,
+            "severity": "HIGH",
+            "source": "cve@jetbrains.com",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 8.1,
+              "severity": "HIGH",
+              "source": "cve@jetbrains.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-502"
+          ],
+          "references": [
+            {
+              "url": "https://www.jetbrains.com/privacy-security/issues-fixed/",
+              "source": "cve@jetbrains.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "JetBrains TeamCity의 빌드 메시지 프로토콜 내 화이트리스트 우회 결함으로 인해 원격 코드 실행이 발생할 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 4,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "JetBrains TeamCity 빌드 메시지 프로토콜 화이트리스트 우회 원격 코드 실행 취약점입니다.",
+            "rank": 15,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-97712": {
+          "id": "CVE-2026-97712",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-97712",
+          "published_at": "2026-10-16T01:18:26.137000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T02:17:34.200000+09:00",
+          "vuln_status": "Received",
+          "rejected": false,
+          "description": "Sonatype Nexus Repository 3 allows a user that holds the role create or role update permission to grant roles and privileges that the account does not hold. This can give the user more access than intended, up to full administrative access.",
+          "description_language": "en",
+          "description_hash": "f3497cec9e709136d9f2e7e416120a303d5dd35a8dfdd8d74cc21f1445a80e47",
+          "cvss": {
+            "version": "4.0",
+            "score": 8.7,
+            "severity": "HIGH",
+            "source": "103e4ec9-0a87-450b-af77-479448ddef11",
             "type": "Secondary",
             "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
           },
@@ -354235,66 +354293,246 @@
               "version": "4.0",
               "score": 8.7,
               "severity": "HIGH",
-              "source": "disclosure@vulncheck.com",
+              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
               "type": "Secondary",
               "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
-            },
-            {
-              "version": "3.1",
-              "score": 8.8,
-              "severity": "HIGH",
-              "source": "disclosure@vulncheck.com",
-              "type": "Primary",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
             }
           ],
           "cpes": [],
           "products": [],
           "weaknesses": [
-            "CWE-863"
+            "CWE-862"
           ],
           "references": [
             {
-              "url": "https://github.com/thinkcmf/cmf-api/blob/v8.0.7/src/admin/controller/RoleController.php#L345-L381",
-              "source": "disclosure@vulncheck.com",
+              "url": "https://help.sonatype.com/en/sonatype-nexus-repository-3-97-0-release-notes.html",
+              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
               "tags": []
             },
             {
-              "url": "https://github.com/thinkcmf/cmf-core/blob/v8.0.3/src/controller/RestAdminBaseController.php#L15-L34",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://github.com/thinkcmf/cmf-core/blob/v8.0.3/src/lib/Auth.php#L40-L61",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://hackmd.io/@hieuPenguinnn/thinkcmf-admin-rest-api-missing-authorization",
-              "source": "disclosure@vulncheck.com",
-              "tags": []
-            },
-            {
-              "url": "https://www.vulncheck.com/advisories/thinkcmf-through-8.0.1-incorrect-authorization-in-admin-rest-api",
-              "source": "disclosure@vulncheck.com",
+              "url": "https://support.sonatype.com/hc/en-us/articles/56207076233619/",
+              "source": "103e4ec9-0a87-450b-af77-479448ddef11",
               "tags": []
             }
           ],
           "known_exploited": null,
           "kev": null,
           "observed_at": "2026-10-16T12:01:37.544134+09:00",
-          "summary_ko": "ThinkCMF에서 관리자 API 규칙이 없을 때 권한 검사가 실패하지 않아 제한된 백엔드 관리자가 모든 관리자 REST API 엔드포인트를 호출하고 스스로 최고 관리자 권한을 부여할 수 있는 부적절한 권한 부여 취약점이 존재합니다.",
+          "summary_ko": "Sonatype Nexus Repository 3에서 역할 생성 또는 수정 권한을 가진 사용자가 보유하지 않은 권한을 스스로 부여하여 접근 권한을 확장할 수 있습니다.",
           "summary_model": "gemini-3.5-flash-lite",
           "curation": {
             "scores": {
               "social_impact": 4,
-              "attention": 4,
+              "attention": 3,
               "issue_relevance": 4
             },
-            "reason_ko": "ThinkCMF RestAdminBaseController 권한 부여 취약점",
-            "rank": 20,
+            "reason_ko": "Sonatype Nexus Repository 3에서 권한 상승 및 임의 권한 부여 취약점이 있습니다.",
+            "rank": 16,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-62679": {
+          "id": "CVE-2026-62679",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-62679",
+          "published_at": "2026-10-16T02:17:26.820000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T06:08:49.703000+09:00",
+          "vuln_status": "Deferred",
+          "rejected": false,
+          "description": "Lychee is a free, open-source photo-management tool. Prior to 7.6.4, SecurePathController, which serves GET /image/{path}, concatenates the attacker-controlled path with the local storage root and performs a string-prefix check before canonicalizing dot segments. Under the supported non-default configuration with temporary_image_link_enabled enabled, temporary_image_link_when_logged_in disabled, and secure_image_link_enabled disabled, any authenticated user can submit encoded traversal segments that pass the prefix check and are later resolved by filesystem operations. This permits reading files available to the web process, including application configuration and other users' private images, and disclosed APP_KEY or database credentials can enable further compromise. This issue is fixed in version 7.6.4.",
+          "description_language": "en",
+          "description_hash": "b9dcb7455e5700dea9f95728d8b752b820a24108c9b2150389f62ed409094ff0",
+          "cvss": {
+            "version": "4.0",
+            "score": 8.9,
+            "severity": "HIGH",
+            "source": "security-advisories@github.com",
+            "type": "Secondary",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+          },
+          "cvss_all": [
+            {
+              "version": "4.0",
+              "score": 8.9,
+              "severity": "HIGH",
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:H/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-22"
+          ],
+          "references": [
+            {
+              "url": "https://github.com/LycheeOrg/Lychee/commit/f4553f6e0145ec4e02360c6121bd169e87b5d05f",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/LycheeOrg/Lychee/pull/4465",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/LycheeOrg/Lychee/releases/tag/v7.6.4",
+              "source": "security-advisories@github.com",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/LycheeOrg/Lychee/security/advisories/GHSA-j5ff-34x8-xxqg",
+              "source": "security-advisories@github.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "무료 오픈소스 사진 관리 도구 Lychee에서 인증된 사용자가 경로 조작 세그먼트를 제출해 웹 프로세스가 접근 가능한 파일을 읽을 수 있는 취약점이 존재합니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "Lychee 사진 관리 도구에서 인증된 사용자의 경로 조작을 통한 파일 읽기 취약점이 있습니다.",
+            "rank": 17,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-9703": {
+          "id": "CVE-2026-9703",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-9703",
+          "published_at": "2026-10-16T00:17:39.180000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T00:17:39.180000+09:00",
+          "vuln_status": "Received",
+          "rejected": false,
+          "description": "Grafana's data source proxy did not apply role-based access control to write requests forwarded to Loki data sources. A user holding only the Viewer role on an affected Grafana instance could send POST, PUT and DELETE requests through the proxy to the Loki rules API (/loki/api/v1/rules), allowing them to create, modify and delete Loki alerting rules. Because those rules are stored by Loki rather than by Grafana, the change took effect for every user of that Loki data source, not only for the Viewer who made the request. Exploitation requires an authenticated Viewer account on the Grafana instance and a configured Loki data source; no other privileges are needed. Both Grafana OSS and Grafana Enterprise are affected. The defect is in Grafana's data source proxy; Loki itself is not vulnerable and does not need to be patched.",
+          "description_language": "en",
+          "description_hash": "79b3de996186f5dc0a04f99ac15ed7deff177ba5d7e9c970bc46028ca1577660",
+          "cvss": {
+            "version": "3.1",
+            "score": 7.1,
+            "severity": "HIGH",
+            "source": "security@grafana.com",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:L"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 7.1,
+              "severity": "HIGH",
+              "source": "security@grafana.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:L"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-284"
+          ],
+          "references": [
+            {
+              "url": "https://grafana.com/security/security-advisories/cve-2026-9703",
+              "source": "security@grafana.com",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Grafana 데이터 소스 프록시가 Loki 데이터 소스로 전달되는 쓰기 요청에 역할 기반 접근 제어를 적용하지 않아, 뷰어 권한으로 경고 규칙을 조작할 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "Grafana 데이터 소스 프록시의 접근 제어 미적용으로 뷰어 권한 경고 규칙 조작이 가능합니다.",
+            "rank": 18,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
+            "related_ids": []
+          },
+          "related_ids": [],
+          "related_cves": []
+        },
+        "CVE-2026-109383": {
+          "id": "CVE-2026-109383",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-109383",
+          "published_at": "2026-10-16T04:17:20.853000+09:00",
+          "published_day": "2026-10-16",
+          "last_modified_at": "2026-10-16T05:38:04.303000+09:00",
+          "vuln_status": "Awaiting Analysis",
+          "rejected": false,
+          "description": "undici is an HTTP client library for Node.js. In versions 4.0.0 through 6.29.0, 7.0.0 through 7.30.0, and 8.0.0 through 8.12.1, its Agent dispatcher passes its constructor options through a JSON-based deep clone before forwarding them to each per-origin pool, and because JSON cannot represent functions, a caller-supplied tls option containing a checkServerIdentity callback is silently dropped before it reaches the TLS layer. As a result, a TLS peer whose certificate a custom checkServerIdentity was written to reject, but which passes Node's default hostname and chain checks, is silently accepted. Because Agent is the default dispatcher behind request, fetch, and setGlobalDispatcher, this affects the path most applications use, and EnvHttpProxyAgent is affected on its direct and no-proxy routes as well, while only applications that pass a function-valued tls option such as a custom checkServerIdentity for certificate or public-key pinning are at risk. The issue is fixed in undici 6.29.1, 7.30.1, and 8.12.2, which preserve the tls option outside the JSON clone so custom verification callbacks are forwarded unchanged, and users should upgrade to one of those versions or later. As a workaround, pass the TLS options through connect instead of tls, or for proxied destinations use requestTls and proxyTls.",
+          "description_language": "en",
+          "description_hash": "608c5765c9ce51a2ecd03c3df6707787d8ae387d4a093841d07a3ac72420b615",
+          "cvss": {
+            "version": "3.1",
+            "score": 7.4,
+            "severity": "HIGH",
+            "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
+          },
+          "cvss_all": [
+            {
+              "version": "3.1",
+              "score": 7.4,
+              "severity": "HIGH",
+              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
+            }
+          ],
+          "cpes": [],
+          "products": [],
+          "weaknesses": [
+            "CWE-295"
+          ],
+          "references": [
+            {
+              "url": "https://cna.openjsf.org/security-advisories.html",
+              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
+              "tags": []
+            },
+            {
+              "url": "https://github.com/nodejs/undici/security/advisories/GHSA-2m5v-pch6-74hx",
+              "source": "ce714d77-add3-4f53-aff5-83d477b104bb",
+              "tags": []
+            }
+          ],
+          "known_exploited": null,
+          "kev": null,
+          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "summary_ko": "Node.js HTTP 클라이언트 라이브러리인 undici에서 JSON 기반 심층 복사로 인해 사용자 정의 TLS 확인 콜백이 누락되어 인증서 검증이 우회될 수 있습니다.",
+          "summary_model": "gemini-3.5-flash-lite",
+          "curation": {
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "Node.js undici 라이브러리에서 사용자 정의 TLS 콜백 누락으로 인증서 검증이 우회됩니다.",
+            "rank": 19,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00",
             "related_ids": []
           },
           "related_ids": [],
@@ -354302,11 +354540,11 @@
         }
       },
       "cve_meta": {
-        "status": "ok",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "last_success_at": "2026-10-16T12:01:37.544134+09:00",
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
-        "count": 20,
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
+        "count": 19,
         "candidate_count": 360
       },
       "news_candidates": {
@@ -356288,8 +356526,35 @@
           "language_hint": "ko",
           "category_hint": "security",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-15T18:08:20.347679+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-15T18:08:20.347679+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "티오리, AI 해킹 도구 ARTEX 심층 분석 백서 및 탐지 룰셋 공개",
+          "summary_ko": "티오리 연구팀이 AI 기반 오펜시브 보안 도구 'ARTEX'의 실증 분석 백서를 발간하고 관련 탐지 룰셋을 무료로 공개했습니다. 공격 AI의 행위 패턴을 식별하고 자동 대응 체계를 갖추기 위한 가이드를 제공합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "d9ae352b69820327a0ea0cae",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "티오리가 국내 금융권 침해사고에서 사용된 AI 해킹 도구 심층 분석 백서를 발간했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 2,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "875ff92092c94a3e6a3c69c0": {
           "title_original": "라온시큐어, 피지컬AI 안전망 구축 정부 과제 주관사 선정",
@@ -356303,8 +356568,35 @@
           "language_hint": "ko",
           "category_hint": "security",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-15T18:08:20.347679+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-15T18:08:20.347679+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "라온시큐어, 피지컬AI 안전망 구축 정부 과제 주관사 선정",
+          "summary_ko": "라온시큐어가 과학기술정보통신부 등이 지원하는 피지컬AI 다중계층 보안기술 개발 과제의 주관기관으로 선정되었다. 분산신원인증 기술을 활용해 로봇 에이전트에 디지털 신분증을 부여하고 권한과 활동 이력을 통합 관리하는 기술을 개발할 예정이다. 센스톤, 틸론, 디사일로 등 산학연 기관이 함께 참여해 제조 및 물류 현장의 로봇 보안성을 검증한다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "875ff92092c94a3e6a3c69c0",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "라온시큐어가 협업지능 시스템을 위한 피지컬AI 기반 다중계층 보안기술 개발 과제 주관사로 선정됐다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 3,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "a7689a35826245b8694c72fc": {
           "title_original": "샌즈랩, 바이러스블러틴 2026서 AI 변종 악성코드 분석 연구 성과 발표",
@@ -356318,8 +356610,35 @@
           "language_hint": "ko",
           "category_hint": "security",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-15T18:08:20.347679+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-15T18:08:20.347679+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "샌즈랩, 바이러스블러틴 2026서 AI 변종 악성코드 분석 연구 성과 발표",
+          "summary_ko": "샌즈랩이 국제 보안 컨퍼런스 '바이러스블러틴 2026'에서 생성형 AI로 변형된 악성코드의 모델별 코드 작성 흔적을 확인하고 계보를 추적하는 연구 성과를 공개했다. 자체 개발한 프레임워크 'GHOST'를 활용해 코드가 변형되더라도 함수 구조와 데이터 처리 방식에 남는 모델별 특징을 분석했다. 이번 성과는 기존 악성코드 분석 역량을 AI가 생성한 위협 탐지 영역으로 확장했다는 평가를 받는다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "a7689a35826245b8694c72fc",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 3
+            },
+            "reason_ko": "샌즈랩이 바이러스블러틴 2026에서 AI 기반 변종 악성코드 분석 연구 성과를 발표했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 4,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "4bafc1006b06a95b7c2b2eec": {
           "title_original": "카스퍼스키, 2026년 3분기 국내 사이버 위협 444만여 건 탐지",
@@ -356348,8 +356667,35 @@
           "language_hint": "ko",
           "category_hint": "security",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-15T18:08:20.347679+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-15T18:08:20.347679+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "ko",
+          "title_ko": "파이오링크, 자체 개발 CTEM 플랫폼으로 미공개 오픈소스 취약점 28건 발굴",
+          "summary_ko": "파이오링크가 지속적 위협 노출 관리 플랫폼인 '블루헌터'를 활용해 미공개 오픈소스 소프트웨어 취약점 28건을 발견했다고 밝혔다. 이 중 2건은 CVE 번호를 할당받았으며, 리눅스 환경에서 쓰이는 오픈소스 서비스들의 메모리 접근 오류 등을 확인했다. 회사는 책임 있는 공개 원칙에 따라 개발사에 먼저 취약점을 알려 수정 시간을 부여하고 소프트웨어 공급망 보안 강화를 추진하고 있다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "298cf86f292c3743ef27dc8d",
+            "scores": {
+              "social_impact": 3,
+              "attention": 3,
+              "issue_relevance": 4
+            },
+            "reason_ko": "파이오링크가 자체 개발한 위협 관리 플랫폼으로 미공개 오픈소스 취약점 28건을 발굴했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 5,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "6ef0abd06252e4c50b8b19db": {
           "title_original": "포티넷코리아, ‘2026 SASE 서밋 코리아’ 개최...망분리 및 AI 보안 해법 제시",
@@ -357753,17 +358099,17 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 32314,
-          "total_stars": 273427,
+          "total_stars": 273557,
           "programming_language": "TypeScript",
           "category": "github",
           "language": "en",
           "title_ko": "앱 동작부터 네이티브 바이너리까지 에이전트로 리버스 엔지니어링하는 도구",
           "summary_ko": "이 저장소는 인공지능 에이전트를 활용해 애플리케이션의 동작 분석부터 네이티브 바이너리 코드에 이르기까지 다양한 대상의 리버스 엔지니어링을 수행하는 도구를 제공한다.",
-          "collected_at": "2026-10-16T12:01:37.544134+09:00",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
           "summary_model": "gemini-3.5-flash-lite",
           "translation": true,
           "body_note": ""
@@ -357781,17 +358127,17 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 3024,
-          "total_stars": 69288,
+          "total_stars": 69301,
           "programming_language": "Python",
           "category": "github",
           "language": "en",
           "title_ko": "오픈소스 음성 복제 및 변환 도구 VoiceStudio",
           "summary_ko": "VoiceStudio는 646개 언어를 지원하는 오픈소스 로컬 음성 복제 및 변환 도구다. 음성 디자인, 비디오 더빙, 받아쓰기, 오디오북 생성 기능을 제공한다.",
-          "collected_at": "2026-10-16T12:01:37.544134+09:00",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
           "summary_model": "gemini-3.5-flash-lite",
           "translation": true,
           "body_note": ""
@@ -357809,11 +358155,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 1369,
-          "total_stars": 88892,
+          "total_stars": 88898,
           "programming_language": "Java"
         },
         "37674a2c88dad3ec3c363869": {
@@ -357829,11 +358175,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 904,
-          "total_stars": 29836,
+          "total_stars": 29841,
           "programming_language": "TypeScript"
         },
         "26eb4b03333b239f91e7cacf": {
@@ -357849,11 +358195,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 1091,
-          "total_stars": 50597,
+          "total_stars": 50605,
           "programming_language": "Python"
         },
         "79380769f2da182275322bc9": {
@@ -359460,11 +359806,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 1013,
-          "total_stars": 280490,
+          "total_stars": 280495,
           "programming_language": "JavaScript"
         },
         "b6472dbb638d03cada5eb46b": {
@@ -359480,11 +359826,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 715,
-          "total_stars": 5785,
+          "total_stars": 5792,
           "programming_language": "Rust"
         },
         "f048a2d0f3676de210beb42d": {
@@ -359500,11 +359846,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 582,
-          "total_stars": 299997,
+          "total_stars": 300001,
           "programming_language": "Shell"
         },
         "a291877616b5cdbcbdf246f7": {
@@ -359520,11 +359866,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 433,
-          "total_stars": 112646,
+          "total_stars": 112652,
           "programming_language": "Go"
         },
         "f0c63b2b100ba5299c0dafc2": {
@@ -359540,11 +359886,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 307,
-          "total_stars": 39220,
+          "total_stars": 39224,
           "programming_language": "Python"
         },
         "5a6299492505bafa4b45198d": {
@@ -359560,11 +359906,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 147,
-          "total_stars": 75190,
+          "total_stars": 75196,
           "programming_language": "TypeScript"
         },
         "6eb2dc65c0050c7e17e253c7": {
@@ -359580,11 +359926,11 @@
           "category_hint": "github",
           "language_hint": "en",
           "evidence_kind": "repository_description",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
           "published_at": null,
-          "observed_at": "2026-10-16T12:01:37.544134+09:00",
+          "observed_at": "2026-10-16T12:08:17.489632+09:00",
           "stars_today": 30,
-          "total_stars": 2524,
+          "total_stars": 2527,
           "programming_language": "Python"
         },
         "f35a09ded5407b0ce60f4e23": {
@@ -359614,8 +359960,35 @@
           "language_hint": "en",
           "category_hint": "security",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T05:28:15.989602+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-16T05:28:15.989602+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "security",
+          "language": "en",
+          "title_ko": "Nextcloud 콜라보라 서버에서 명령 실행 취약점 악용 발생",
+          "summary_ko": "Nextcloud의 Collabora Online 내장 CODE 서버 애플리케이션에서 운영체제 명령 주입이 가능한 치명적인 취약점인 CVE-2026-110447이 악용되고 있다. 공격자는 인증 없이 프록시 엔드포인트에 악성 요청을 보내 PHP 웹셸을 심고 비밀번호 데이터베이스 등을 탐색하고 있는 것으로 나타났다. 관리자들은 최신 버전인 26.4.303 이상으로 업그레이드하거나 불필요한 경우 서버 앱을 제거해야 한다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": true,
+          "body_note": "",
+          "curation": {
+            "id": "4de1f27dab3f36e78db982cc",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 5
+            },
+            "reason_ko": "넥스트클라우드 서버를 겨냥한 콜라보라 RCE 취약점 악용 공격이 발생했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 11,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "d5dff68a61a6f19448ec74f2": {
           "title_original": "Fortran 70주년을 기념하며",
@@ -359732,8 +360105,38 @@
           "language_hint": "ko",
           "category_hint": "ai",
           "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
+          "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "메타, 개인용 환경 및 에이전트 작업에 초점 맞춘 '뮤즈 스파크 오픈' 공개",
+          "summary_ko": "메타가 복잡한 코딩과 장시간 에이전트 작업을 수행할 수 있는 8,160억 개의 매개변수를 가진 멀티모달 오픈웨이트 모델 '뮤즈 스파크 오픈'을 공개했다. 애플과의 협력을 통해 맥 스튜디오 환경에 최적화되었으며, 100만 토큰의 컨텍스트 창과 전문가 혼합(MoE) 구조를 적용했다. 벤치마크에서 뛰어난 도구 사용 능력을 입증했으나, 대형 API 사업자의 별도 계약 의무 등 상업적 조건이 붙는다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": "",
+          "curation": {
+            "id": "e9d0fda1780ed2ddc7382a30",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 4
+            },
+            "reason_ko": "메타가 맥 두 대로 구동 가능한 대규모 오픈웨이트 멀티모달 모델 '뮤즈 스파크 오픈'을 공개했다.",
+            "related_ids": [
+              "3f69d671af5b3bf3ac9589e1",
+              "d223e77bf605037cc5cfa258"
+            ],
+            "category": "ai",
+            "rank": 6,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "a80462bd86ff2730f098a809": {
           "title_original": "FBI, 북한 IT 인력 ‘노트북 팜’ 대규모 단속…미국인 조력자 2명 체포",
@@ -360063,22 +360466,20 @@
           "category_hint": "tech",
           "kind": "article",
           "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
-        },
-        "fe4533ba117284b8db50971b": {
-          "title_original": "“제대로 하지 않았잖아요” - 프레임워크의 실패를 실행 탓으로만 돌릴 때",
-          "url": "https://news.hada.io/topic?id=35444",
-          "excerpt": "WP Engine에서 교육과 개별 코칭까지 거쳐 OKR 도입을 네 차례 시도했지만 모두 실패 . 매번 “제대로 하지 않았다”는 답만 돌아온다면, 프레임워크가 조직에 맞는지도 물어야 함 실패할 때마다 더 정확한 이해와 실행을 요구하면서 무엇이 ‘제대로’인지 정의하지 않으면...",
-          "published_at": "2026-10-16T09:31:28+09:00",
-          "id": "fe4533ba117284b8db50971b",
-          "source_id": "geeknews",
-          "source": "GeekNews",
-          "region": "KR",
-          "language_hint": "ko",
-          "category_hint": "tech",
-          "kind": "article",
-          "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "우리는 대체 왜 이 모든 일을 하는가?",
+          "summary_ko": "테렌스 타오의 블로그 글을 통해 AI가 생성하는 결과물의 양이 증가하는 현상과 인간의 진정한 이해 사이의 관계를 조명합니다. 과학과 수학 연구의 본질과 목적에 대해 되돌아보는 내용을 담고 있습니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
         },
         "760a086d6eeae714936325c1": {
           "title_original": "에이전트 기반 검증 - AI가 쓴 코드를 스스로 검사하게 만들기",
@@ -360093,7 +360494,20 @@
           "category_hint": "tech",
           "kind": "article",
           "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "에이전트 기반 검증 - AI가 쓴 코드를 스스로 검사하게 만들기",
+          "summary_ko": "AI 코딩의 병목 현상이 코드 작성에서 정확성 검증으로 이동하고 있습니다. 에이전트가 스스로 변경하고 검사하며 수정하는 반복 과정을 거치면 소프트웨어 품질을 크게 높일 수 있습니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
         },
         "c9e802a419e579db97accb54": {
           "title_original": "Strands Harness SDK - 모델과 클라우드를 선택하고 에이전트 실행을 직접 제어하는 SDK",
@@ -360108,7 +360522,20 @@
           "category_hint": "tech",
           "kind": "article",
           "evidence_kind": "rss",
-          "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "Strands Harness SDK - 에이전트 실행 제어 SDK",
+          "summary_ko": "자체 앱에 AI 에이전트를 구축하려는 개발자를 위한 Python 및 TypeScript SDK입니다. 모델과 클라우드를 자유롭게 선택하고 맥락 관리와 실행 제어 기능을 제공합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
         },
         "9f36faf4cd1f2c867dab1c2a": {
           "title_original": "웹 활용 사례로 비교한 JPEG XL과 AVIF",
@@ -366574,6 +367001,34 @@
           "kind": "paper",
           "evidence_kind": "abstract",
           "first_seen_at": "2026-10-16T12:01:37.544134+09:00"
+        },
+        "b41ad44c31af2d559837e5eb": {
+          "title_original": "원격 증명을 용인해서는 안 된다",
+          "url": "https://news.hada.io/topic?id=35459",
+          "excerpt": "원격 증명(remote attestation) 은 다른 기기에서 실행 중인 소프트웨어를 검증하는 기술로, 제3자가 사용자 소유 기기에서 무엇을 실행할 수 있는지 통제하는 수단이 됨 Google Play Integrity 는 Google이 승인한 Android 시스템인지 판별하며, 이를 요구하는 앱은...",
+          "published_at": "2026-10-16T12:02:48+09:00",
+          "id": "b41ad44c31af2d559837e5eb",
+          "source_id": "geeknews",
+          "source": "GeekNews",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "tech",
+          "kind": "article",
+          "evidence_kind": "rss",
+          "first_seen_at": "2026-10-16T12:08:17.489632+09:00",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "원격 증명을 용인해서는 안 된다",
+          "summary_ko": "원격 증명 기술은 제3자가 사용자 기기의 소프트웨어 실행을 통제하는 수단이 될 수 있음을 다룹니다. Google Play Integrity와 같은 시스템이 승인된 환경을 판별하는 과정에서 발생하는 통제 문제를 설명합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
         }
       },
       "cve_candidates": {
@@ -388695,14 +389150,19 @@
           "body_note": ""
         },
         "a80462bd86ff2730f098a809": {
-          "id": "a80462bd86ff2730f098a809",
+          "title_original": "FBI, 북한 IT 인력 ‘노트북 팜’ 대규모 단속…미국인 조력자 2명 체포",
           "url": "https://www.dailysecu.com/news/articleView.html?idxno=208902",
-          "source": "데일리시큐",
-          "source_id": "dailysecu",
-          "region": "KR",
-          "kind": "article",
+          "excerpt": "미국 수사당국이 북한 IT 인력의 위장 취업을 지원한 현지 거점을 대규모로 단속했다. 해외에서 미국 기업 직원으로 일하는 것처럼 위장할 수 있도록 회사 지급 노트북을 대신 받아 관리해 주던 이른바 ‘노트북 팜’이 대상이다.미 법무부는 10월 13일(현지시간) 북한 원격 IT 인력의 불법 수익 활동에 대응해 텍사스주 거점 단속과 오하이오주 연방 기소 등 일련의 조치를 발표했다. 전체 조치에는 14명 기소, 미국인 2명 체포, 노트북과 원격제어 장비 약 187대 압수가 포함됐다. 체포된 2명은 오하이오 기소 사건의 피고인이다. 미국에",
           "published_at": "2026-10-16T10:52:41+09:00",
+          "id": "a80462bd86ff2730f098a809",
+          "source_id": "dailysecu",
+          "source": "데일리시큐",
+          "region": "KR",
+          "language_hint": "ko",
+          "category_hint": "security",
+          "kind": "article",
           "evidence_kind": "body_excerpt",
+          "first_seen_at": "2026-10-16T12:01:37.544134+09:00",
           "repo_name": null,
           "stars_today": null,
           "total_stars": null,
@@ -388715,7 +389175,21 @@
           "collected_at": "2026-10-16T12:01:37.544134+09:00",
           "summary_model": "gemini-3.5-flash-lite",
           "translation": false,
-          "body_note": ""
+          "body_note": "",
+          "curation": {
+            "id": "a80462bd86ff2730f098a809",
+            "scores": {
+              "social_impact": 4,
+              "attention": 4,
+              "issue_relevance": 4
+            },
+            "reason_ko": "미 FBI가 북한 IT 인력의 위장 취업을 지원한 '노트북 팜' 거점을 대규모로 단속했다.",
+            "related_ids": [],
+            "category": "security",
+            "rank": 9,
+            "model": "gemini-3.5-flash-lite",
+            "at": "2026-10-16T12:08:17.489632+09:00"
+          }
         },
         "4a90c4c0f79775f9e4704a72": {
           "id": "4a90c4c0f79775f9e4704a72",
@@ -388836,14 +389310,14 @@
             "scores": {
               "social_impact": 3,
               "attention": 3,
-              "issue_relevance": 3
+              "issue_relevance": 4
             },
-            "reason_ko": "티오리가 앤트로픽의 고급 사이버 보안 AI 기능 접근권을 제공하는 '사이버 검증 프로그램'에 합류했습니다.",
+            "reason_ko": "오펜시브 보안 기업 티오리가 앤트로픽의 사이버 검증 프로그램 참여 기업으로 승인받았다.",
             "related_ids": [],
             "category": "security",
-            "rank": 9,
+            "rank": 10,
             "model": "gemini-3.5-flash-lite",
-            "at": "2026-10-16T12:01:37.544134+09:00"
+            "at": "2026-10-16T12:08:17.489632+09:00"
           }
         },
         "9358c9cfe1347c262e97cd44": {
@@ -388891,38 +389365,130 @@
           "summary_model": "gemini-3.5-flash-lite",
           "translation": false,
           "body_note": ""
+        },
+        "b41ad44c31af2d559837e5eb": {
+          "id": "b41ad44c31af2d559837e5eb",
+          "url": "https://news.hada.io/topic?id=35459",
+          "source": "GeekNews",
+          "source_id": "geeknews",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-16T12:02:48+09:00",
+          "evidence_kind": "rss",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "원격 증명을 용인해서는 안 된다",
+          "summary_ko": "원격 증명 기술은 제3자가 사용자 기기의 소프트웨어 실행을 통제하는 수단이 될 수 있음을 다룹니다. Google Play Integrity와 같은 시스템이 승인된 환경을 판별하는 과정에서 발생하는 통제 문제를 설명합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
+        },
+        "4e8fa4b37f3e00792c037670": {
+          "id": "4e8fa4b37f3e00792c037670",
+          "url": "https://news.hada.io/topic?id=35445",
+          "source": "GeekNews",
+          "source_id": "geeknews",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-16T09:33:17+09:00",
+          "evidence_kind": "rss",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "tech",
+          "language": "ko",
+          "title_ko": "우리는 대체 왜 이 모든 일을 하는가?",
+          "summary_ko": "테렌스 타오의 블로그 글을 통해 AI가 생성하는 결과물의 양이 증가하는 현상과 인간의 진정한 이해 사이의 관계를 조명합니다. 과학과 수학 연구의 본질과 목적에 대해 되돌아보는 내용을 담고 있습니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
+        },
+        "760a086d6eeae714936325c1": {
+          "id": "760a086d6eeae714936325c1",
+          "url": "https://news.hada.io/topic?id=35443",
+          "source": "GeekNews",
+          "source_id": "geeknews",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-16T09:31:02+09:00",
+          "evidence_kind": "rss",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "에이전트 기반 검증 - AI가 쓴 코드를 스스로 검사하게 만들기",
+          "summary_ko": "AI 코딩의 병목 현상이 코드 작성에서 정확성 검증으로 이동하고 있습니다. 에이전트가 스스로 변경하고 검사하며 수정하는 반복 과정을 거치면 소프트웨어 품질을 크게 높일 수 있습니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
+        },
+        "c9e802a419e579db97accb54": {
+          "id": "c9e802a419e579db97accb54",
+          "url": "https://news.hada.io/topic?id=35442",
+          "source": "GeekNews",
+          "source_id": "geeknews",
+          "region": "KR",
+          "kind": "article",
+          "published_at": "2026-10-16T09:30:03+09:00",
+          "evidence_kind": "rss",
+          "repo_name": null,
+          "stars_today": null,
+          "total_stars": null,
+          "programming_language": null,
+          "observed_at": null,
+          "category": "ai",
+          "language": "ko",
+          "title_ko": "Strands Harness SDK - 에이전트 실행 제어 SDK",
+          "summary_ko": "자체 앱에 AI 에이전트를 구축하려는 개발자를 위한 Python 및 TypeScript SDK입니다. 모델과 클라우드를 자유롭게 선택하고 맥락 관리와 실행 제어 기능을 제공합니다.",
+          "collected_at": "2026-10-16T12:08:17.489632+09:00",
+          "summary_model": "gemini-3.5-flash-lite",
+          "translation": false,
+          "body_note": ""
         }
       },
       "news_window": {
         "start": "2026-10-15T00:00:00+09:00",
-        "end": "2026-10-16T12:01:37.544134+09:00"
+        "end": "2026-10-16T12:08:17.489632+09:00"
       },
       "news_curation": {
         "status": "fresh",
         "model": "gemini-3.5-flash-lite",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "limit": 20,
-        "candidate_count": 769,
-        "selected_count": 12,
+        "candidate_count": 765,
+        "selected_count": 20,
         "shortfall_reason_ko": ""
       },
       "latest_curation": {
         "status": "fresh",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "model": "gemini-3.5-flash-lite",
         "limit": 20,
-        "candidate_count": 276,
+        "candidate_count": 272,
         "considered_count": 20,
-        "selected_count": 13,
+        "selected_count": 17,
         "shortfall_reason_ko": ""
       },
       "cve_curation": {
         "status": "fresh",
         "model": "gemini-3.5-flash-lite",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "limit": 20,
         "candidate_count": 360,
-        "selected_count": 20,
+        "selected_count": 19,
         "shortfall_reason_ko": ""
       },
       "hot_model_used": "gemini-3.5-flash-lite"
@@ -401693,18 +402259,15 @@
     },
     "d9ae352b69820327a0ea0cae": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "티오리ai해킹도구artex심층분석백서발간탐지룰셋무료공개"
     },
     "875ff92092c94a3e6a3c69c0": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "라온시큐어피지컬ai안전망구축정부과제주관사선정"
     },
     "a7689a35826245b8694c72fc": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "샌즈랩바이러스블러틴2026서ai변종악성코드분석연구성과발표"
     },
     "4bafc1006b06a95b7c2b2eec": {
       "day": "2026-10-16",
@@ -401713,8 +402276,7 @@
     },
     "298cf86f292c3743ef27dc8d": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "파이오링크자체개발ctem블루헌터로오픈소스신규취약점28건발굴"
     },
     "6ef0abd06252e4c50b8b19db": {
       "day": "2026-10-16",
@@ -402663,8 +403225,7 @@
     },
     "4de1f27dab3f36e78db982cc": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "hackersexploitcollaborarceflawtobackdoornextcloudservers"
     },
     "d5dff68a61a6f19448ec74f2": {
       "day": "2026-10-16",
@@ -402693,8 +403254,7 @@
     },
     "e9d0fda1780ed2ddc7382a30": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "메타뮤즈스파크오픈공개맥2대로구동미국최고성능내세워"
     },
     "bc6c1014a0318de9b389c6fd": {
       "day": "2026-10-16",
@@ -402733,23 +403293,19 @@
     },
     "4e8fa4b37f3e00792c037670": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "우리는대체왜이모든일을하는가"
     },
     "fe4533ba117284b8db50971b": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "제대로하지않았잖아요프레임워크의실패를실행탓으로만돌릴때"
     },
     "760a086d6eeae714936325c1": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "에이전트기반검증ai가쓴코드를스스로검사하게만들기"
     },
     "c9e802a419e579db97accb54": {
       "day": "2026-10-16",
-      "title_key": null,
-      "excluded_by_curation": true
+      "title_key": "strandsharnesssdk모델과클라우드를선택하고에이전트실행을직접제어하는sdk"
     },
     "9f36faf4cd1f2c867dab1c2a": {
       "day": "2026-10-16",
@@ -404971,6 +405527,10 @@
     "9fdcc0352e3202b9bb424e8f": {
       "day": "2026-10-16",
       "title_key": "오픈ai앤트로픽통제어려운중국오픈모델사이버보안에구멍경고"
+    },
+    "b41ad44c31af2d559837e5eb": {
+      "day": "2026-10-16",
+      "title_key": "원격증명을용인해서는안된다"
     }
   },
   "pending": {},
@@ -405065,11 +405625,11 @@
     }
   },
   "last_run": {
-    "at": "2026-10-16T12:01:37.544134+09:00",
+    "at": "2026-10-16T12:08:17.489632+09:00",
     "day": "2026-10-16",
-    "new_count": 24,
-    "api_calls": 18,
-    "api_tokens": 771908,
+    "new_count": 13,
+    "api_calls": 13,
+    "api_tokens": 845392,
     "pending_count": 0,
     "sources": [
       {
@@ -405182,57 +405742,59 @@
       },
       {
         "name": "NVD · 일별 CVE",
-        "status": "ok",
-        "count": 4415,
-        "total": 4439,
-        "message": "보관 기간 내 4415건 · NVD 공개일(KST) 기준 · 전체 페이지 조회 완료",
-        "at": "2026-10-16T12:01:37.544134+09:00",
+        "status": "error",
+        "count": 0,
+        "total": 0,
+        "message": "보관 기간 내 0건 · NVD 공개일(KST) 기준 · NVD 응답 크기 또는 수신 시간 제한 초과",
+        "at": "2026-10-16T12:08:17.489632+09:00",
         "start": "2026-10-12T00:00:00+09:00",
-        "end": "2026-10-16T12:01:37.544134+09:00",
-        "pages": 3,
+        "end": "2026-10-16T12:08:17.489632+09:00",
+        "pages": 0,
         "invalid_count": 0
       }
     ],
-    "warnings": [],
-    "slot": "06:00",
+    "warnings": [
+      "1개 수집원이 응답하지 않거나 수집을 제한했습니다. 수집 상태를 확인하세요."
+    ],
+    "slot": "13:00",
     "slot_day": "2026-10-16",
-    "publish_at": "2026-10-16T06:00:00+09:00",
+    "publish_at": "2026-10-16T13:00:00+09:00",
     "summary_model": "gemini-3.5-flash-lite",
     "hot_model": "gemini-3.5-flash-lite",
     "curation_model": "gemini-3.5-flash-lite",
     "news_curation": {
       "status": "fresh",
       "model": "gemini-3.5-flash-lite",
-      "at": "2026-10-16T12:01:37.544134+09:00",
+      "at": "2026-10-16T12:08:17.489632+09:00",
       "limit": 20,
-      "candidate_count": 769,
-      "selected_count": 12,
+      "candidate_count": 765,
+      "selected_count": 20,
       "shortfall_reason_ko": ""
     },
     "cve_curation": {
       "status": "fresh",
       "model": "gemini-3.5-flash-lite",
-      "at": "2026-10-16T12:01:37.544134+09:00",
+      "at": "2026-10-16T12:08:17.489632+09:00",
       "limit": 20,
       "candidate_count": 360,
-      "selected_count": 20,
+      "selected_count": 19,
       "shortfall_reason_ko": ""
     },
     "hot_model_used": "gemini-3.5-flash-lite",
-    "latest_count": 13,
+    "latest_count": 17,
     "latest_curation": {
       "status": "fresh",
-      "at": "2026-10-16T12:01:37.544134+09:00",
+      "at": "2026-10-16T12:08:17.489632+09:00",
       "model": "gemini-3.5-flash-lite",
       "limit": 20,
-      "candidate_count": 276,
+      "candidate_count": 272,
       "considered_count": 20,
-      "selected_count": 13,
+      "selected_count": 17,
       "shortfall_reason_ko": ""
     },
-    "cve_count": 20,
+    "cve_count": 19,
     "cve_summary": {
-      "translated": 20,
+      "translated": 0,
       "pending": 0,
       "error": ""
     }

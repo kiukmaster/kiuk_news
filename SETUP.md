@@ -150,16 +150,16 @@ env:
 
 | 역할 | 모델 |
 |---|---|
-| 번역·요약·분류 | `gemini-3.5-flash-lite` |
-| HOT 선정 | `gemini-3.5-flash-lite` |
-| 뉴스·최신·CVE 선별 | `gemini-3.5-flash-lite` |
+| 번역·요약·분류 | `gemini-3.1-flash-lite` |
+| HOT 선정 | `gemini-3.1-flash-lite` |
+| 뉴스·최신·CVE 선별 | `gemini-3.1-flash-lite` |
 
 사용 프로젝트에서 해당 모델이 제공되지 않거나 다른 모델로 운영하려면 **Settings → Secrets and variables → Actions → Variables → New repository variable**에서 설정합니다.
 
 | Name | Value 예시 |
 |---|---|
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
-| `GEMINI_HOT_MODEL` | `gemini-3.5-flash-lite` |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` |
+| `GEMINI_HOT_MODEL` | `gemini-3.1-flash-lite` |
 
 모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Interactions API와 구조화된 JSON 출력**을 사용하므로 이를 지원하는 모델을 선택합니다.
 

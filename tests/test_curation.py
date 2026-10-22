@@ -98,7 +98,7 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
     assert seen == {row['id'] for row in candidates}
     assert Counter(row['category'] for row in result['picks']) == dict.fromkeys(categories, 20)
     assert client.calls <= curation_max_calls(len(candidates), 'news')
-    assert all(call.kwargs['json']['model'] == 'gemini-3.5-flash-lite'
+    assert all(call.kwargs['json']['model'] == 'gemini-3.1-flash-lite'
                for call in client.session.post.call_args_list)
     assert all(call.kwargs['json']['generation_config']['max_output_tokens'] == 32768
                for call in client.session.post.call_args_list)

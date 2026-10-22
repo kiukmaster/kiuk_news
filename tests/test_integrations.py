@@ -49,7 +49,7 @@ def test_interactions_contract(monkeypatch):
 def test_interactions_optional_thinking_level_preserves_existing_defaults(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({'ok': True}))
-    client.request('test', {}, {'type': 'object'}, 'gemini-3.5-flash-lite',
+    client.request('test', {}, {'type': 'object'}, 'gemini-3.1-flash-lite',
                    max_output_tokens=32768, thinking_level='low')
     config = client.session.post.call_args.kwargs['json']['generation_config']
     assert config == {'max_output_tokens': 32768, 'thinking_level': 'low'}

@@ -73,9 +73,9 @@ AI·보안·신기술·행사·GitHub 각 분야와 CVE는 **하루 총 20건 �
 | `latest_enabled` | true | 중요도 분야와 독립적인 최신 기사 목록 |
 | `latest_daily_limit` | 20 | 최신 목록 전체 최대 20건 |
 | `publication_probe_max_items` | 20 | 발행일 미상 목록의 본문 메타 확인 상한. 확인 실패는 6시간 뒤 재시도 |
-| `summary_model` | `gemini-3.5-flash-lite` | 번역·요약·분류 |
-| `hot_model` | `gemini-3.5-flash-lite` | HOT 선정 |
-| `curation_model` | `gemini-3.5-flash-lite` | 뉴스·최신·CVE 중복 판단과 선정 |
+| `summary_model` | `gemini-3.1-flash-lite` | 번역·요약·분류 |
+| `hot_model` | `gemini-3.1-flash-lite` | HOT 선정 |
+| `curation_model` | `gemini-3.1-flash-lite` | 뉴스·최신·CVE 중복 판단과 선정 |
 | `category_daily_limit` | 20 | 분야별 하루 최종 게시 상한. 최대 20 |
 | `batch_size` | 6 | 요약 요청 한 번에 보내는 기사 수 |
 | `max_new_articles_per_run` | 0 | 선정분의 신규 요약 수 별도 제한 없음. 하루 게시 상한은 별개 |
@@ -85,7 +85,7 @@ AI·보안·신기술·행사·GitHub 각 분야와 CVE는 **하루 총 20건 �
 | `fetch_article_body` | true | 허용된 경우 본문 일부 확보 |
 | `github_max_items` | 25 | Trending 화면에서 읽는 최대 저장소 수 |
 
-모든 역할의 기본 모델은 `gemini-3.5-flash-lite`입니다. API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 401 인증 실패는 게시를 중단합니다. AI Studio에서 Auth 키 유형과 차단 여부를 확인해 저장소 `GEMINI_API_KEY` Secret을 교체하고, Actions의 `mode: check-api`로 설정된 모델 연결을 검사할 수 있습니다. 이 진단은 수집·상태 저장·배포를 하지 않지만 Gemini 호출은 발생합니다. 429는 프로젝트별 호출·토큰·일일 한도 문제이므로 AI Studio의 사용량과 한도를 확인하세요. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
+모든 역할의 기본 모델은 `gemini-3.1-flash-lite`입니다. API 모델은 저장소 Variables의 `GEMINI_MODEL`, `GEMINI_HOT_MODEL`로 덮어쓸 수도 있습니다. 401 인증 실패는 게시를 중단합니다. AI Studio에서 Auth 키 유형과 차단 여부를 확인해 저장소 `GEMINI_API_KEY` Secret을 교체하고, Actions의 `mode: check-api`로 설정된 모델 연결을 검사할 수 있습니다. 이 진단은 수집·상태 저장·배포를 하지 않지만 Gemini 호출은 발생합니다. 429는 프로젝트별 호출·토큰·일일 한도 문제이므로 AI Studio의 사용량과 한도를 확인하세요. 모델 제공 여부와 할당량은 사용 프로젝트에서 확인해야 합니다. 호출 수 제한은 **금액의 절대 상한이 아닙니다**. 긴 기사와 HOT 후보 수에 따라 입력 토큰이 늘어납니다.
 
 기사·논문·공고의 발행 범위는 **한국시간 어제 00:00부터 마지막 수집 시각까지**입니다. 전전날 기사와 미래 시각은 제외합니다. 전날 이미 처리한 기사도 유효한 발행 범위 안에서는 오늘 후보에 포함하고 기존 요약을 재사용합니다. RSS의 수정 시각이나 수집 시각을 원래 발행 시각으로 바꾸지 않습니다. 발행일 미상은 원문 메타를 확인하며, 확인되지 않으면 ‘최신’에서 제외하고 일반 분야 카드에는 시각 미제공을 표시합니다. CVE는 NVD 공개 날짜별로, GitHub는 당일 Trending 관측값으로 처리합니다.
 

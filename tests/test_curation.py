@@ -11,7 +11,7 @@ from digest.common import load_config
 from digest.curation import (CURATION_CHUNK_SIZE, SCORE_KEYS, curate_candidates,
                              curation_max_calls, fixed_category, _schema, _normalize_selection)
 from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
-                           GeminiError, GeminiResponseValidationError)
+                           GeminiError, GeminiResponseValidationError, SEMANTIC_RETRY_FEEDBACK)
 
 
 def make_client(monkeypatch, budget=80):
@@ -177,7 +177,7 @@ def test_duplicate_members_are_preserved_when_representative_changes_between_rou
     assert result['picks'][0]['id'] == final
     assert result['picks'][0]['related_ids'] == [first, duplicate]
     final_data = payload_candidates(client.session.post.call_args_list[-1].kwargs)
-    assert final_data[0]['already_grouped_ids'] == [duplicate]
+    assert all('already_grouped_ids' not in row for row in final_data)
     assert client.calls == 3
 
 
@@ -251,6 +251,22 @@ def test_invalid_selection_is_rejected_atomically_after_only_two_attempts(monkey
         curate_candidates(client, candidates)
     assert client.calls == client.session.post.call_count == 2
     assert candidates == original
+
+
+@pytest.mark.parametrize('related,code', [
+    (['outside'], 'IDS'), (['one'], 'DUPLICATES'), (['two', 'two'], 'DUPLICATES'),
+])
+def test_invalid_related_ids_receive_specific_feedback_without_extra_attempts(monkeypatch, related, code):
+    client = make_client(monkeypatch)
+    client.session.post = Mock(side_effect=[
+        response(selection(pick('one', 'ai', related=related))),
+        response(selection(pick('one', 'ai', related=['two']))),
+    ])
+    result = curate_candidates(client, [{'id': 'one'}, {'id': 'two'}])
+    assert result['picks'][0]['related_ids'] == ['two']
+    assert client.calls == client.session.post.call_count == 2
+    retry_input = client.session.post.call_args.kwargs['json']['input']
+    assert 'TRUSTED_VALIDATION_FEEDBACK:\n' + SEMANTIC_RETRY_FEEDBACK[code] in retry_input
 
 
 @pytest.mark.parametrize('kind,category,canonical', [

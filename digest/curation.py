@@ -53,12 +53,10 @@ def _text(value: Any, limit: int) -> str:
     return str(value or '')[:limit]
 
 
-def _compact_candidate(candidate: dict, kind: str, inherited: list[str]) -> dict:
+def _compact_candidate(candidate: dict, kind: str) -> dict:
     row = {'id': candidate['id'], 'published_at': candidate.get('published_at'),
            'observed_at': candidate.get('observed_at') or candidate.get('first_seen_at'),
            'url': _text(candidate.get('url'), 500)}
-    if inherited:
-        row['already_grouped_ids'] = inherited
     if kind == 'news':
         row.update({
             'kind': candidate.get('kind', 'news'),
@@ -162,8 +160,10 @@ def _validate_raw_selection(result: dict, candidates: list[dict], kind: str, lim
                            for key in SCORE_KEYS)):
                 raise GeminiResponseValidationError('선정 중요도 점수가 유효하지 않습니다', retry_code='SCORES')
             related = pick['related_ids']
+            if not set(related).issubset(by_id):
+                raise GeminiResponseValidationError('중복으로 묶은 ID가 이번 후보 목록에 없습니다', retry_code='IDS')
             if (not isinstance(related, list) or len(related) != len(set(related))
-                    or not set(related).issubset(by_id) or represented.intersection(related)):
+                    or represented.intersection(related)):
                 raise GeminiResponseValidationError('중복으로 묶은 ID가 유효하지 않습니다', retry_code='DUPLICATES')
             represented.update(related)
             if kind == 'news':
@@ -232,7 +232,8 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
         '서로 다른 언어·매체가 같은 사건을 반복하면 대표 한 개를 남기고 '
         'related_ids에 이번 입력에 있는 동일 사건의 다른 ID를 넣어라. '
         '각 ID는 대표 또는 related_ids 중 한 곳에만 등장할 수 있다. '
-        'already_grouped_ids는 앞 단계에서 묶은 원본 ID이며 이번 출력에 직접 넣지 말라. '
+        '대표 id와 related_ids는 모두 이번 candidates의 id 필드에서만 정확히 복사하라. '
+        '반환 전에 모든 대표 id와 모든 related_ids를 함께 확인하여 어떤 ID도 두 번 나오지 않게 하라. '
         'reason_ko는 근거에 기반한 짧은 한국어 한 문장, 80자 이내로 작성하라. '
         '후보별 분석이나 긴 검토 과정을 출력하지 말고 지정된 선정 결과 JSON만 간결하게 반환하라. '
         '후보 밖 ID는 금지한다. '
@@ -288,7 +289,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
     finalists = list(originals.values())
 
     def select_round(group: list[dict], preliminary: bool) -> dict:
-        data = {'as_of': as_of, 'candidates': [_compact_candidate(candidate, kind, grouped[candidate['id']])
+        data = {'as_of': as_of, 'candidates': [_compact_candidate(candidate, kind)
                                for candidate in group]}
         result = client.request(_instruction(kind, limit, preliminary), data,
             _schema(kind, limit, topic_only=True), model,

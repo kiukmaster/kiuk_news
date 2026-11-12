@@ -5,31 +5,31 @@ from unittest.mock import Mock
 import pytest
 
 from digest.common import load_config
-from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
-                           GeminiHTTPError, GeminiIncompleteError,
-                           GeminiResponseValidationError, response_text,
+from digest.openai_client import (BudgetExceeded, OpenAIClient, OpenAIAuthenticationError,
+                           OpenAIHTTPError, OpenAIIncompleteError,
+                           OpenAIResponseValidationError, response_text,
                            safe_response_diagnostic, SEMANTIC_RETRY_FEEDBACK)
 
 
 def make_client(monkeypatch, budget=80):
-    monkeypatch.setenv('GEMINI_API_KEY', 'offline-test-placeholder')
-    monkeypatch.setattr('digest.gemini.time.sleep', lambda _: None)
+    monkeypatch.setenv('OPENAI_API_KEY', 'offline-test-placeholder')
+    monkeypatch.setattr('digest.openai_client.time.sleep', lambda _: None)
     cfg = load_config()
     cfg['max_api_calls_per_run'] = budget
     cfg['api_interval_seconds'] = 0
-    return Gemini(cfg)
+    return OpenAIClient(cfg)
 
 
 def response(result, status=200):
-    result = {'status': 'completed', 'steps': [
-        {'type': 'model_output', 'content': [{'type': 'text', 'text': json.dumps(result)}]}],
+    result = {'status': 'completed', 'output': [
+        {'type': 'message', 'content': [{'type': 'output_text', 'text': json.dumps(result)}]}],
         'usage': {'total_tokens': 12}}
     return Mock(status_code=status, json=Mock(return_value=result))
 
 
 def require_source_id(result):
     if result.get('id') != 'source-id':
-        raise GeminiResponseValidationError('응답의 ID가 원문과 다릅니다')
+        raise OpenAIResponseValidationError('응답의 ID가 원문과 다릅니다')
 
 
 def test_semantic_failure_retries_before_return(monkeypatch):
@@ -47,7 +47,7 @@ def test_semantic_failure_retries_before_return(monkeypatch):
 def test_semantic_failure_exhausts_only_three_attempts(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response({'id': 'invented-id'}))
-    with pytest.raises(GeminiResponseValidationError, match='원문'):
+    with pytest.raises(OpenAIResponseValidationError, match='원문'):
         client.request('test', {}, {'type': 'object'}, client.summary_model,
                        validator=require_source_id)
     assert client.calls == client.session.post.call_count == 3
@@ -67,7 +67,7 @@ def test_http_failure_is_not_semantic_retry(monkeypatch, status):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response({}, status=status))
     validate = Mock(side_effect=require_source_id)
-    expected = GeminiAuthenticationError if status == 401 else GeminiHTTPError
+    expected = OpenAIAuthenticationError if status == 401 else OpenAIHTTPError
     with pytest.raises(expected):
         client.request('test', {}, {'type': 'object'}, client.summary_model,
                        validator=validate)
@@ -79,13 +79,13 @@ def test_semantic_retry_keeps_existing_interval(monkeypatch):
     client = make_client(monkeypatch)
     client.cfg['api_interval_seconds'] = 10
     now, sleeps = [100.0], []
-    monkeypatch.setattr('digest.gemini.time.monotonic', lambda: now[0])
+    monkeypatch.setattr('digest.openai_client.time.monotonic', lambda: now[0])
 
     def sleep(seconds):
         sleeps.append(seconds)
         now[0] += seconds
 
-    monkeypatch.setattr('digest.gemini.time.sleep', sleep)
+    monkeypatch.setattr('digest.openai_client.time.sleep', sleep)
     call_times = []
     answers = iter([response({'id': 'invented-id'}), response({'id': 'source-id'})])
 
@@ -109,7 +109,7 @@ def test_category_retry_adds_trusted_correction_before_unchanged_source_data(mon
 
     def category_contract(result):
         if result['category'] != 'tech':
-            raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다',
+            raise OpenAIResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다',
                                                  retry_code='CATEGORY')
 
     result = client.request('Original trusted instruction', data, {'type': 'object'}, client.summary_model,
@@ -123,7 +123,7 @@ def test_category_retry_adds_trusted_correction_before_unchanged_source_data(mon
     assert result == {'id': 'paper-id', 'category': 'tech'}
     assert client.calls == client.session.post.call_count == 2 and client.tokens == 24
     output = capsys.readouterr().out
-    assert output.strip() == '[Gemini 응답 보정 재시도] code=CATEGORY attempt=2/2'
+    assert output.strip() == '[OpenAI 응답 보정 재시도] code=CATEGORY attempt=2/2'
 
 
 @pytest.mark.parametrize('retry_code', [None, 'unknown', 'SYNTHETIC-secret-code', ['IDS'], {'code': 'IDS'}])
@@ -135,7 +135,7 @@ def test_unrecognized_retry_code_and_arbitrary_error_text_never_enter_prompt_or_
 
     def check(result):
         if result['id'] != 'source-id':
-            raise GeminiResponseValidationError(secret + '\n' + client.key, retry_code=retry_code)
+            raise OpenAIResponseValidationError(secret + '\n' + client.key, retry_code=retry_code)
 
     result = client.request('test', {'source': 'unchanged'}, {'type': 'object'}, client.summary_model,
                             attempts=2, validator=check)
@@ -156,9 +156,9 @@ def test_semantic_feedback_is_replaced_instead_of_accumulated_across_attempts(mo
 
     def check(result):
         if result['id'] == 'one':
-            raise GeminiResponseValidationError('first failure', retry_code='SCORES')
+            raise OpenAIResponseValidationError('first failure', retry_code='SCORES')
         if result['id'] == 'two':
-            raise GeminiResponseValidationError('second failure', retry_code='IDS')
+            raise OpenAIResponseValidationError('second failure', retry_code='IDS')
 
     client.request('test', {'original': 'data'}, {'type': 'object'}, client.summary_model, validator=check)
     inputs = [call.kwargs['json']['input'] for call in client.session.post.call_args_list]
@@ -174,7 +174,7 @@ def test_semantic_feedback_is_replaced_instead_of_accumulated_across_attempts(mo
 def test_authentication_failure_after_semantic_feedback_stops_at_second_call(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(side_effect=[response({'id': 'invented'}), response({}, status=401)])
-    with pytest.raises(GeminiAuthenticationError):
+    with pytest.raises(OpenAIAuthenticationError):
         client.request('test', {}, {'type': 'object'}, client.summary_model, validator=require_source_id)
     assert client.calls == client.session.post.call_count == 2
 
@@ -185,7 +185,7 @@ def test_retry_code_remains_safe_if_validator_changes_exception_attribute(monkey
 
     def check(result):
         if result['id'] != 'source-id':
-            error = GeminiResponseValidationError('private-message')
+            error = OpenAIResponseValidationError('private-message')
             error.retry_code = 'private-modified-retry-code'
             raise error
 
@@ -217,8 +217,8 @@ def test_completed_schema_failure_gets_safe_corrective_retry(monkeypatch, capsys
 def test_completed_malformed_model_json_gets_safe_corrective_retry(monkeypatch, capsys):
     client = make_client(monkeypatch)
     malformed = Mock(status_code=200)
-    malformed.json.return_value = {'status': 'completed', 'steps': [
-        {'type': 'model_output', 'content': [{'type': 'text', 'text': '{"private":"private-json-value",'}]}],
+    malformed.json.return_value = {'status': 'completed', 'output': [
+        {'type': 'message', 'content': [{'type': 'output_text', 'text': '{"private":"private-json-value",'}]}],
         'usage': {'total_tokens': 12}}
     client.session.post = Mock(side_effect=[malformed, response({'id': 'source-id'})])
     result = client.request('test', {}, {'type': 'object'}, client.summary_model, attempts=2)
@@ -232,7 +232,7 @@ def test_completed_malformed_model_json_gets_safe_corrective_retry(monkeypatch, 
 def test_repeated_schema_failure_exposes_fixed_error_without_private_values(monkeypatch, capsys):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response({'private': 'private-rejected-value'}))
-    with pytest.raises(GeminiResponseValidationError, match='스키마 검증 실패') as error:
+    with pytest.raises(OpenAIResponseValidationError, match='스키마 검증 실패') as error:
         client.request('test', {}, {'type': 'object', 'required': ['id']}, client.summary_model, attempts=2)
     assert client.calls == 2
     assert 'private-rejected-value' not in str(error.value)
@@ -250,13 +250,17 @@ def test_outer_response_json_failure_keeps_existing_connection_retry_path(monkey
     assert 'private-http-response-value' not in capsys.readouterr().out
 
 
-def unfinished(status='incomplete', reason='MAX_TOKENS', tokens=12):
+def unfinished(status='incomplete', reason='max_output_tokens', tokens=12):
     # Valid-looking partial JSON must never pass to json.loads/the validator.
-    payload = {'status': status, 'errors': [{'code': reason, 'message': 'provider diagnostic'}],
-               'steps': [{'type': 'model_output', 'content': [
-                   {'type': 'text', 'text': '{"id":"partial-source-id"}'}]}],
-               'usage': {'total_tokens': tokens, 'total_output_tokens': 8192,
-                         'total_thought_tokens': 4000}}
+    payload = {'status': status,
+               'output': [{'type': 'message', 'content': [
+                   {'type': 'output_text', 'text': '{"id":"partial-source-id"}'}]}],
+               'usage': {'total_tokens': tokens, 'output_tokens': 8192,
+                         'output_tokens_details': {'reasoning_tokens': 4000}}}
+    if status == 'incomplete':
+        payload['incomplete_details'] = {'reason': reason}
+    else:
+        payload['error'] = {'code': reason, 'message': 'private-provider-diagnostic'}
     return Mock(status_code=200, json=Mock(return_value=payload))
 
 
@@ -267,11 +271,11 @@ def test_token_limit_retry_never_parses_partial_json_and_expands_output_cap(monk
     limits = []
 
     def post(*args, **kwargs):
-        limits.append(kwargs['json']['generation_config']['max_output_tokens'])
+        limits.append(kwargs['json']['max_output_tokens'])
         return next(replies)
 
     client.session.post = Mock(side_effect=post)
-    result = client.request('test', {}, {'type': 'object'}, 'gemini-3.1-flash-lite',
+    result = client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
                             attempts=2, validator=validator)
     assert result == {'id': 'source-id'}
     assert limits == [8192, 16384]
@@ -284,7 +288,7 @@ def test_incomplete_retries_only_within_reserved_physical_budget(monkeypatch):
     client = make_client(monkeypatch, budget=1)
     client.session.post = Mock(return_value=unfinished())
     with pytest.raises(BudgetExceeded):
-        client.request('test', {}, {'type': 'object'}, 'gemini-3.1-flash-lite', attempts=2)
+        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol', attempts=2)
     assert client.calls == client.session.post.call_count == 1
     assert client.tokens == 12
 
@@ -292,20 +296,20 @@ def test_incomplete_retries_only_within_reserved_physical_budget(monkeypatch):
 def test_repeated_token_exhaustion_stops_at_attempt_bound_and_model_cap(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=unfinished())
-    with pytest.raises(GeminiIncompleteError) as error:
-        client.request('test', {}, {'type': 'object'}, 'gemini-3.1-flash-lite',
+    with pytest.raises(OpenAIIncompleteError) as error:
+        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
                        attempts=2, max_output_tokens=65536)
     assert error.value.status == 'incomplete'
     assert error.value.reason == 'MAX_TOKENS' and error.value.retryable
     assert error.value.diagnostic['output_limit'] == 65536
     assert client.calls == 2
-    assert client.session.post.call_args.kwargs['json']['generation_config']['max_output_tokens'] == 65536
+    assert client.session.post.call_args.kwargs['json']['max_output_tokens'] == 65536
 
 
 @pytest.mark.parametrize('status,code', [
-    ('incomplete', 'safety'), ('failed', 'content_blocked'), ('failed', 'recitation'),
-    ('failed', 'authentication'), ('failed', 'permission_denied'),
-    ('failed', 'quota_exceeded'), ('failed', 'payment_required'),
+    ('incomplete', 'content_filter'), ('failed', 'content_filter'),
+    ('failed', 'invalid_api_key'), ('failed', 'permission_denied'),
+    ('failed', 'insufficient_quota'), ('failed', 'billing_hard_limit_reached'),
     ('incomplete', 'unknown-provider-code'), ('queued', 'service_unavailable'),
     ('in_progress', 'service_unavailable'),
 ])
@@ -313,15 +317,15 @@ def test_nonretryable_failures_stop_without_parsing_output(monkeypatch, status, 
     client = make_client(monkeypatch)
     validator = Mock()
     client.session.post = Mock(return_value=unfinished(status, code))
-    with pytest.raises(GeminiIncompleteError) as error:
-        client.request('test', {}, {'type': 'object'}, 'gemini-3.1-flash-lite',
+    with pytest.raises(OpenAIIncompleteError) as error:
+        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
                        attempts=2, validator=validator)
     assert not error.value.retryable
     assert client.calls == 1
     validator.assert_not_called()
 
 
-@pytest.mark.parametrize('code', ['api_error', 'service_unavailable', 'rate_limit_exceeded', 'too_many_requests'])
+@pytest.mark.parametrize('code', ['server_error', 'service_unavailable', 'rate_limit_exceeded'])
 def test_declared_transient_failed_state_recovers_with_bounded_retry(monkeypatch, code):
     client = make_client(monkeypatch)
     client.session.post = Mock(side_effect=[unfinished('failed', code), response({'id': 'source-id'})])
@@ -333,14 +337,14 @@ def test_failed_rate_limit_cooldown_is_shared_with_next_request(monkeypatch):
     client = make_client(monkeypatch)
     now = [100.0]
     delays = []
-    monkeypatch.setattr('digest.gemini.time.monotonic', lambda: now[0])
-    monkeypatch.setattr('digest.gemini.random.uniform', lambda *_: 0)
+    monkeypatch.setattr('digest.openai_client.time.monotonic', lambda: now[0])
+    monkeypatch.setattr('digest.openai_client.random.uniform', lambda *_: 0)
 
     def sleep(seconds):
         delays.append(seconds)
         now[0] += seconds
 
-    monkeypatch.setattr('digest.gemini.time.sleep', sleep)
+    monkeypatch.setattr('digest.openai_client.time.sleep', sleep)
     replies = iter([unfinished('failed', 'rate_limit_exceeded'), response({'id': 'source-id'})])
     call_times = []
 
@@ -349,62 +353,62 @@ def test_failed_rate_limit_cooldown_is_shared_with_next_request(monkeypatch):
         return next(replies)
 
     client.session.post = Mock(side_effect=post)
-    with pytest.raises(GeminiIncompleteError):
+    with pytest.raises(OpenAIIncompleteError):
         client.request('test', {}, {'type': 'object'}, client.summary_model, attempts=1)
     assert client.request('test', {}, {'type': 'object'}, client.summary_model) == {'id': 'source-id'}
     assert call_times == [100.0, 130.0] and delays == [30.0]
     assert client.calls == 2
 
 
-def test_response_metadata_never_logs_provider_prose_partial_text_or_continuation_token():
+def test_response_metadata_never_logs_provider_prose_partial_text_or_response_id():
     secret = 'synthetic-private-value-keep-out-of-logs'
-    payload = {'status': 'incomplete', 'continuation_token': secret,
-               'errors': [{'code': 'https://private.example/' + secret, 'message': secret}],
-               'finish_reason': secret,
-               'steps': [{'type': 'model_output', 'content': [{'type': 'text', 'text': secret}]}],
-               'usage': {'total_output_tokens': 50, 'total_thought_tokens': 60}}
-    with pytest.raises(GeminiIncompleteError) as error:
+    payload = {'status': 'incomplete', 'id': secret,
+               'error': {'code': 'https://private.example/' + secret, 'message': secret},
+               'incomplete_details': {'reason': secret},
+               'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': secret}]}],
+               'usage': {'output_tokens': 110, 'output_tokens_details': {'reasoning_tokens': 60}}}
+    with pytest.raises(OpenAIIncompleteError) as error:
         response_text(payload, 8192)
     diagnostic = error.value.diagnostic
     assert secret not in str(error.value) and secret not in json.dumps(diagnostic)
     assert diagnostic['reason'] == 'UNKNOWN' and not diagnostic['retryable']
-    assert diagnostic['continuation_available'] is True
-    assert diagnostic['output_tokens'] == 50 and diagnostic['thought_tokens'] == 60
+    assert diagnostic['output_tokens'] == 110 and diagnostic['thought_tokens'] == 60
 
 
 def test_safety_metadata_takes_precedence_over_token_limit():
-    diagnostic = safe_response_diagnostic({'status': 'incomplete', 'finish_reason': 'MAX_TOKENS',
-        'errors': [{'code': 'safety'}], 'usage': {'total_output_tokens': 8192}}, 8192)
-    assert diagnostic['reason'] == 'SAFETY' and not diagnostic['retryable']
+    diagnostic = safe_response_diagnostic({'status': 'incomplete',
+        'incomplete_details': {'reason': 'max_output_tokens'},
+        'error': {'code': 'content_filter'}, 'usage': {'output_tokens': 8192}}, 8192)
+    assert diagnostic['reason'] == 'CONTENT_BLOCKED' and not diagnostic['retryable']
 
 
 def test_incomplete_status_alone_does_not_imply_token_exhaustion():
-    diagnostic = safe_response_diagnostic({'status': 'incomplete', 'continuation_token': 'opaque'}, 8192)
+    diagnostic = safe_response_diagnostic({'status': 'incomplete', 'id': 'opaque'}, 8192)
     assert diagnostic['reason'] == 'UNKNOWN' and not diagnostic['retryable']
 
 
-def test_exact_reported_output_cap_can_identify_token_exhaustion_without_reason():
+def test_output_cap_without_explicit_reason_does_not_infer_retry():
     diagnostic = safe_response_diagnostic({'status': 'incomplete',
-        'usage': {'total_output_tokens': 8192, 'total_thought_tokens': 0}}, 8192)
-    assert diagnostic['reason'] == 'MAX_TOKENS' and diagnostic['retryable']
-
-
-def test_combined_thought_and_output_cap_identifies_reasoning_token_exhaustion():
-    diagnostic = safe_response_diagnostic({'status': 'incomplete',
-        'usage': {'total_output_tokens': 3000, 'total_thought_tokens': 13384}}, 16384)
-    assert diagnostic['reason'] == 'MAX_TOKENS' and diagnostic['retryable']
-    assert diagnostic['output_tokens'] == 3000 and diagnostic['thought_tokens'] == 13384
-
-
-def test_below_combined_cap_without_diagnostic_remains_unknown():
-    diagnostic = safe_response_diagnostic({'status': 'incomplete',
-        'usage': {'total_output_tokens': 3000, 'total_thought_tokens': 13000}}, 16384)
+        'usage': {'output_tokens': 8192, 'output_tokens_details': {'reasoning_tokens': 0}}}, 8192)
     assert diagnostic['reason'] == 'UNKNOWN' and not diagnostic['retryable']
 
 
-def test_documented_error_uri_is_classified_without_exposing_uri():
-    diagnostic = safe_response_diagnostic({'status': 'failed', 'errors': [
-        {'code': 'https://ai.google.dev/errors/service_unavailable', 'message': 'do not expose'}]})
-    assert diagnostic['reason'] == 'SERVICE_UNAVAILABLE' and diagnostic['retryable']
-    assert diagnostic['error_codes'] == ['SERVICE_UNAVAILABLE']
+def test_explicit_token_exhaustion_reports_reasoning_subset_without_double_counting():
+    diagnostic = safe_response_diagnostic({'status': 'incomplete',
+        'incomplete_details': {'reason': 'max_output_tokens'},
+        'usage': {'output_tokens': 16384, 'output_tokens_details': {'reasoning_tokens': 13384}}}, 16384)
+    assert diagnostic['reason'] == 'MAX_TOKENS' and diagnostic['retryable']
+    assert diagnostic['output_tokens'] == 16384 and diagnostic['thought_tokens'] == 13384
+
+
+def test_reasoning_tokens_are_not_added_again_to_infer_exhaustion():
+    diagnostic = safe_response_diagnostic({'status': 'incomplete',
+        'usage': {'output_tokens': 16000, 'output_tokens_details': {'reasoning_tokens': 13000}}}, 16384)
+    assert diagnostic['reason'] == 'UNKNOWN' and not diagnostic['retryable']
+
+
+def test_unrecognized_error_uri_is_not_treated_as_documented_retry_code():
+    diagnostic = safe_response_diagnostic({'status': 'failed', 'error':
+        {'code': 'https://private.example/service_unavailable', 'message': 'do not expose'}})
+    assert diagnostic['reason'] == 'UNKNOWN' and not diagnostic['retryable']
     assert 'https://' not in json.dumps(diagnostic)

@@ -1,16 +1,16 @@
-"""Daily quotas and selection-before-fetch integration, with offline Gemini."""
+"""Daily quotas and selection-before-fetch integration, with offline OpenAI."""
 from collections import Counter
 from copy import deepcopy
 
 import pytest
 
 from digest.common import load_config
-from digest.gemini import GeminiError, GeminiAuthenticationError
+from digest.openai_client import OpenAIError, OpenAIAuthenticationError
 from digest.pipeline import empty_state, run_pipeline
-from tests.test_core import FakeGemini, NOW, article, run
+from tests.test_core import FakeAI, NOW, article, run
 
 
-class LatestFirstGemini(FakeGemini):
+class LatestFirstAI(FakeAI):
     def request(self, instruction, data, schema, model, **kwargs):
         # Simulate a valid model deciding the newly arrived event matters most.
         data = deepcopy(data)
@@ -18,7 +18,7 @@ class LatestFirstGemini(FakeGemini):
         return super().request(instruction, data, schema, model, **kwargs)
 
 
-class WrongFixedCategoryGemini(FakeGemini):
+class WrongFixedCategoryAI(FakeAI):
     """Model returns valid JSON but ignores the source-kind category rule."""
 
     def request(self, instruction, data, schema, model, validator=None, **kwargs):
@@ -46,14 +46,14 @@ def test_three_batches_share_daily_quota_and_promote_new_issues(tmp_path):
     assert len(state['days'][NOW.date().isoformat()]['articles']) == 20
     assert not state['pending']  # Unselected candidates are not summary failures.
     later = article(99, NOW.replace(hour=13))
-    client = run(state, tmp_path, [later], NOW.replace(hour=13), client=LatestFirstGemini())
+    client = run(state, tmp_path, [later], NOW.replace(hour=13), client=LatestFirstAI())
     day = state['days'][NOW.date().isoformat()]
     assert len(day['articles']) == 20 and later['id'] in day['articles']
     assert len(client.summarized) <= 20
     run(state, tmp_path, [], NOW.replace(hour=19))
     assert len(day['articles']) == 20
     assert all(pick['id'] in day['articles'] for pick in day['hot'])
-    assert day['news_curation']['model'] == 'gemini-3.1-flash-lite'
+    assert day['news_curation']['model'] == 'gpt-6.1-sol'
 
 
 def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
@@ -73,8 +73,8 @@ def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
     monkeypatch.setattr('digest.pipeline.prepare_article', prepare)
     cfg = load_config()
     cfg.update(cve_enabled=False, latest_enabled=False)
-    client = FakeGemini()
-    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=client,
+    client = FakeAI()
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=client,
                  source_loader=lambda *args: (items[:-25], []),
                  github_loader=lambda *args: (items[-25:], {'status': 'ok'}))
     day = state['days'][NOW.date().isoformat()]
@@ -98,10 +98,10 @@ def test_fixed_kind_category_correction_publishes_fresh_scheduled_report(tmp_pat
                         lambda fetcher, item, source, cfg: item)
     cfg = load_config()
     cfg.update(cve_enabled=False, fetch_article_body=False, latest_enabled=False)
-    client = WrongFixedCategoryGemini()
+    client = WrongFixedCategoryAI()
 
     report = run_pipeline(state, tmp_path, NOW, cfg, schedule='7 20 * * *',
-                          web=object(), gemini=client,
+                          web=object(), ai=client,
                           source_loader=lambda *args: (papers, [{'status': 'ok'}]),
                           github_loader=lambda *args: (repos, {'status': 'ok'}))
     day = state['days'][NOW.date().isoformat()]
@@ -132,7 +132,7 @@ def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp
     cfg.update(cve_enabled=False, fetch_article_body=False, latest_enabled=False)
     source_loader = lambda *args: (papers, [{'status': 'ok'}])
     github_loader = lambda *args: (repos, {'status': 'ok'})
-    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=FakeGemini(),
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=FakeAI(),
                  source_loader=source_loader, github_loader=github_loader)
     day = state['days'][NOW.date().isoformat()]
     for row in day['articles'].values():
@@ -140,7 +140,7 @@ def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp
         row['curation']['category'] = 'ai'
 
     run_pipeline(state, tmp_path, NOW.replace(hour=13), cfg, web=object(),
-                 gemini=WrongFixedCategoryGemini(), source_loader=source_loader,
+                 ai=WrongFixedCategoryAI(), source_loader=source_loader,
                  github_loader=github_loader)
     assert day['news_curation']['status'] == 'fresh'
     assert Counter(row['category'] for row in day['articles'].values()) == {
@@ -151,7 +151,7 @@ def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp
 
 
 def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_path):
-    class InvalidLateId(WrongFixedCategoryGemini):
+    class InvalidLateId(WrongFixedCategoryAI):
         def request(self, instruction, data, schema, model, validator=None, **kwargs):
             result = super().request(instruction, data, schema, model, validator=None,
                                      **kwargs)
@@ -164,7 +164,7 @@ def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_
     for row in papers:
         row.update(kind='paper', category_hint='tech')
     state = empty_state()
-    with pytest.raises(GeminiError, match='게시를 중단'):
+    with pytest.raises(OpenAIError, match='게시를 중단'):
         run(state, tmp_path, papers, schedule='7 20 * * *', client=InvalidLateId())
     day = state['days'][NOW.date().isoformat()]
     assert day['news_curation']['status'] == 'unavailable'
@@ -176,9 +176,9 @@ def test_reselection_failure_preserves_previous_capped_result(tmp_path):
     run(state, tmp_path, [article(index) for index in range(25)])
     previous = deepcopy(state['days'][NOW.date().isoformat()]['articles'])
 
-    class FailingCuration(FakeGemini):
+    class FailingCuration(FakeAI):
         def request(self, *args, **kwargs):
-            raise GeminiError('테스트 선별 실패')
+            raise OpenAIError('테스트 선별 실패')
 
     run(state, tmp_path, [article(99)], client=FailingCuration())
     day = state['days'][NOW.date().isoformat()]
@@ -192,17 +192,17 @@ def test_promoted_exclusions_keep_pending_when_summary_fails(tmp_path):
     run(state, tmp_path, [article(index) for index in range(25)])
     excluded = {ident for ident, record in state['seen'].items() if record.get('excluded_by_curation')}
     assert len(excluded) == 5
-    run(state, tmp_path, [], NOW.replace(hour=13), client=LatestFirstGemini(fail_summary=True))
+    run(state, tmp_path, [], NOW.replace(hour=13), client=LatestFirstAI(fail_summary=True))
     assert excluded.issubset(state['pending'])
     assert state['last_run']['pending_count'] == 5
 
 
 def test_curation_authentication_failure_aborts(tmp_path):
-    class Unauthorized(FakeGemini):
+    class Unauthorized(FakeAI):
         def request(self, *args, **kwargs):
-            raise GeminiAuthenticationError()
+            raise OpenAIAuthenticationError()
 
-    with pytest.raises(GeminiAuthenticationError):
+    with pytest.raises(OpenAIAuthenticationError):
         run(empty_state(), tmp_path, [article(1)], client=Unauthorized())
 
 
@@ -216,11 +216,11 @@ def test_expensive_legacy_pool_failure_is_retriable_and_never_exceeds_cap(tmp_pa
         day['articles'][row['id']] = row
     day.pop('news_curation', None)
 
-    class FailingCuration(FakeGemini):
+    class FailingCuration(FakeAI):
         def request(self, *args, **kwargs):
-            raise GeminiError('테스트 실패')
+            raise OpenAIError('테스트 실패')
 
-    with pytest.raises(GeminiError, match='게시를 중단'):
+    with pytest.raises(OpenAIError, match='게시를 중단'):
         run(state, tmp_path, [], client=FailingCuration())
     assert day['articles'] == {} and day['hot'] == []
     assert len(day['news_candidates']) == 26

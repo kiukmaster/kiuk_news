@@ -1,3 +1,5 @@
+> 아래는 Gemini 운영 당시의 과거 검증 기록입니다. OpenAI 전환의 실제 연결과 배포 여부는 해당 변경의 CI 및 `check-api` 실행 결과로 확인합니다.
+
 # 2026-09-25 변경 검증
 
 Windows Python 3.14.6의 프로젝트 전용 환경에서 `PYTHONUTF8=1`로 오프라인 테스트 **105개 통과**. 워크플로 YAML 파싱, `compileall`, `git diff --check`도 통과했습니다.

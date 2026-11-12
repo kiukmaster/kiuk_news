@@ -4,11 +4,11 @@
 
 **목표: API 키 등록 → GitHub 저장소 업로드 → Actions 실행 → Pages에서 확인.**
 
-이 안내서는 2026년 9월 22일 확인한 공식 문서와 이 프로젝트의 코드에 맞춰 작성했습니다. 실제 키와 GitHub 계정은 사용자가 설정해야 합니다. 키를 채팅, HTML, 저장소 파일에 넣지 마세요.
+API 설정은 2026년 11월 12일 확인한 OpenAI 공식 문서와 이 프로젝트의 코드에 맞춰 갱신했습니다. 실제 키와 GitHub 계정은 사용자가 설정해야 합니다. 키를 채팅, HTML, 저장소 파일에 넣지 마세요.
 
 ## 0. 준비와 용어
 
-필요한 것은 Google 계정, GitHub 계정, 그리고 프로젝트 ZIP입니다. GitHub에서 자동 운영만 하려면 PC에 Python을 설치할 필요는 없습니다.
+필요한 것은 OpenAI API 계정, GitHub 계정, 그리고 프로젝트 ZIP입니다. GitHub에서 자동 운영만 하려면 PC에 Python을 설치할 필요는 없습니다.
 
 | 용어 | 이 프로젝트에서 하는 일 |
 |---|---|
@@ -23,19 +23,18 @@
 
 설정은 **본인이 관리자 권한을 가진 저장소**에서 진행하세요. 기관·조직 저장소는 관리자가 Actions·Pages·키 생성을 제한할 수 있습니다.
 
-## 1. Gemini API 키 만들기
+## 1. OpenAI API 키 만들기
 
-1. [Google AI Studio API Keys](https://aistudio.google.com/api-keys)에 접속하고 Google 계정으로 로그인합니다.
-2. 처음 이용한다면 약관과 프로젝트 생성 안내를 확인합니다. 기존 프로젝트를 사용할 경우 대시보드의 **Projects → Import projects**에서 가져온 후 진행합니다.
-3. **Create API key**를 누르고 사용할 프로젝트를 선택합니다. 용도를 알아볼 수 있도록 이름을 `ai-security-digest`로 지정해도 됩니다.
-4. 생성한 키를 복사합니다. 지금은 GitHub Secret에 넣을 때까지만 안전하게 보관합니다.
-5. 키 목록의 **Key Type**이 **Auth**인지 확인합니다. 공식 안내상 2026년 9월에는 기존 Standard 키 거부 전환이 예정되어 있으므로, 예전에 발급한 키보다 AI Studio에서 새로 만든 Auth 키를 사용하세요.
+1. [OpenAI API Keys](https://platform.openai.com/api-keys)에 접속하고 로그인합니다.
+2. 사용할 프로젝트를 선택하고 API 키를 생성합니다. 용도를 알아볼 수 있도록 이름을 `ai-security-digest`로 지정해도 됩니다.
+3. 해당 프로젝트에서 `gpt-6-luna`, `gpt-6.1-sol`과 Responses API를 사용할 수 있는지 확인합니다.
+4. 생성한 키를 복사해 아래 GitHub Secret에 등록합니다. 키 원문은 채팅이나 프로젝트 파일에 남기지 않습니다.
 
 키 생성 권한 오류가 나면 프로젝트 소유자나 조직 관리자에게 문의하세요. 이미 쓰고 있는 다른 서비스의 키 설정을 임의로 바꾸지 말고 이 프로젝트용 키를 별도로 만드는 편이 관리하기 쉽습니다.
 
-**API 사용료와 호출 제한은 별도입니다.** AI Studio에서 해당 프로젝트의 모델 사용 가능 여부, 한도, 사용량 및 결제 상태를 확인하세요. Google 계정이 있다고 해서 모든 모델·모든 요청이 무료인 것은 아닙니다. 이 프로그램의 호출 상한도 금액을 확정적으로 제한하지는 않습니다.
+**API 사용료와 호출 제한은 별도입니다.** OpenAI 대시보드에서 해당 프로젝트의 모델 사용 가능 여부, 한도, 사용량 및 크레딧을 확인하세요. 이 프로그램의 호출 상한도 금액을 확정적으로 제한하지는 않습니다.
 
-참고: [공식 API 키 안내](https://ai.google.dev/gemini-api/docs/api-key), [모델 목록](https://ai.google.dev/gemini-api/docs/models), [사용 한도](https://ai.google.dev/gemini-api/docs/rate-limits), [가격 안내](https://ai.google.dev/gemini-api/docs/pricing).
+참고: [공식 API 키 안내](https://developers.openai.com/api/docs/quickstart), [모델 목록](https://developers.openai.com/api/docs/models), [사용 한도](https://developers.openai.com/api/docs/guides/rate-limits), [가격 안내](https://developers.openai.com/api/docs/pricing).
 
 ## 2. GitHub 저장소 만들기
 
@@ -115,7 +114,7 @@ git config user.email "본인의 커밋용 이메일"
 
 참고: [로컬 코드 GitHub에 추가](https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github).
 
-## 4. GEMINI_API_KEY를 Secret에 등록하기
+## 4. OPENAI_API_KEY를 Secret에 등록하기
 
 1. 방금 만든 저장소를 엽니다. **계정 설정이 아니라 해당 저장소의 Settings**로 이동합니다.
 2. 왼쪽 메뉴에서 **Secrets and variables → Actions**를 누릅니다.
@@ -123,11 +122,11 @@ git config user.email "본인의 커밋용 이메일"
 4. **Name**에 아래 이름을 정확히 입력합니다.
 
 ```text
-GEMINI_API_KEY
+OPENAI_API_KEY
 ```
 
-5. **Secret**에 AI Studio에서 복사한 실제 API 키를 붙여넣습니다. 따옴표나 설명 문구를 추가하지 않습니다.
-6. **Add secret**를 누릅니다. 목록에 `GEMINI_API_KEY`가 나타나면 등록된 것입니다. 다시 열어도 키 원문이 보이지 않는 것이 정상입니다.
+5. **Secret**에 OpenAI 대시보드에서 복사한 실제 API 키를 붙여넣습니다. 따옴표나 설명 문구를 추가하지 않습니다.
+6. **Add secret**를 누릅니다. 목록에 `OPENAI_API_KEY`가 나타나면 등록된 것입니다. 다시 열어도 키 원문이 보이지 않는 것이 정상입니다.
 
 **Variables 탭에 키를 넣지 마세요.** `.env`, `settings.json`, HTML, JavaScript, `update-news.yml`에도 키를 적지 않습니다.
 
@@ -135,12 +134,12 @@ GEMINI_API_KEY
 
 ```yaml
 env:
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 **Auth**인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 `GEMINI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 설정된 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
+401 오류가 나면 OpenAI 대시보드에서 키의 유효성과 프로젝트 권한을 확인하고 `OPENAI_API_KEY` Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 **Actions → Update news & deploy → Run workflow → Branch: main → mode: check-api**로 설정된 모델의 연결을 확인합니다. 이 모드는 OpenAI 요청을 보내지만 뉴스 수집, 상태 저장, Pages 배포는 하지 않습니다. 성공하면 `mode: collect`를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.
 
-키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.
+키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 OpenAI 대시보드에서 해당 키를 폐기하고 새 키를 등록하세요.
 
 참고: [GitHub Actions Secret 사용](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
@@ -150,20 +149,22 @@ env:
 
 | 역할 | 모델 |
 |---|---|
-| 번역·요약·분류 | `gemini-3.1-flash-lite` |
-| HOT 선정 | `gemini-3.1-flash-lite` |
-| 뉴스·최신·CVE 선별 | `gemini-3.1-flash-lite` |
+| 번역, 요약, 분류 | `gpt-6-luna` |
+| HOT 선정 | `gpt-6.1-sol` |
+| 뉴스, 최신, CVE 선별 | `gpt-6.1-sol` |
+
+두 모델 모두 `config/settings.json`의 `reasoning_effort: high`를 사용합니다. 추론 강도가 높으면 응답 시간과 사용 토큰이 늘 수 있습니다.
 
 사용 프로젝트에서 해당 모델이 제공되지 않거나 다른 모델로 운영하려면 **Settings → Secrets and variables → Actions → Variables → New repository variable**에서 설정합니다.
 
 | Name | Value 예시 |
 |---|---|
-| `GEMINI_MODEL` | `gemini-3.1-flash-lite` |
-| `GEMINI_HOT_MODEL` | `gemini-3.1-flash-lite` |
+| `OPENAI_MODEL` | `gpt-6-luna` |
+| `OPENAI_HOT_MODEL` | `gpt-6.1-sol` |
 
-모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Interactions API와 구조화된 JSON 출력**을 사용하므로 이를 지원하는 모델을 선택합니다.
+모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Responses API와 엄격한 구조화 JSON 출력**을 사용하므로 해당 기능과 `high` 추론을 지원하는 모델을 선택합니다. 선별 모델은 `config/settings.json`의 `curation_model`에서 설정합니다.
 
-참고: [Gemini 모델 목록](https://ai.google.dev/gemini-api/docs/models), [구조화된 출력](https://ai.google.dev/gemini-api/docs/structured-output), [Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview).
+참고: [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [구조화된 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Responses API](https://developers.openai.com/api/docs/guides/migrate-to-responses).
 
 ## 6. Actions 권한 확인하기
 
@@ -239,7 +240,7 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 | 확인 항목 | 정상 동작 |
 |---|---|
 | 카드 | 실제 수집된 제목·한국어 요약·출처·원문 링크 |
-| HOT | Gemini가 고른 이슈와 선정 이유 |
+| HOT | OpenAI가 고른 이슈와 선정 이유 |
 | 갱신 | 실제 실행한 예약 슬롯 또는 수동 실행 횟수 |
 | 수집 상태 | 성공한 수집원과 실패·보류 사유 |
 | 인기 | `stars today` 수치와 관측 시각 |
@@ -302,7 +303,7 @@ Content-Type: application/json
 
 **Actions → Update news & deploy → Run workflow → mode: rebuild → Run workflow**
 
-이 모드는 `news-state`에서 기존 데이터를 읽고 최근 5일 범위로 HTML을 재생성합니다. 새 기사를 수집하거나 Gemini를 부르지 않습니다. 초기 데이터가 없다면 빈 목록만 게시됩니다.
+이 모드는 `news-state`에서 기존 데이터를 읽고 최근 5일 범위로 HTML을 재생성합니다. 새 기사를 수집하거나 OpenAI를 부르지 않습니다. 초기 데이터가 없다면 빈 목록만 게시됩니다.
 
 소스 파일을 수정한 뒤 `main`에 올렸다고 해서 즉시 새 화면이 배포되는 것은 아닙니다. 코드 업로드는 테스트 워크플로를 실행합니다. 즉시 반영하려면 `rebuild`를 실행하고, 그렇지 않으면 다음 예약 수집 때 반영됩니다.
 
@@ -328,12 +329,12 @@ RSS·본문 요청은 robots.txt와 사이트 제한을 따릅니다. 로그인,
 |---|---|
 | Actions에 워크플로가 안 보임 | 기본 브랜치의 최상위 `.github/workflows/` 아래에 YAML이 있는지 확인 |
 | Run workflow 버튼이 없음 | `Update news & deploy`를 선택했는지, 기본 브랜치에 업로드했는지, 쓰기 권한이 있는지 확인 |
-| `GEMINI_API_KEY ... 등록하세요` | 저장소 Secrets에 정확한 이름으로 등록. Variables나 계정 설정이 아님 |
-| Gemini HTTP 400/403 | 키 종류·폐기/차단 여부·프로젝트 권한·API 설정·모델 입력 확인. 키를 로그에 출력하지 않음 |
-| Gemini HTTP 404 | 모델 ID와 Interactions 지원 여부 확인 후 Variables 또는 설정 파일 수정 |
-| Gemini HTTP 429 | AI Studio 할당량·사용량 확인. 호출 간격·요청 상한·수집 범위 조절 |
-| HOT 실패 / 이전 선정 결과 | HOT 후보가 많으면 단계별 Gemini 선정. 429·5xx는 대체 모델 재시도, 계속 실패하면 할당량 확인 |
-| Gemini HTTP 401 | AI Studio에서 Auth 키 유형·차단 상태 확인 후 `GEMINI_API_KEY` Secret 교체. `mode: check-api`로 검증. 인증 오류에서는 배포 중단 |
+| `OPENAI_API_KEY ... 등록하세요` | 저장소 Secrets에 정확한 이름으로 등록. Variables나 계정 설정이 아님 |
+| OpenAI HTTP 400/403 | 요청 형식, 모델 지원, 키와 프로젝트 권한 확인. 키를 로그에 출력하지 않음 |
+| OpenAI HTTP 404 | 모델 ID와 해당 프로젝트의 모델 접근 권한 확인 후 Variables 또는 설정 파일 수정 |
+| OpenAI HTTP 429 | 요청 속도 제한인지 크레딧 또는 결제 한도 부족인지 확인. 속도 제한만 대기 후 재시도 |
+| HOT 실패 / 이전 선정 결과 | HOT 후보가 많으면 단계별 OpenAI 선정. 일시 오류는 같은 HOT 모델로 제한된 횟수만 재시도 |
+| OpenAI HTTP 401 | OpenAI 대시보드에서 키 확인 후 `OPENAI_API_KEY` Secret 교체. `mode: check-api`로 검증. 인증 오류에서는 배포 중단 |
 | `git push ... 403` | `contents: write`, 저장소 Workflow permissions, 조직 정책, `news-state` 보호 규칙 확인 |
 | Pages 설정 오류 / 404 | Pages Source가 GitHub Actions인지, `deploy`까지 성공했는지 확인 |
 | 특정 사이트만 403/robots 제한 | 사이트 수집 정책 또는 Actions IP 차단 가능. 상태 안내를 확인하고 허용된 수집원으로 대체 |
@@ -364,19 +365,19 @@ py -3.12 -m venv .venv
 
 브라우저에서 `http://localhost:8000`을 엽니다. 서버는 `Ctrl+C`로 종료합니다.
 
-실제 Gemini 연결 시험에는 환경변수가 필요합니다. 다음 명령은 키를 명령 기록에 직접 남기지 않도록 입력창을 사용합니다. 입력 후 키는 해당 프로세스 환경에 평문으로 존재하므로 이 터미널도 신뢰하는 환경에서만 사용합니다.
+실제 OpenAI 연결 시험에는 환경변수가 필요합니다. 다음 명령은 키를 명령 기록에 직접 남기지 않도록 입력창을 사용합니다. 입력 후 키는 해당 프로세스 환경에 평문으로 존재하므로 이 터미널도 신뢰하는 환경에서만 사용합니다.
 
 ```powershell
-$secureKey = Read-Host "Gemini API key" -AsSecureString
-$env:GEMINI_API_KEY = [System.Net.NetworkCredential]::new("", $secureKey).Password
+$secureKey = Read-Host "OpenAI API key" -AsSecureString
+$env:OPENAI_API_KEY = [System.Net.NetworkCredential]::new("", $secureKey).Password
 .\.venv\Scripts\python.exe -m digest --check-api
 .\.venv\Scripts\python.exe -m digest --check-sources
 .\.venv\Scripts\python.exe -m digest
-Remove-Item Env:GEMINI_API_KEY
+Remove-Item Env:OPENAI_API_KEY
 Remove-Variable secureKey
 ```
 
-`--check-api`는 기본 모델 두 개에 연결 확인 요청을 보내므로 API 사용량이 발생합니다. `--check-sources`는 Gemini를 호출하지 않지만 수집원 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집·요약·HTML 생성을 수행합니다.
+`--check-api`는 두 모델 연결과 작은 가상 후보의 실제 선별 형식을 확인하므로 API 사용량이 발생합니다. `--check-sources`는 OpenAI를 호출하지 않지만 수집원 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집·요약·HTML 생성을 수행합니다.
 
 ### Linux / macOS의 Bash
 
@@ -384,12 +385,12 @@ Remove-Variable secureKey
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-read -rsp "Gemini API key: " GEMINI_API_KEY; echo
-export GEMINI_API_KEY
+read -rsp "OpenAI API key: " OPENAI_API_KEY; echo
+export OPENAI_API_KEY
 python -m digest --check-api
 python -m digest --check-sources
 python -m digest
-unset GEMINI_API_KEY
+unset OPENAI_API_KEY
 python -m http.server 8000 --directory public
 ```
 
@@ -401,6 +402,6 @@ python -m http.server 8000 --directory public
 
 5일 제거는 **현재 공개 사이트와 최신 상태 스냅샷**에 대한 정책입니다. Git 커밋 이력, GitHub의 과거 아티팩트·캐시, 별도 백업까지 완전히 지우는 기능은 아닙니다. 공개 저장소에서는 과거 `news-state` 이력에 요약과 짧은 수집 제공문이 남을 수 있습니다.
 
-기사 근거는 Gemini 서비스에 전송됩니다. API 키는 Actions 환경변수에서만 읽고 브라우저에는 보내지 않습니다. 원문 전체 HTML·본문은 보고서에 게시하지 않습니다. `store:false`를 사용하지만 이것만으로 Google의 모든 로그·데이터 처리 정책을 비활성화한다는 의미는 아닙니다.
+기사 근거는 OpenAI API에 전송됩니다. API 키는 Actions 환경변수에서만 읽고 브라우저에는 보내지 않습니다. 원문 전체 HTML과 본문은 보고서에 게시하지 않습니다. `store:false`를 사용하지만 이것만으로 OpenAI의 모든 로그나 데이터 처리 정책을 비활성화한다는 의미는 아닙니다. [공식 데이터 처리 안내](https://developers.openai.com/api/docs/guides/your-data)를 확인하세요.
 
-이 전달본에서는 로컬 단위·통합 테스트와 가상 화면 크기 검증을 수행했습니다. 실제 Gemini 키 요청, 전체 수집원의 실시간 접근, GitHub 계정에서의 배포, 폴드 8 울트라 실기기 테스트는 수행하지 않았습니다. 최초 `collect` 실행 결과와 기기 화면으로 최종 확인해야 합니다. 자세한 내용은 `docs/TESTING.md`에 있습니다.
+과거 전달본의 검증 기록은 `docs/TESTING.md`에 있습니다. 현재 OpenAI 연결 여부는 `check-api`, 실제 수집과 배포 결과는 해당 Actions 실행에서 확인하세요. 과거 Gemini 검증 기록을 현재 OpenAI 연결 검증으로 해석하지 마세요.

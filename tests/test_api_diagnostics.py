@@ -2,7 +2,7 @@
 from copy import deepcopy
 import pytest
 from digest.common import write_json
-from digest.gemini import GeminiError
+from digest.openai_client import OpenAIError
 
 from digest import __main__ as cli
 
@@ -30,15 +30,15 @@ def test_api_preflight_checks_both_selection_schemas_without_state_or_site(monke
         raise AssertionError('API preflight must never collect, save state or publish')
 
     monkeypatch.setattr('sys.argv', ['digest', '--check-api'])
-    monkeypatch.setattr(cli, 'Gemini', DiagnosticClient)
+    monkeypatch.setattr(cli, 'OpenAIClient', DiagnosticClient)
     for name in ('load_state', 'run_pipeline', 'render_site', 'write_json',
                  'collect_sources', 'collect_github', 'collect_cves'):
         monkeypatch.setattr(cli, name, forbidden)
     assert cli.main() == 0
     selections = [call for call in calls if 'candidates' in call[0]]
     assert len(selections) == 3
-    assert all(call[2] == 'gemini-3.1-flash-lite' and call[3]['max_output_tokens'] == 32768
-               and call[3]['thinking_level'] == 'low'
+    assert all(call[2] == 'gpt-6.1-sol' and call[3]['max_output_tokens'] == 32768
+               and call[3]['reasoning_effort'] == 'high'
                for call in selections[:2])
     assert 'category' in selections[0][1]['properties']['picks']['items']['properties']
     assert 'category' not in selections[1][1]['properties']['picks']['items']['properties']
@@ -65,14 +65,14 @@ def test_saved_pool_diagnostic_is_read_only_and_returns_failure(monkeypatch, tmp
         calls.append((deepcopy(candidates), kwargs))
         client.calls += 1
         if failure and kwargs['kind'] == 'news':
-            raise GeminiError('고정된 진단 오류')
+            raise OpenAIError('고정된 진단 오류')
         return {'picks': [], 'shortfall_reason_ko': '진단 자료입니다.'}
 
     def forbidden(*args, **kwargs):
         raise AssertionError('Diagnostic must not collect, prune, save or publish')
 
     monkeypatch.setattr('sys.argv', ['digest', '--check-curation', '--state-dir', str(tmp_path)])
-    monkeypatch.setattr(cli, 'Gemini', Client)
+    monkeypatch.setattr(cli, 'OpenAIClient', Client)
     monkeypatch.setattr(cli, 'curate_candidates', select)
     for name in ('load_state', 'prune', 'run_pipeline', 'render_site', 'write_json',
                  'collect_sources', 'collect_github', 'collect_cves'):
@@ -81,11 +81,11 @@ def test_saved_pool_diagnostic_is_read_only_and_returns_failure(monkeypatch, tmp
     assert path.read_bytes() == original
     assert [call[1]['kind'] for call in calls] == ['news', 'cve']
     assert calls[0][0] == list(checkpoint['days']['2026-10-06']['news_candidates'].values())
-    assert all(call[1]['model'] == 'gemini-3.1-flash-lite' and call[1]['limit'] == 20 for call in calls)
+    assert all(call[1]['model'] == 'gpt-6.1-sol' and call[1]['limit'] == 20 for call in calls)
     assert '선별 검사 합계' in capsys.readouterr().out
 
 
 def test_saved_pool_diagnostic_requires_checkpoint(monkeypatch, tmp_path):
     monkeypatch.setattr('sys.argv', ['digest', '--check-curation', '--state-dir', str(tmp_path)])
-    with pytest.raises(GeminiError, match='저장된 후보'):
+    with pytest.raises(OpenAIError, match='저장된 후보'):
         cli.main()

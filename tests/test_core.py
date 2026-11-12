@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from defusedxml.common import DefusedXmlException
 
 from digest.common import (KST, ROOT, CRON_SLOTS, CRON_TIMEZONES, canonical_url, item_id, parse_date, retention_cutoff, load_config, text_key)
-from digest.gemini import Gemini, GeminiError, GeminiAuthenticationError, response_text
+from digest.openai_client import OpenAIClient, OpenAIError, OpenAIAuthenticationError, response_text
 from digest.network import PublicWeb, FetchError
 from digest.pipeline import empty_state, load_state, new_day, prune, run_pipeline, fair_queue, public_article
 from digest.render import render_site
@@ -29,7 +29,7 @@ def article(index: int, now=NOW) -> dict:
             'category_hint': 'ai', 'evidence_kind': 'rss'}
 
 
-class FakeGemini:
+class FakeAI:
     def __init__(self, fail_summary=False, fail_hot=False, budget=80):
         self.summary_model = self.hot_model = 'test-only-not-real-gemini'
         self.calls = self.tokens = 0
@@ -66,7 +66,7 @@ class FakeGemini:
     def summarize(self, items):
         self.calls += 1
         if self.fail_summary:
-            raise GeminiError('테스트용 요약 실패')
+            raise OpenAIError('테스트용 요약 실패')
         self.summarized.extend(x['id'] for x in items)
         return {x['id']: {'id': x['id'], 'relevant': True, 'language': 'ko', 'category': x['category_hint'],
                 'title_ko': x['title_original'], 'summary_ko': '레이아웃과 누적 처리를 확인하는 테스트용 요약입니다. 실제 기사가 아닙니다.'}
@@ -75,7 +75,7 @@ class FakeGemini:
     def select_hot(self, items):
         self.calls += 1
         if self.fail_hot:
-            raise GeminiError('테스트용 HOT 실패')
+            raise OpenAIError('테스트용 HOT 실패')
         return {'picks': [{'id': x['id'], 'reason_ko': '자동 테스트용 선정 결과입니다.'} for x in items[:10]],
                 'shortfall_reason_ko': ''}
 
@@ -85,8 +85,8 @@ def run(state, tmp_path, items, now=NOW, schedule='', client=None):
     cfg['fetch_article_body'] = False
     cfg['cve_enabled'] = False  # News-only regression tests never call external APIs.
     cfg['latest_enabled'] = False  # Independent latest selection has its own integration tests.
-    client = client or FakeGemini()
-    run_pipeline(state, tmp_path, now, cfg, schedule=schedule, web=object(), gemini=client,
+    client = client or FakeAI()
+    run_pipeline(state, tmp_path, now, cfg, schedule=schedule, web=object(), ai=client,
         source_loader=lambda *a: (deepcopy(items), [{'name': '테스트', 'status': 'ok', 'count': len(items), 'message': '테스트'}]),
         github_loader=lambda *a: ([], {'name': 'GitHub', 'status': 'ok', 'count': 0, 'message': '테스트'}))
     return client
@@ -167,12 +167,12 @@ def test_private_network_blocked():
     with pytest.raises(FetchError): PublicWeb.validate('https://other.example/', ['example.com'])
 
 
-def test_response_parser_only_model_output():
-    response = {'status': 'completed', 'steps': [
-        {'type': 'user_input', 'content': [{'type': 'text', 'text': 'untrusted'}]},
-        {'type': 'model_output', 'content': [{'type': 'text', 'text': '{"ok": true}'}]}]}
+def test_response_parser_only_message_output_text():
+    response = {'status': 'completed', 'output': [
+        {'type': 'reasoning', 'summary': [{'type': 'summary_text', 'text': 'not final output'}]},
+        {'type': 'message', 'content': [{'type': 'output_text', 'text': '{"ok": true}'}]}]}
     assert json.loads(response_text(response)) == {'ok': True}
-    with pytest.raises(GeminiError): response_text({'status': 'incomplete', 'steps': []})
+    with pytest.raises(OpenAIError): response_text({'status': 'incomplete', 'output': []})
 
 
 def test_three_runs_one_report(tmp_path):
@@ -215,7 +215,7 @@ def test_scheduled_slots_match_workflow_and_lead_time():
 def test_event_card_has_own_section(tmp_path):
     item = article(777)
     item['kind'] = 'event'
-    summary = FakeGemini().summarize([item])[item['id']]
+    summary = FakeAI().summarize([item])[item['id']]
     summary['category'] = 'tech'
     card = public_article(item, summary, NOW, 'offline-test')
     assert card['category'] == 'event'
@@ -239,7 +239,7 @@ def test_manual_not_fake_scheduled_completion(tmp_path):
 
 def test_summary_failure_keeps_pending(tmp_path):
     state = empty_state()
-    run(state, tmp_path, [article(1)], client=FakeGemini(fail_summary=True))
+    run(state, tmp_path, [article(1)], client=FakeAI(fail_summary=True))
     assert len(state['pending']) == 1
     assert not state['seen'] and not state['days'][NOW.date().isoformat()]['articles']
     assert state['last_run']['warnings']
@@ -249,7 +249,7 @@ def test_hot_failure_retains_prior_selection(tmp_path):
     state = empty_state()
     run(state, tmp_path, [article(1)])
     old_hot = deepcopy(state['days']['2026-09-22']['hot'])
-    run(state, tmp_path, [article(2)], now=NOW.replace(hour=13), client=FakeGemini(fail_hot=True))
+    run(state, tmp_path, [article(2)], now=NOW.replace(hour=13), client=FakeAI(fail_hot=True))
     day = state['days']['2026-09-22']
     assert day['hot_status'] == 'stale' and day['hot'] == old_hot
     assert len(day['articles']) == 2
@@ -257,11 +257,11 @@ def test_hot_failure_retains_prior_selection(tmp_path):
 
 @pytest.mark.parametrize('count', [1, 6])
 def test_summary_auth_error_aborts_publication(tmp_path, count):
-    class AuthFailure(FakeGemini):
+    class AuthFailure(FakeAI):
         def summarize(self, items):
-            raise GeminiAuthenticationError()
+            raise OpenAIAuthenticationError()
 
-    with pytest.raises(GeminiAuthenticationError, match='GEMINI_API_KEY'):
+    with pytest.raises(OpenAIAuthenticationError, match='OPENAI_API_KEY'):
         run(empty_state(), tmp_path, [article(index) for index in range(count)], client=AuthFailure())
 
 
@@ -269,18 +269,18 @@ def test_hot_auth_error_aborts_publication(tmp_path):
     state = empty_state()
     run(state, tmp_path, [article(1)])
 
-    class AuthFailure(FakeGemini):
+    class AuthFailure(FakeAI):
         def select_hot(self, items):
-            raise GeminiAuthenticationError()
+            raise OpenAIAuthenticationError()
 
-    with pytest.raises(GeminiAuthenticationError, match='GEMINI_API_KEY'):
+    with pytest.raises(OpenAIAuthenticationError, match='OPENAI_API_KEY'):
         run(state, tmp_path, [article(1)], now=NOW.replace(hour=13), client=AuthFailure())
     assert state['days']['2026-09-22']['hot_status'] == 'fresh'
 
 
 def test_budget_queues_unfinished(tmp_path):
     state = empty_state()
-    run(state, tmp_path, [article(1)], client=FakeGemini(budget=4))
+    run(state, tmp_path, [article(1)], client=FakeAI(budget=4))
     assert len(state['pending']) == 1 and not state['seen']
 
 
@@ -291,8 +291,8 @@ def test_large_pending_backlog_still_summarizes_news(tmp_path):
         state['pending'][row['id']] = row
     cfg = load_config()
     cfg.update(fetch_article_body=False, cve_enabled=False, latest_enabled=False, max_new_articles_per_run=12)
-    client = FakeGemini()
-    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=client,
+    client = FakeAI()
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=client,
                  source_loader=lambda *a: ([], []),
                  github_loader=lambda *a: ([], {'status': 'ok', 'name': 'Test', 'message': 'Test'}))
     assert len(client.summarized) == 12
@@ -397,7 +397,7 @@ def test_failed_duplicate_summary_not_silently_lost(tmp_path):
     first, second = article(703), article(704)
     second['title_original'] = first['title_original']
     state = empty_state()
-    run(state, tmp_path, [first, second], client=FakeGemini(fail_summary=True))
+    run(state, tmp_path, [first, second], client=FakeAI(fail_summary=True))
     assert set(state['pending']) == {first['id']}
     assert first['id'] not in state['seen']
     assert state['seen'][second['id']]['excluded_duplicate'] is True

@@ -10,22 +10,22 @@ from jsonschema import ValidationError, validate
 from digest.common import load_config
 from digest.curation import (CURATION_CHUNK_SIZE, SCORE_KEYS, curate_candidates,
                              curation_max_calls, fixed_category, _schema, _normalize_selection)
-from digest.gemini import (BudgetExceeded, Gemini, GeminiAuthenticationError,
-                           GeminiError, GeminiResponseValidationError, SEMANTIC_RETRY_FEEDBACK)
+from digest.openai_client import (BudgetExceeded, OpenAIClient, OpenAIAuthenticationError,
+                           OpenAIError, OpenAIResponseValidationError, SEMANTIC_RETRY_FEEDBACK)
 
 
 def make_client(monkeypatch, budget=80):
-    monkeypatch.setenv('GEMINI_API_KEY', 'offline-test-placeholder')
-    monkeypatch.setattr('digest.gemini.time.sleep', lambda _: None)
+    monkeypatch.setenv('OPENAI_API_KEY', 'offline-test-placeholder')
+    monkeypatch.setattr('digest.openai_client.time.sleep', lambda _: None)
     cfg = load_config()
     cfg['max_api_calls_per_run'] = budget
     cfg['api_interval_seconds'] = 0
-    return Gemini(cfg)
+    return OpenAIClient(cfg)
 
 
 def response(result, status=200):
-    payload = {'status': 'completed', 'steps': [
-        {'type': 'model_output', 'content': [{'type': 'text', 'text': json.dumps(result)}]}],
+    payload = {'status': 'completed', 'output': [
+        {'type': 'message', 'content': [{'type': 'output_text', 'text': json.dumps(result)}]}],
         'usage': {'total_tokens': 12}}
     return Mock(status_code=status, json=Mock(return_value=payload))
 
@@ -52,7 +52,7 @@ def provider_topic(category):
 
 
 def assert_provider_topics(call):
-    schema = call['json']['response_format']['schema']
+    schema = call['json']['text']['format']['schema']
     assert schema['properties']['picks']['items']['properties']['category']['enum'] == [
         'ai', 'security', 'tech']
 
@@ -98,11 +98,11 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
     assert seen == {row['id'] for row in candidates}
     assert Counter(row['category'] for row in result['picks']) == dict.fromkeys(categories, 20)
     assert client.calls <= curation_max_calls(len(candidates), 'news')
-    assert all(call.kwargs['json']['model'] == 'gemini-3.1-flash-lite'
+    assert all(call.kwargs['json']['model'] == 'gpt-6.1-sol'
                for call in client.session.post.call_args_list)
-    assert all(call.kwargs['json']['generation_config']['max_output_tokens'] == 32768
+    assert all(call.kwargs['json']['max_output_tokens'] == 32768
                for call in client.session.post.call_args_list)
-    assert all(call.kwargs['json']['generation_config']['thinking_level'] == 'low'
+    assert all(call.kwargs['json']['reasoning']['effort'] == 'high'
                for call in client.session.post.call_args_list)
     assert candidates == original
 
@@ -158,7 +158,7 @@ def test_later_preliminary_failure_cannot_expose_an_earlier_valid_selection(monk
         return response(selection(pick('0', 'ai')))
 
     client.session.post = Mock(side_effect=choose)
-    with pytest.raises(GeminiResponseValidationError, match='ID'):
+    with pytest.raises(OpenAIResponseValidationError, match='ID'):
         curate_candidates(client, candidates)
     assert client.calls == client.session.post.call_count == 3
     assert candidates == original
@@ -213,7 +213,7 @@ def test_invalid_twenty_first_pick_is_not_hidden_by_the_daily_quota(monkeypatch,
     client.session.post = Mock(return_value=response(raw))
     # JSON Schema can reject malformed types before the semantic callback;
     # either failure path must reject the whole response instead of cutting it.
-    with pytest.raises(GeminiError):
+    with pytest.raises(OpenAIError):
         curate_candidates(client, candidates)
     assert client.calls == client.session.post.call_count == 2
     assert raw == original
@@ -225,7 +225,7 @@ def test_total_raw_one_hundred_pick_limit_cannot_be_hidden_by_category_cuts(monk
     raw = selection(*(pick(str(number), ('ai', 'security', 'tech')[number % 3])
                       for number in range(101)))
     client.session.post = Mock(return_value=response(raw))
-    with pytest.raises(GeminiResponseValidationError, match='상한') as failure:
+    with pytest.raises(OpenAIResponseValidationError, match='상한') as failure:
         curate_candidates(client, candidates)
     assert failure.value.retry_code == 'COUNT'
     assert client.calls == 2
@@ -247,7 +247,7 @@ def test_invalid_selection_is_rejected_atomically_after_only_two_attempts(monkey
     client.session.post = Mock(return_value=response(malformed))
     candidates = [{'id': ident} for ident in ('one', 'two', 'three')]
     original = copy.deepcopy(candidates)
-    with pytest.raises(GeminiError):
+    with pytest.raises(OpenAIError):
         curate_candidates(client, candidates)
     assert client.calls == client.session.post.call_count == 2
     assert candidates == original
@@ -293,7 +293,7 @@ def test_fixed_source_kind_controls_section_without_discarding_gemini_selection(
 def test_ordinary_article_invalid_topic_remains_strict_and_has_safe_retry_code(monkeypatch, category):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response(selection(pick('one', category))))
-    with pytest.raises(GeminiResponseValidationError, match='스키마') as failure:
+    with pytest.raises(OpenAIResponseValidationError, match='스키마') as failure:
         curate_candidates(client, [{'id': 'one', 'kind': 'article'}])
     assert failure.value.retry_code == 'GENERIC'
     assert client.calls == client.session.post.call_count == 2
@@ -390,7 +390,7 @@ def test_provider_schema_rejects_fixed_section_names_even_for_fixed_source_kinds
     with pytest.raises(ValidationError):
         validate(raw, _schema('news', 20, topic_only=True))
     client.session.post = Mock(return_value=response(raw))
-    with pytest.raises(GeminiResponseValidationError) as failure:
+    with pytest.raises(OpenAIResponseValidationError) as failure:
         curate_candidates(client, [{'id': 'fixed', 'kind': kind}])
     assert failure.value.retry_code == 'GENERIC'
     assert client.calls == client.session.post.call_count == 2
@@ -401,7 +401,7 @@ def test_canonical_normalizer_preserves_saved_fixed_fields_but_checks_every_id()
     raw = selection(pick('event', 'event'), pick('repo', 'github'))
     assert _normalize_selection(raw, candidates, 'news', 20) == raw
     invalid = selection(pick('event', 'event'), pick('outside', 'github'))
-    with pytest.raises(GeminiResponseValidationError) as failure:
+    with pytest.raises(OpenAIResponseValidationError) as failure:
         _normalize_selection(invalid, candidates, 'news', 20)
     assert failure.value.retry_code == 'IDS'
 
@@ -449,7 +449,7 @@ def test_not_enough_budget_prevents_even_first_screening_call(monkeypatch):
 def test_authentication_failure_is_not_retried(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response({}, status=401))
-    with pytest.raises(GeminiAuthenticationError):
+    with pytest.raises(OpenAIAuthenticationError):
         curate_candidates(client, [{'id': 'one'}], kind='cve')
     assert client.calls == 1
 
@@ -498,7 +498,7 @@ def test_distinct_vulnerabilities_in_same_library_remain_separate_if_gemini_sele
 def test_rejected_cve_cannot_be_published_even_if_model_selects_it(monkeypatch):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response(selection(pick('CVE-2026-10000'))))
-    with pytest.raises(GeminiResponseValidationError, match='Rejected'):
+    with pytest.raises(OpenAIResponseValidationError, match='Rejected'):
         curate_candidates(client, [{'id': 'CVE-2026-10000', 'vuln_status': 'Rejected'}], kind='cve')
     assert client.calls == 2
 
@@ -523,4 +523,4 @@ def test_default_request_output_limit_does_not_change_existing_callers(monkeypat
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=response({}))
     client.request('test', {}, {'type': 'object'}, client.summary_model)
-    assert client.session.post.call_args.kwargs['json']['generation_config']['max_output_tokens'] == 8192
+    assert client.session.post.call_args.kwargs['json']['max_output_tokens'] == 8192

@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import timedelta, timezone
 
 from digest.pipeline import empty_state
-from tests.test_core import FakeGemini, NOW, article, run
+from tests.test_core import FakeAI, NOW, article, run
 
 
 def test_yesterday_seen_publications_seed_today_and_reuse_completed_summaries(tmp_path):
@@ -75,7 +75,7 @@ def test_body_metadata_outside_window_is_removed_from_retry_pool(tmp_path, monke
 
 
 def test_yesterday_curation_exclusion_remains_a_current_candidate(tmp_path):
-    class ReverseCuration(FakeGemini):
+    class ReverseCuration(FakeAI):
         def request(self, instruction, data, schema, model, **kwargs):
             data = deepcopy(data)
             data['candidates'].reverse()

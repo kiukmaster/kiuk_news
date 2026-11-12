@@ -1,11 +1,11 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>처음부터 설정하기 · AI Security Digest</title><style>
 :root{color-scheme:dark;--bg:#111317;--panel:#1a1c20;--text:#e2e2e8;--muted:#b8bdcb;--accent:#b1c5ff;--line:#343943}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:80px}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.85 system-ui,-apple-system,"Noto Sans KR",sans-serif;word-break:keep-all;overflow-wrap:anywhere}header{position:sticky;top:0;background:#111317f5;border-bottom:1px solid var(--line);z-index:3;padding:12px 20px;display:flex;justify-content:space-between;gap:15px;font-size:13px}header span{color:var(--muted)}main{max-width:900px;margin:auto;padding:32px 24px 90px}h1{font-size:32px;line-height:1.4;margin:10px 0 24px}h2{font-size:25px;line-height:1.5;margin:64px 0 20px;padding-top:18px;border-top:1px solid var(--line)}h3{font-size:19px;margin-top:32px}a{color:var(--accent);text-underline-offset:4px}p{margin:14px 0}li{margin:8px 0}strong{color:#f0f0f5}pre{background:var(--panel);padding:18px;border:1px solid var(--line);border-radius:8px;overflow:auto;font:13px/1.75 ui-monospace,Consolas,monospace;word-break:normal}code{font-family:ui-monospace,Consolas,monospace;font-size:.89em;background:#23262c;padding:2px 5px;border-radius:3px}pre code{padding:0;background:none;font-size:inherit}.table-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:8px}table{width:100%;border-collapse:collapse;min-width:430px;font-size:14px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--panel);color:var(--accent)}tr:last-child td{border:0}.toc{background:var(--panel);padding:18px 22px;border-radius:10px;margin:20px 0 30px}.toc summary{cursor:pointer;font-weight:650}.toc nav{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:18px}.toc a{font-size:13px;line-height:1.6;text-decoration:none}footer{max-width:900px;margin:auto;padding:24px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}@media(max-width:599px){body{font-size:15px}main{padding:20px 16px 60px}h1{font-size:28px}h2{font-size:22px}header span{display:none}.toc nav{grid-template-columns:1fr}}@media print{header,.toc{display:none}body{background:white;color:black}strong{color:black}a{color:#222}pre,th{background:#eee}main{max-width:none}}
-</style></head><body><header><a href="#top">설정 안내서</a><span>GEMINI API · GITHUB ACTIONS · PAGES</span></header><main id="top"><p><strong>v2 업데이트:</strong> 수집 오류 수정, 당일 CVE·CVSS, 선택 사항인 NVD 키는 <a href="UPGRADE.html">업데이트 안내서</a>를 확인하세요.</p><details class="toc"><summary>단계 바로가기</summary><nav><a href="#step-0">0. 준비와 용어</a><a href="#step-1">1. Gemini API 키 만들기</a><a href="#step-2">2. GitHub 저장소 만들기</a><a href="#step-3">3. 프로젝트 파일 올리기</a><a href="#step-4">4. GEMINI_API_KEY를 Secret에 등록하기</a><a href="#step-5">5. 모델 설정 확인하기</a><a href="#step-6">6. Actions 권한 확인하기</a><a href="#step-7">7. GitHub Pages 설정하기</a><a href="#step-8">8. 첫 수집을 수동 실행하기</a><a href="#step-9">9. 사이트 열기</a><a href="#step-10">10. 하루 세 번 자동화 확인하기</a><a href="#step-11">11. API 호출 없이 다시 배포하기</a><a href="#step-12">12. 수집 범위와 API 호출량 조정하기</a><a href="#step-13">13. 자주 발생하는 문제</a><a href="#step-14">14. 로컬 실행·진단 — 필요한 경우에만</a><a href="#step-15">15. 보관·개인정보·검증 범위</a></nav></details><h1>처음부터 설정하기</h1>
+</style></head><body><header><a href="#top">설정 안내서</a><span>OPENAI API · GITHUB ACTIONS · PAGES</span></header><main id="top"><p><strong>v2 업데이트:</strong> 수집 오류 수정, 당일 CVE·CVSS, 선택 사항인 NVD 키는 <a href="UPGRADE.html">업데이트 안내서</a>를 확인하세요.</p><details class="toc"><summary>단계 바로가기</summary><nav><a href="#step-0">0. 준비와 용어</a><a href="#step-1">1. OpenAI API 키 만들기</a><a href="#step-2">2. GitHub 저장소 만들기</a><a href="#step-3">3. 프로젝트 파일 올리기</a><a href="#step-4">4. OPENAI_API_KEY를 Secret에 등록하기</a><a href="#step-5">5. 모델 설정 확인하기</a><a href="#step-6">6. Actions 권한 확인하기</a><a href="#step-7">7. GitHub Pages 설정하기</a><a href="#step-8">8. 첫 수집을 수동 실행하기</a><a href="#step-9">9. 사이트 열기</a><a href="#step-10">10. 하루 세 번 자동화 확인하기</a><a href="#step-11">11. API 호출 없이 다시 배포하기</a><a href="#step-12">12. 수집 범위와 API 호출량 조정하기</a><a href="#step-13">13. 자주 발생하는 문제</a><a href="#step-14">14. 로컬 실행·진단 — 필요한 경우에만</a><a href="#step-15">15. 보관·개인정보·검증 범위</a></nav></details><h1>처음부터 설정하기</h1>
 <p><strong>목표: API 키 등록 → GitHub 저장소 업로드 → Actions 실행 → Pages에서 확인.</strong></p>
-<p>이 안내서는 2026년 9월 22일 확인한 공식 문서와 이 프로젝트의 코드에 맞춰 작성했습니다. 실제 키와 GitHub 계정은 사용자가 설정해야 합니다. 키를 채팅, HTML, 저장소 파일에 넣지 마세요.</p>
+<p>API 설정은 2026년 11월 12일 확인한 OpenAI 공식 문서와 이 프로젝트의 코드에 맞춰 갱신했습니다. 실제 키와 GitHub 계정은 사용자가 설정해야 합니다. 키를 채팅, HTML, 저장소 파일에 넣지 마세요.</p>
 <h2 id="step-0">0. 준비와 용어</h2>
-<p>필요한 것은 Google 계정, GitHub 계정, 그리고 프로젝트 ZIP입니다. GitHub에서 자동 운영만 하려면 PC에 Python을 설치할 필요는 없습니다.</p>
+<p>필요한 것은 OpenAI API 계정, GitHub 계정, 그리고 프로젝트 ZIP입니다. GitHub에서 자동 운영만 하려면 PC에 Python을 설치할 필요는 없습니다.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -49,17 +49,16 @@
 </tbody>
 </table></div>
 <p>설정은 <strong>본인이 관리자 권한을 가진 저장소</strong>에서 진행하세요. 기관·조직 저장소는 관리자가 Actions·Pages·키 생성을 제한할 수 있습니다.</p>
-<h2 id="step-1">1. Gemini API 키 만들기</h2>
+<h2 id="step-1">1. OpenAI API 키 만들기</h2>
 <ol>
-<li><a href="https://aistudio.google.com/api-keys" rel="noopener noreferrer" target="_blank">Google AI Studio API Keys</a>에 접속하고 Google 계정으로 로그인합니다.</li>
-<li>처음 이용한다면 약관과 프로젝트 생성 안내를 확인합니다. 기존 프로젝트를 사용할 경우 대시보드의 <strong>Projects → Import projects</strong>에서 가져온 후 진행합니다.</li>
-<li><strong>Create API key</strong>를 누르고 사용할 프로젝트를 선택합니다. 용도를 알아볼 수 있도록 이름을 <code>ai-security-digest</code>로 지정해도 됩니다.</li>
-<li>생성한 키를 복사합니다. 지금은 GitHub Secret에 넣을 때까지만 안전하게 보관합니다.</li>
-<li>키 목록의 <strong>Key Type</strong>이 <strong>Auth</strong>인지 확인합니다. 공식 안내상 2026년 9월에는 기존 Standard 키 거부 전환이 예정되어 있으므로, 예전에 발급한 키보다 AI Studio에서 새로 만든 Auth 키를 사용하세요.</li>
+<li><a href="https://platform.openai.com/api-keys" rel="noopener noreferrer" target="_blank">OpenAI API Keys</a>에 접속하고 로그인합니다.</li>
+<li>사용할 프로젝트를 선택하고 API 키를 생성합니다. 용도를 알아볼 수 있도록 이름을 <code>ai-security-digest</code>로 지정해도 됩니다.</li>
+<li>해당 프로젝트에서 <code>gpt-6-luna</code>, <code>gpt-6.1-sol</code>과 Responses API를 사용할 수 있는지 확인합니다.</li>
+<li>생성한 키를 복사해 아래 GitHub Secret에 등록합니다. 키 원문은 채팅이나 프로젝트 파일에 남기지 않습니다.</li>
 </ol>
 <p>키 생성 권한 오류가 나면 프로젝트 소유자나 조직 관리자에게 문의하세요. 이미 쓰고 있는 다른 서비스의 키 설정을 임의로 바꾸지 말고 이 프로젝트용 키를 별도로 만드는 편이 관리하기 쉽습니다.</p>
-<p><strong>API 사용료와 호출 제한은 별도입니다.</strong> AI Studio에서 해당 프로젝트의 모델 사용 가능 여부, 한도, 사용량 및 결제 상태를 확인하세요. Google 계정이 있다고 해서 모든 모델·모든 요청이 무료인 것은 아닙니다. 이 프로그램의 호출 상한도 금액을 확정적으로 제한하지는 않습니다.</p>
-<p>참고: <a href="https://ai.google.dev/gemini-api/docs/api-key" rel="noopener noreferrer" target="_blank">공식 API 키 안내</a>, <a href="https://ai.google.dev/gemini-api/docs/models" rel="noopener noreferrer" target="_blank">모델 목록</a>, <a href="https://ai.google.dev/gemini-api/docs/rate-limits" rel="noopener noreferrer" target="_blank">사용 한도</a>, <a href="https://ai.google.dev/gemini-api/docs/pricing" rel="noopener noreferrer" target="_blank">가격 안내</a>.</p>
+<p><strong>API 사용료와 호출 제한은 별도입니다.</strong> OpenAI 대시보드에서 해당 프로젝트의 모델 사용 가능 여부, 한도, 사용량 및 크레딧을 확인하세요. 이 프로그램의 호출 상한도 금액을 확정적으로 제한하지는 않습니다.</p>
+<p>참고: <a href="https://developers.openai.com/api/docs/quickstart" rel="noopener noreferrer" target="_blank">공식 API 키 안내</a>, <a href="https://developers.openai.com/api/docs/models" rel="noopener noreferrer" target="_blank">모델 목록</a>, <a href="https://developers.openai.com/api/docs/guides/rate-limits" rel="noopener noreferrer" target="_blank">사용 한도</a>, <a href="https://developers.openai.com/api/docs/pricing" rel="noopener noreferrer" target="_blank">가격 안내</a>.</p>
 <h2 id="step-2">2. GitHub 저장소 만들기</h2>
 <ol>
 <li>GitHub에 로그인한 뒤 우측 상단 <strong>+ → New repository</strong>를 누릅니다.</li>
@@ -113,72 +112,42 @@ git config user.email "본인의 커밋용 이메일"
 </code></pre>
 <p>인증 창이 뜨면 GitHub 로그인 절차를 따르세요. 계정 비밀번호나 인증 토큰을 코드에 적지 않습니다. 기존에 파일이 있는 저장소에 무작정 <code>--force</code>로 밀어 넣지 마세요.</p>
 <p>참고: <a href="https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github" rel="noopener noreferrer" target="_blank">로컬 코드 GitHub에 추가</a>.</p>
-<h2 id="step-4">4. GEMINI_API_KEY를 Secret에 등록하기</h2>
+<h2 id="step-4">4. OPENAI_API_KEY를 Secret에 등록하기</h2>
 <ol>
 <li>방금 만든 저장소를 엽니다. <strong>계정 설정이 아니라 해당 저장소의 Settings</strong>로 이동합니다.</li>
 <li>왼쪽 메뉴에서 <strong>Secrets and variables → Actions</strong>를 누릅니다.</li>
 <li><strong>Secrets</strong> 탭에서 <strong>New repository secret</strong>를 누릅니다.</li>
 <li><strong>Name</strong>에 아래 이름을 정확히 입력합니다.</li>
 </ol>
-<pre><code class="language-text">GEMINI_API_KEY
+<pre><code class="language-text">OPENAI_API_KEY
 </code></pre>
 <ol start="5">
-<li><strong>Secret</strong>에 AI Studio에서 복사한 실제 API 키를 붙여넣습니다. 따옴표나 설명 문구를 추가하지 않습니다.</li>
-<li><strong>Add secret</strong>를 누릅니다. 목록에 <code>GEMINI_API_KEY</code>가 나타나면 등록된 것입니다. 다시 열어도 키 원문이 보이지 않는 것이 정상입니다.</li>
+<li><strong>Secret</strong>에 OpenAI 대시보드에서 복사한 실제 API 키를 붙여넣습니다. 따옴표나 설명 문구를 추가하지 않습니다.</li>
+<li><strong>Add secret</strong>를 누릅니다. 목록에 <code>OPENAI_API_KEY</code>가 나타나면 등록된 것입니다. 다시 열어도 키 원문이 보이지 않는 것이 정상입니다.</li>
 </ol>
 <p><strong>Variables 탭에 키를 넣지 마세요.</strong> <code>.env</code>, <code>settings.json</code>, HTML, JavaScript, <code>update-news.yml</code>에도 키를 적지 않습니다.</p>
 <p>코드에는 이미 다음 참조가 연결되어 있습니다. 사용자가 이 줄을 실제 키로 교체하는 것이 아닙니다.</p>
 <pre><code class="language-yaml">env:
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 </code></pre>
-<p>2026년 9월부터 Gemini의 기존 Standard 키 요청이 거부됩니다. AI Studio에서 키 유형이 <strong>Auth</strong>인지, 차단된 키는 아닌지 확인하고, 401 오류가 나면 새 Auth 키를 만들어 <code>GEMINI_API_KEY</code> Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 <strong>Actions → Update news &amp; deploy → Run workflow → Branch: main → mode: check-api</strong>로 설정된 모델의 연결을 확인합니다. 이 모드는 Gemini 요청을 보내지만 뉴스 수집·상태 저장·Pages 배포는 하지 않습니다. 성공하면 <code>mode: collect</code>를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.</p>
-<p>키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 AI Studio에서 해당 키를 폐기하고 새 키를 등록하세요.</p>
+<p>401 오류가 나면 OpenAI 대시보드에서 키의 유효성과 프로젝트 권한을 확인하고 <code>OPENAI_API_KEY</code> Secret을 교체하세요. 변경을 기본 브랜치에 반영한 후 <strong>Actions → Update news &amp; deploy → Run workflow → Branch: main → mode: check-api</strong>로 설정된 모델의 연결을 확인합니다. 이 모드는 OpenAI 요청을 보내지만 뉴스 수집, 상태 저장, Pages 배포는 하지 않습니다. 성공하면 <code>mode: collect</code>를 실행하세요. 키 값은 채팅이나 저장소에 붙여넣지 마세요.</p>
+<p>키를 잘못 넣었다면 Secret의 수정 버튼으로 값을 교체합니다. 실제 키가 공개 파일에 올라갔다면 파일 삭제만 하지 말고 OpenAI 대시보드에서 해당 키를 폐기하고 새 키를 등록하세요.</p>
 <p>참고: <a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets" rel="noopener noreferrer" target="_blank">GitHub Actions Secret 사용</a>.</p>
 <h2 id="step-5">5. 모델 설정 확인하기</h2>
 <p>처음에는 모델 설정을 따로 만들지 않아도 됩니다. 프로젝트 기본값은 다음과 같습니다.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>역할</th>
-<th>모델</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>번역·요약·분류</td>
-<td><code>gemini-3.5-flash-lite</code></td>
-</tr>
-<tr>
-<td>HOT 선정</td>
-<td><code>gemini-3.5-flash-lite</code></td>
-</tr>
-<tr>
-<td>뉴스·최신·CVE 선별</td>
-<td><code>gemini-3.5-flash-lite</code></td>
-</tr>
-</tbody>
-</table></div>
+<div class="table-wrap"><table><thead><tr><th>역할</th><th>모델</th></tr></thead><tbody>
+<tr><td>번역, 요약, 분류</td><td><code>gpt-6-luna</code></td></tr>
+<tr><td>HOT 선정</td><td><code>gpt-6.1-sol</code></td></tr>
+<tr><td>뉴스, 최신, CVE 선별</td><td><code>gpt-6.1-sol</code></td></tr>
+</tbody></table></div>
+<p>두 모델 모두 <code>config/settings.json</code>의 <code>reasoning_effort: high</code>를 사용합니다. 추론 강도가 높으면 응답 시간과 사용 토큰이 늘 수 있습니다.</p>
 <p>사용 프로젝트에서 해당 모델이 제공되지 않거나 다른 모델로 운영하려면 <strong>Settings → Secrets and variables → Actions → Variables → New repository variable</strong>에서 설정합니다.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Value 예시</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>GEMINI_MODEL</code></td>
-<td><code>gemini-3.5-flash-lite</code></td>
-</tr>
-<tr>
-<td><code>GEMINI_HOT_MODEL</code></td>
-<td><code>gemini-3.5-flash-lite</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 <strong>Interactions API와 구조화된 JSON 출력</strong>을 사용하므로 이를 지원하는 모델을 선택합니다.</p>
-<p>참고: <a href="https://ai.google.dev/gemini-api/docs/models" rel="noopener noreferrer" target="_blank">Gemini 모델 목록</a>, <a href="https://ai.google.dev/gemini-api/docs/structured-output" rel="noopener noreferrer" target="_blank">구조화된 출력</a>, <a href="https://ai.google.dev/gemini-api/docs/interactions-overview" rel="noopener noreferrer" target="_blank">Interactions API</a>.</p>
+<div class="table-wrap"><table><thead><tr><th>Name</th><th>Value 예시</th></tr></thead><tbody>
+<tr><td><code>OPENAI_MODEL</code></td><td><code>gpt-6-luna</code></td></tr>
+<tr><td><code>OPENAI_HOT_MODEL</code></td><td><code>gpt-6.1-sol</code></td></tr>
+</tbody></table></div>
+<p>모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 <strong>Responses API와 엄격한 구조화 JSON 출력</strong>을 사용하므로 해당 기능과 <code>high</code> 추론을 지원하는 모델을 선택합니다. 선별 모델은 <code>config/settings.json</code>의 <code>curation_model</code>에서 설정합니다.</p>
+<p>참고: <a href="https://developers.openai.com/api/docs/models/gpt-6-luna" rel="noopener noreferrer" target="_blank">GPT-6 Luna</a>, <a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol" rel="noopener noreferrer" target="_blank">GPT-6.1 Sol</a>, <a href="https://developers.openai.com/api/docs/guides/structured-outputs" rel="noopener noreferrer" target="_blank">구조화된 출력</a>, <a href="https://developers.openai.com/api/docs/guides/migrate-to-responses" rel="noopener noreferrer" target="_blank">Responses API</a>.</p>
 <h2 id="step-6">6. Actions 권한 확인하기</h2>
 <p>저장소 <strong>Settings → Actions → General</strong>로 이동합니다.</p>
 <p><strong>Actions permissions</strong>에서 GitHub 공식 Actions를 실행할 수 있어야 합니다. 개인 저장소에서는 기본 허용 설정으로 진행할 수 있습니다. 조직 정책이 제한 중이면 필요한 공식 Actions를 허용하도록 관리자와 확인하세요. 임의의 외부 Action은 사용하지 않습니다.</p>
@@ -241,7 +210,7 @@ Deploy Pages
 </tr>
 <tr>
 <td>HOT</td>
-<td>Gemini가 고른 이슈와 선정 이유</td>
+<td>OpenAI가 고른 이슈와 선정 이유</td>
 </tr>
 <tr>
 <td>갱신</td>
@@ -313,7 +282,7 @@ Content-Type: application/json
 <p>참고: <a href="https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event">GitHub workflow dispatch API</a>, <a href="https://docs.github.com/en/actions/how-tos/troubleshoot-workflows">GitHub 예약 실행 지연</a>, <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site">GitHub Pages 반영 시간</a>.</p><h2 id="step-11">11. API 호출 없이 다시 배포하기</h2>
 <p>디자인을 수정했거나 기존 데이터로 HTML만 다시 만들 때 사용합니다.</p>
 <p><strong>Actions → Update news &amp; deploy → Run workflow → mode: rebuild → Run workflow</strong></p>
-<p>이 모드는 <code>news-state</code>에서 기존 데이터를 읽고 최근 5일 범위로 HTML을 재생성합니다. 새 기사를 수집하거나 Gemini를 부르지 않습니다. 초기 데이터가 없다면 빈 목록만 게시됩니다.</p>
+<p>이 모드는 <code>news-state</code>에서 기존 데이터를 읽고 최근 5일 범위로 HTML을 재생성합니다. 새 기사를 수집하거나 OpenAI를 부르지 않습니다. 초기 데이터가 없다면 빈 목록만 게시됩니다.</p>
 <p>소스 파일을 수정한 뒤 <code>main</code>에 올렸다고 해서 즉시 새 화면이 배포되는 것은 아닙니다. 코드 업로드는 테스트 워크플로를 실행합니다. 즉시 반영하려면 <code>rebuild</code>를 실행하고, 그렇지 않으면 다음 예약 수집 때 반영됩니다.</p>
 <h2 id="step-12">12. 수집 범위와 API 호출량 조정하기</h2>
 <h3>사이트 추가·제외</h3>
@@ -341,25 +310,25 @@ Content-Type: application/json
 <td><code>Update news &amp; deploy</code>를 선택했는지, 기본 브랜치에 업로드했는지, 쓰기 권한이 있는지 확인</td>
 </tr>
 <tr>
-<td><code>GEMINI_API_KEY ... 등록하세요</code></td>
+<td><code>OPENAI_API_KEY ... 등록하세요</code></td>
 <td>저장소 Secrets에 정확한 이름으로 등록. Variables나 계정 설정이 아님</td>
 </tr>
 <tr>
-<td>Gemini HTTP 400/403</td>
-<td>키 종류·폐기/차단 여부·프로젝트 권한·API 설정·모델 입력 확인. 키를 로그에 출력하지 않음</td>
+<td>OpenAI HTTP 400/403</td>
+<td>요청 형식, 모델 지원, 키와 프로젝트 권한 확인. 키를 로그에 출력하지 않음</td>
 </tr>
 <tr>
-<td>Gemini HTTP 404</td>
-<td>모델 ID와 Interactions 지원 여부 확인 후 Variables 또는 설정 파일 수정</td>
+<td>OpenAI HTTP 404</td>
+<td>모델 ID와 해당 프로젝트의 모델 접근 권한 확인 후 Variables 또는 설정 파일 수정</td>
 </tr>
 <tr>
-<td>Gemini HTTP 429</td>
-<td>AI Studio 할당량·사용량 확인. 호출 간격·요청 상한·수집 범위 조절</td>
+<td>OpenAI HTTP 429</td>
+<td>요청 속도 제한인지 크레딧 또는 결제 한도 부족인지 확인. 속도 제한만 대기 후 재시도</td>
 </tr>
 <tr>
 <td>HOT 실패 / 이전 선정 결과</td>
-<td>HOT 후보가 많으면 단계별 Gemini 선정. 429·5xx는 대체 모델 재시도, 계속 실패하면 할당량 확인</td>
-</tr><tr><td>Gemini HTTP 401</td><td>AI Studio에서 Auth 키 유형·차단 상태 확인 후 GEMINI_API_KEY Secret 교체. mode: check-api로 검증. 인증 오류에서는 배포 중단</td>
+<td>HOT 후보가 많으면 단계별 OpenAI 선정. 일시 오류는 같은 HOT 모델로 제한된 횟수만 재시도</td>
+</tr><tr><td>OpenAI HTTP 401</td><td>OpenAI 대시보드에서 키 확인 후 OPENAI_API_KEY Secret 교체. mode: check-api로 검증. 인증 오류에서는 배포 중단</td>
 </tr>
 <tr>
 <td><code>git push ... 403</code></td>
@@ -414,32 +383,32 @@ Content-Type: application/json
 .\.venv\Scripts\python.exe -m http.server 8000 --directory public
 </code></pre>
 <p>브라우저에서 <code>http://localhost:8000</code>을 엽니다. 서버는 <code>Ctrl+C</code>로 종료합니다.</p>
-<p>실제 Gemini 연결 시험에는 환경변수가 필요합니다. 다음 명령은 키를 명령 기록에 직접 남기지 않도록 입력창을 사용합니다. 입력 후 키는 해당 프로세스 환경에 평문으로 존재하므로 이 터미널도 신뢰하는 환경에서만 사용합니다.</p>
-<pre><code class="language-powershell">$secureKey = Read-Host "Gemini API key" -AsSecureString
-$env:GEMINI_API_KEY = [System.Net.NetworkCredential]::new("", $secureKey).Password
+<p>실제 OpenAI 연결 시험에는 환경변수가 필요합니다. 다음 명령은 키를 명령 기록에 직접 남기지 않도록 입력창을 사용합니다. 입력 후 키는 해당 프로세스 환경에 평문으로 존재하므로 이 터미널도 신뢰하는 환경에서만 사용합니다.</p>
+<pre><code class="language-powershell">$secureKey = Read-Host "OpenAI API key" -AsSecureString
+$env:OPENAI_API_KEY = [System.Net.NetworkCredential]::new("", $secureKey).Password
 .\.venv\Scripts\python.exe -m digest --check-api
 .\.venv\Scripts\python.exe -m digest --check-sources
 .\.venv\Scripts\python.exe -m digest
-Remove-Item Env:GEMINI_API_KEY
+Remove-Item Env:OPENAI_API_KEY
 Remove-Variable secureKey
 </code></pre>
-<p><code>--check-api</code>는 기본 모델 두 개에 연결 확인 요청을 보내므로 API 사용량이 발생합니다. <code>--check-sources</code>는 Gemini를 호출하지 않지만 수집원 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집·요약·HTML 생성을 수행합니다.</p>
+<p><code>--check-api</code>는 두 모델 연결과 작은 가상 후보의 실제 선별 형식을 확인하므로 API 사용량이 발생합니다. <code>--check-sources</code>는 OpenAI를 호출하지 않지만 수집원 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집·요약·HTML 생성을 수행합니다.</p>
 <h3>Linux / macOS의 Bash</h3>
 <pre><code class="language-bash">python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-read -rsp "Gemini API key: " GEMINI_API_KEY; echo
-export GEMINI_API_KEY
+read -rsp "OpenAI API key: " OPENAI_API_KEY; echo
+export OPENAI_API_KEY
 python -m digest --check-api
 python -m digest --check-sources
 python -m digest
-unset GEMINI_API_KEY
+unset OPENAI_API_KEY
 python -m http.server 8000 --directory public
 </code></pre>
 <p>이 프로젝트는 <code>.env</code>를 자동으로 읽지 않습니다. <code>.env.example</code>은 변수 이름 참고용입니다. 로컬 <code>state/</code>를 저장소에 커밋하지 마세요. GitHub Actions의 <code>news-state</code>는 워크플로가 별도로 관리합니다.</p>
 <h2 id="step-15">15. 보관·개인정보·검증 범위</h2>
 <p><strong>5일은 120시간 타이머가 아니라 KST 달력 날짜 기준입니다.</strong> 예를 들어 9월 22일에는 9월 18~22일을 유지합니다. 9월 23일 갱신에서는 9월 18일 보고서가 제거됩니다. 자정 즉시 별도 작업을 실행하는 것이 아니라 다음 성공한 생성·배포에서 서버 파일이 삭제됩니다. 브라우저는 날짜를 계산해 만료한 보고서를 숨기지만 클라이언트 코드가 서버 파일을 직접 삭제하는 것은 아닙니다.</p>
 <p>5일 제거는 <strong>현재 공개 사이트와 최신 상태 스냅샷</strong>에 대한 정책입니다. Git 커밋 이력, GitHub의 과거 아티팩트·캐시, 별도 백업까지 완전히 지우는 기능은 아닙니다. 공개 저장소에서는 과거 <code>news-state</code> 이력에 요약과 짧은 수집 제공문이 남을 수 있습니다.</p>
-<p>기사 근거는 Gemini 서비스에 전송됩니다. API 키는 Actions 환경변수에서만 읽고 브라우저에는 보내지 않습니다. 원문 전체 HTML·본문은 보고서에 게시하지 않습니다. <code>store:false</code>를 사용하지만 이것만으로 Google의 모든 로그·데이터 처리 정책을 비활성화한다는 의미는 아닙니다.</p>
-<p>이 전달본에서는 로컬 단위·통합 테스트와 가상 화면 크기 검증을 수행했습니다. 실제 Gemini 키 요청, 전체 수집원의 실시간 접근, GitHub 계정에서의 배포, 폴드 8 울트라 실기기 테스트는 수행하지 않았습니다. 최초 <code>collect</code> 실행 결과와 기기 화면으로 최종 확인해야 합니다. 자세한 내용은 <code>docs/TESTING.md</code>에 있습니다.</p>
-</main><footer>프로젝트와 함께 제공된 SETUP.md의 브라우저용 버전 · 2026-09-22</footer></body></html>
+<p>기사 근거는 OpenAI API에 전송됩니다. API 키는 Actions 환경변수에서만 읽고 브라우저에는 보내지 않습니다. 원문 전체 HTML과 본문은 보고서에 게시하지 않습니다. <code>store:false</code>를 사용하지만 이것만으로 OpenAI의 모든 로그나 데이터 처리 정책을 비활성화한다는 의미는 아닙니다. <a href="https://developers.openai.com/api/docs/guides/your-data" rel="noopener noreferrer" target="_blank">공식 데이터 처리 안내</a>를 확인하세요.</p>
+<p>과거 전달본의 검증 기록은 <code>docs/TESTING.md</code>에 있습니다. 현재 OpenAI 연결 여부는 <code>check-api</code>, 실제 수집과 배포 결과는 해당 Actions 실행에서 확인하세요. 과거 Gemini 검증 기록을 현재 OpenAI 연결 검증으로 해석하지 마세요.</p>
+</main><footer>프로젝트와 함께 제공된 SETUP.md의 브라우저용 버전 / API 안내 갱신 2026-11-12</footer></body></html>

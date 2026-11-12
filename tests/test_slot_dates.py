@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from digest.common import KST, load_config
 from digest.pipeline import empty_state, new_day, repair_slot_dates, run_pipeline
 from digest.render import render_site
-from tests.test_core import FakeGemini, article
+from tests.test_core import FakeAI, article
 
 
 def test_legacy_overnight_slots_move_without_losing_articles():
@@ -40,7 +40,7 @@ def collect(tmp_path, now, schedule, target=None):
     cfg = load_config()
     cfg.update(fetch_article_body=False, cve_enabled=False)
     row = article(601, now)
-    run_pipeline(state, tmp_path / 'state', now, cfg, schedule, web=object(), gemini=FakeGemini(),
+    run_pipeline(state, tmp_path / 'state', now, cfg, schedule, web=object(), ai=FakeAI(),
                  source_loader=lambda *a: ([row], []),
                  github_loader=lambda *a: ([], {'status': 'ok', 'name': 'Test', 'message': 'Test'}),
                  publication_at=target)

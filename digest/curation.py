@@ -1,7 +1,7 @@
-"""Gemini selects the day's representatives before expensive body/summary work.
+"""OpenAI selects the day's representatives before expensive body/summary work.
 
 Every candidate is screened. Bounded intermediate rounds reduce large feeds,
-then Gemini makes the final ranking; Python never substitutes a popularity or
+then OpenAI makes the final ranking; Python never substitutes a popularity or
 CVSS ranking. A failed round cannot return a partially curated public result.
 """
 from __future__ import annotations
@@ -11,13 +11,13 @@ from typing import Any
 
 from jsonschema import ValidationError, validate
 
-from .gemini import BudgetExceeded, GeminiResponseValidationError
+from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 
 # Leave room for the structured selection and the model's thinking. This must
 # stay above the maximum 100 news representatives so every round shrinks.
 CURATION_CHUNK_SIZE = 200
 CURATION_ATTEMPTS = 2
-CURATION_MODEL = 'gemini-3.1-flash-lite'
+CURATION_MODEL = 'gpt-6.1-sol'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
 NEWS_TOPICS = ('ai', 'security', 'tech')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')
@@ -138,46 +138,46 @@ def _validate_raw_selection(result: dict, candidates: list[dict], kind: str, lim
                  'scores': 'SCORES', 'reason_ko': 'KOREAN_REASON',
                  'shortfall_reason_ko': 'KOREAN_REASON'}
         code = next((codes[field] for field in exc.absolute_path if field in codes), None)
-        raise GeminiResponseValidationError('선정 응답 JSON 형식 불일치', retry_code=code) from None
+        raise OpenAIResponseValidationError('선정 응답 JSON 형식 불일치', retry_code=code) from None
     try:
         picks = result['picks']
         if not isinstance(picks, list) or len(picks) > limit * (5 if kind == 'news' else 1):
-            raise GeminiResponseValidationError('선정 개수 상한 초과', retry_code='COUNT')
+            raise OpenAIResponseValidationError('선정 개수 상한 초과', retry_code='COUNT')
         shortfall = result['shortfall_reason_ko']
         if not _korean_reason(shortfall, 500, allow_empty=bool(picks)):
-            raise GeminiResponseValidationError('선정 부족 사유가 유효하지 않습니다', retry_code='KOREAN_REASON')
+            raise OpenAIResponseValidationError('선정 부족 사유가 유효하지 않습니다', retry_code='KOREAN_REASON')
         by_id = {candidate['id']: candidate for candidate in candidates}
         ids = [pick['id'] for pick in picks]
         if len(ids) != len(set(ids)) or not set(ids).issubset(by_id):
-            raise GeminiResponseValidationError('선정 결과의 ID 누락·중복·변조', retry_code='IDS')
+            raise OpenAIResponseValidationError('선정 결과의 ID 누락·중복·변조', retry_code='IDS')
         represented = set(ids)
         for pick in picks:
             if not _korean_reason(pick['reason_ko'], 200):
-                raise GeminiResponseValidationError('한국어 선정 이유가 유효하지 않습니다', retry_code='KOREAN_REASON')
+                raise OpenAIResponseValidationError('한국어 선정 이유가 유효하지 않습니다', retry_code='KOREAN_REASON')
             scores = pick['scores']
             if (not isinstance(scores, dict) or set(scores) != set(SCORE_KEYS)
                     or any(type(scores[key]) is not int or not 0 <= scores[key] <= 5
                            for key in SCORE_KEYS)):
-                raise GeminiResponseValidationError('선정 중요도 점수가 유효하지 않습니다', retry_code='SCORES')
+                raise OpenAIResponseValidationError('선정 중요도 점수가 유효하지 않습니다', retry_code='SCORES')
             related = pick['related_ids']
             if not set(related).issubset(by_id):
-                raise GeminiResponseValidationError('중복으로 묶은 ID가 이번 후보 목록에 없습니다', retry_code='IDS')
+                raise OpenAIResponseValidationError('중복으로 묶은 ID가 이번 후보 목록에 없습니다', retry_code='IDS')
             if (not isinstance(related, list) or len(related) != len(set(related))
                     or represented.intersection(related)):
-                raise GeminiResponseValidationError('중복으로 묶은 ID가 유효하지 않습니다', retry_code='DUPLICATES')
+                raise OpenAIResponseValidationError('중복으로 묶은 ID가 유효하지 않습니다', retry_code='DUPLICATES')
             represented.update(related)
             if kind == 'news':
                 category = pick['category']
                 candidate = by_id[pick['id']]
                 # The fixed source kinds define their section deterministically.
-                # Ordinary articles still require Gemini to choose a valid topic.
+                # Ordinary articles still require OpenAI to choose a valid topic.
                 if fixed_category(candidate) is None and category not in _allowed_categories(candidate):
-                    raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
+                    raise OpenAIResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
             elif (by_id[pick['id']].get('rejected')
                   or str(by_id[pick['id']].get('vuln_status', '')).lower() in ('reject', 'rejected')):
-                raise GeminiResponseValidationError('Rejected CVE는 선정할 수 없습니다')
+                raise OpenAIResponseValidationError('Rejected CVE는 선정할 수 없습니다')
     except (KeyError, TypeError, AttributeError):
-        raise GeminiResponseValidationError('선정 응답 형식 불일치') from None
+        raise OpenAIResponseValidationError('선정 응답 형식 불일치') from None
 
 
 def _validate_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> None:
@@ -189,14 +189,14 @@ def _validate_selection(result: dict, candidates: list[dict], kind: str, limit: 
         for pick in result['picks']:
             category = pick['category']
             if category not in _allowed_categories(by_id[pick['id']]):
-                raise GeminiResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
+                raise OpenAIResponseValidationError('기사 종류와 선정 카테고리가 일치하지 않습니다', retry_code='CATEGORY')
             counts[category] += 1
             if counts[category] > limit:
-                raise GeminiResponseValidationError('카테고리별 선정 개수 상한 초과', retry_code='COUNT')
+                raise OpenAIResponseValidationError('카테고리별 선정 개수 상한 초과', retry_code='COUNT')
 
 
 def _normalize_selection(result: dict, candidates: list[dict], kind: str, limit: int) -> dict:
-    """Apply source sections and daily quotas to Gemini's unchanged ordering.
+    """Apply source sections and daily quotas to OpenAI's unchanged ordering.
 
     Integrity checks precede every change: a corrupt later pick cannot be hidden
     by a quota cut. No source candidate, model result or score order is mutated.
@@ -278,7 +278,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
     _check_options(kind, limit)
     ids = [candidate.get('id') for candidate in candidates]
     if any(not isinstance(ident, str) or not ident.strip() for ident in ids) or len(ids) != len(set(ids)):
-        raise GeminiResponseValidationError('선정 입력의 ID 누락·중복')
+        raise OpenAIResponseValidationError('선정 입력의 ID 누락·중복')
     if not candidates:
         return {'picks': [], 'shortfall_reason_ko': '선정할 새 후보가 없습니다.'}
     required = curation_max_calls(len(candidates), kind, limit)
@@ -295,7 +295,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
             _schema(kind, limit, topic_only=True), model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _normalize_selection(result, group, kind, limit),
-            max_output_tokens=32768, thinking_level='low')
+            max_output_tokens=32768, reasoning_effort='high')
         # Defensively validate lightweight clients too, then transform a copy.
         normalized = _normalize_selection(result, group, kind, limit)
         by_id = {candidate['id']: candidate for candidate in group}

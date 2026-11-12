@@ -1,4 +1,4 @@
-"""Official NVD CVE evidence and separately labeled Gemini editorial selection.
+"""Official NVD CVE evidence and separately labeled OpenAI editorial selection.
 
 Date basis: NVD `published` (NVD publication, NOT CVE reservation, discovery,
 lastModified or necessarily CVE Program first publication). All grouping is KST.
@@ -18,7 +18,7 @@ from typing import Callable
 import requests
 
 from .common import KST, canonical_url, parse_date
-from .gemini import GeminiError, GeminiAuthenticationError, GeminiResponseValidationError
+from .openai_client import OpenAIError, OpenAIAuthenticationError, OpenAIResponseValidationError
 
 ENDPOINT = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 CVE_ID = re.compile(r'CVE-\d{4}-\d{4,}')
@@ -42,13 +42,13 @@ def validate_summaries(response: dict, expected_ids: set[str]) -> None:
         answers = response['cves']
         ids = [answer['id'] for answer in answers]
         if len(set(ids)) != len(ids) or set(ids) != expected_ids:
-            raise GeminiResponseValidationError('CVE 요약의 ID 누락·중복·변조')
+            raise OpenAIResponseValidationError('CVE 요약의 ID 누락·중복·변조')
         for answer in answers:
             text = answer['summary_ko'].strip()
             if not text or len(text) > 500 or not re.search(r'[가-힣]', text):
-                raise GeminiResponseValidationError('CVE 한국어 요약 형식 불일치')
+                raise OpenAIResponseValidationError('CVE 한국어 요약 형식 불일치')
     except (KeyError, TypeError, AttributeError):
-        raise GeminiResponseValidationError('CVE 요약 응답 형식 불일치') from None
+        raise OpenAIResponseValidationError('CVE 요약 응답 형식 불일치') from None
 
 
 class NvdError(RuntimeError):
@@ -410,7 +410,7 @@ def related_cve(row: dict) -> dict:
 
 
 def refresh_selected_cves(day: dict) -> None:
-    """Drop rejected IDs and update originals, keeping Gemini judgments separate."""
+    """Drop rejected IDs and update originals, keeping OpenAI judgments separate."""
     pool = candidate_pool(day)
     refreshed = {}
     for ident, previous in day.get('cves', {}).items():
@@ -437,10 +437,10 @@ def refresh_selected_cves(day: dict) -> None:
 
 
 def apply_cve_selection(day: dict, picks: list[dict], now: datetime, model: str) -> None:
-    """Commit a fully validated maximum of twenty Gemini-selected representatives."""
+    """Commit a fully validated maximum of twenty OpenAI-selected representatives."""
     pool = candidate_pool(day)
     if not isinstance(picks, list) or len(picks) > 20:
-        raise GeminiResponseValidationError('CVE 대표 선정은 최대 20건입니다')
+        raise OpenAIResponseValidationError('CVE 대표 선정은 최대 20건입니다')
     selected, used = {}, set()
     try:
         for rank, pick in enumerate(picks, 1):
@@ -451,19 +451,19 @@ def apply_cve_selection(day: dict, picks: list[dict], now: datetime, model: str)
                     or ident not in pool or pool[ident].get('rejected')
                     or pool[ident].get('id') != ident
                     or ident in used):
-                raise GeminiResponseValidationError('CVE 대표 선정 ID가 유효하지 않습니다')
+                raise OpenAIResponseValidationError('CVE 대표 선정 ID가 유효하지 않습니다')
             if (not isinstance(related, list) or len(related) > max(0, len(pool) - 1)
                     or any(not isinstance(rid, str) or rid not in pool or rid == ident
                            or pool[rid].get('id') != rid or pool[rid].get('rejected')
                            for rid in related)
                     or len(set(related)) != len(related) or set(related) & used):
-                raise GeminiResponseValidationError('CVE 관련 ID가 유효하지 않습니다')
+                raise OpenAIResponseValidationError('CVE 관련 ID가 유효하지 않습니다')
             if (not isinstance(scores, dict) or set(scores) != CURATION_SCORE_KEYS
                     or any(isinstance(score, bool) or not isinstance(score, int)
                            or not 0 <= score <= 5
                            for score in scores.values())
                     or not reason or len(reason) > 500 or not re.search(r'[가-힣]', reason)):
-                raise GeminiResponseValidationError('CVE 중요도 또는 선정 이유가 유효하지 않습니다')
+                raise OpenAIResponseValidationError('CVE 중요도 또는 선정 이유가 유효하지 않습니다')
             used.update([ident, *related])
             row = deepcopy(pool[ident])
             row['curation'] = {'scores': deepcopy(scores), 'reason_ko': reason,
@@ -473,7 +473,7 @@ def apply_cve_selection(day: dict, picks: list[dict], now: datetime, model: str)
             row['related_cves'] = [related_cve(pool[rid]) for rid in related]
             selected[ident] = row
     except (KeyError, TypeError, AttributeError):
-        raise GeminiResponseValidationError('CVE 대표 선정 응답 형식 불일치') from None
+        raise OpenAIResponseValidationError('CVE 대표 선정 응답 형식 불일치') from None
     day['cves'] = selected
     day.setdefault('cve_meta', {}).update(count=len(selected), candidate_count=len(pool))
 
@@ -515,10 +515,10 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
                     canonical['summary_ko'], canonical['summary_model'] = row['summary_ko'], row['summary_model']
                 translated += 1
             checkpoint()
-        except GeminiAuthenticationError:
+        except OpenAIAuthenticationError:
             raise
-        except (GeminiError, KeyError, TypeError, ValueError) as exc:
-            error = str(exc) if isinstance(exc, GeminiError) else f'CVE 요약 응답 오류: {type(exc).__name__}'
+        except (OpenAIError, KeyError, TypeError, ValueError) as exc:
+            error = str(exc) if isinstance(exc, OpenAIError) else f'CVE 요약 응답 오류: {type(exc).__name__}'
             break
     total_pending = sum(not row.get('summary_ko') for row in today.get('cves', {}).values())
     return {'translated': translated, 'pending': total_pending, 'error': error}

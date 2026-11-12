@@ -17,7 +17,7 @@ def format_time(value, pattern='%m.%d %H:%M'):
 
 
 def curation_order(item: dict) -> tuple[int, int]:
-    """Prioritize saved Gemini ranks while retaining legacy order as a fallback."""
+    """Prioritize saved OpenAI ranks while retaining legacy order as a fallback."""
     rank = (item.get('curation') or {}).get('rank')
     if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0:
         return 0, rank

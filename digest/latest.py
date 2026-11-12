@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from jsonschema import ValidationError, validate
 
 from .common import KST, canonical_url, parse_date, text_key
-from .gemini import BudgetExceeded, GeminiResponseValidationError
+from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 
-LATEST_MODEL = 'gemini-3.1-flash-lite'
+LATEST_MODEL = 'gpt-6.1-sol'
 LATEST_ATTEMPTS = 2
 
 
@@ -61,27 +61,27 @@ def _validate_selection(result: dict, candidates: list[dict], limit: int) -> Non
     try:
         validate(result, _schema())
     except ValidationError:
-        raise GeminiResponseValidationError('최신 선정 응답 JSON 형식 불일치') from None
+        raise OpenAIResponseValidationError('최신 선정 응답 JSON 형식 불일치') from None
     picks = result['picks']
     if len(picks) > limit:
-        raise GeminiResponseValidationError('최신 선정 개수 상한 초과', retry_code='COUNT')
+        raise OpenAIResponseValidationError('최신 선정 개수 상한 초과', retry_code='COUNT')
     if not _korean_reason(result['shortfall_reason_ko'], allow_empty=bool(picks)):
-        raise GeminiResponseValidationError('최신 선정 부족 사유가 유효하지 않습니다',
+        raise OpenAIResponseValidationError('최신 선정 부족 사유가 유효하지 않습니다',
                                              retry_code='KOREAN_REASON')
     by_id = {row['id']: row for row in candidates}
     ids = [pick['id'] for pick in picks]
     if len(ids) != len(set(ids)) or not set(ids).issubset(by_id):
-        raise GeminiResponseValidationError('최신 선정 ID 누락·중복·변조', retry_code='IDS')
+        raise OpenAIResponseValidationError('최신 선정 ID 누락·중복·변조', retry_code='IDS')
     represented = set(ids)
     for pick in picks:
         related = pick['related_ids']
         if (len(related) != len(set(related)) or not set(related).issubset(by_id)
                 or represented.intersection(related)):
-            raise GeminiResponseValidationError('최신 중복 ID가 유효하지 않습니다',
+            raise OpenAIResponseValidationError('최신 중복 ID가 유효하지 않습니다',
                                                  retry_code='DUPLICATES')
         published = _published(by_id[pick['id']])
         if any(published < _published(by_id[ident]) for ident in related):
-            raise GeminiResponseValidationError('최신 중복 대표가 관련 기사보다 오래되었습니다',
+            raise OpenAIResponseValidationError('최신 중복 대표가 관련 기사보다 오래되었습니다',
                                                  retry_code='DUPLICATES')
         represented.update(related)
 
@@ -99,7 +99,7 @@ def select_latest_candidates(client, candidates: list[dict], now: datetime,
                              limit: int = 20, model: str = LATEST_MODEL) -> dict:
     """Screen the latest twenty eligible inputs, then keep actual date order.
 
-    Gemini checks relevance, expired events and semantic duplicates; it never
+    OpenAI checks relevance, expired events and semantic duplicates; it never
     promotes an older article for importance. A failed model call raises rather
     than returning a partially validated selection.
     """
@@ -108,7 +108,7 @@ def select_latest_candidates(client, candidates: list[dict], now: datetime,
     local_now = _local_now(now)
     eligible = [row for row in candidates if latest_eligible(row, local_now)]
     if any(not isinstance(row.get('id'), str) or not row['id'].strip() for row in eligible):
-        raise GeminiResponseValidationError('최신 선정 입력 ID 누락·변조', retry_code='IDS')
+        raise OpenAIResponseValidationError('최신 선정 입력 ID 누락·변조', retry_code='IDS')
     # Stable ID order for equal publication timestamps; no importance heuristic.
     ordered = sorted(eligible, key=lambda row: row['id'])
     ordered.sort(key=_published, reverse=True)
@@ -156,7 +156,7 @@ def select_latest_candidates(client, candidates: list[dict], now: datetime,
         {'as_of': local_now.isoformat(), 'candidates': [_compact(row) for row in considered]},
         _schema(), model, attempts=LATEST_ATTEMPTS,
         validator=lambda result: _validate_selection(result, considered, limit),
-        max_output_tokens=8192, thinking_level='low')
+        max_output_tokens=8192, reasoning_effort='high')
     _validate_selection(result, considered, limit)
     by_id = {row['id']: row for row in considered}
     picks = [{'id': pick['id'], 'related_ids': list(pick['related_ids'])}

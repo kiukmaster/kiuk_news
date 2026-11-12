@@ -89,7 +89,7 @@ def fixture_state(now):
                     row.pop('curation', None)
                 latest.append(row)
             # Deliberately reverse saved order: the view must sort publication
-            # timestamps, rather than insertion order or Gemini importance.
+            # timestamps, rather than insertion order or AI importance.
             day['latest_articles'] = {row['id']: row for row in reversed(latest)}
             day['latest_curation'] = {'status': 'fresh', 'at': dt.isoformat(), 'limit': 20,
                                      'candidate_count': 120, 'selected_count': 20}

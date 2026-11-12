@@ -1,4 +1,4 @@
-"""Offline public rendering contracts for saved Gemini curation results."""
+"""Offline public rendering contracts for saved AI curation results."""
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -102,7 +102,7 @@ def test_curated_report_explains_policy_escapes_reasons_and_links_related_cves(t
     text = page.get_text(' ', strip=True)
     assert '분야마다 하루 최대 20건' in text
     assert '사회적 파급력·화제성·이슈성' in text
-    assert 'Gemini의 중요도 평가와 별개' in text
+    assert 'AI의 중요도 평가와 별개' in text
     assert '함께 묶인 관련 CVE 2건' in text
     assert '사회적 파급력 4/5' in text
     assert not page.select_one('#sec-ai script')
@@ -123,8 +123,8 @@ def test_legacy_report_does_not_claim_a_gemini_curation_policy(tmp_path):
     text = page.get_text(' ', strip=True)
     assert '선별 정책을 적용하기 전에 생성된 기록' in text
     assert '선별 정책을 적용하기 전의 기록' in text
-    assert 'Gemini가 중복 보도를 정리하고' not in text
-    assert 'Gemini 선정 이유' not in text
+    assert 'AI가 중복 보도를 정리하고' not in text
+    assert 'AI 선정 이유' not in text
 
 
 def test_stale_selection_has_specific_notice(tmp_path):

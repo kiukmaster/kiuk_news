@@ -31,7 +31,9 @@ def child_text(node, *names: str) -> str:
     for name in names:
         for child in node:
             if local_name(child.tag) == name.lower():
-                return ''.join(child.itertext()).strip()
+                text = ''.join(child.itertext()).strip()
+                if text:
+                    return text
     return ''
 
 
@@ -40,6 +42,12 @@ def parse_feed(data: bytes, source: dict) -> list[dict]:
     # Python's XML parser does not accept every multibyte encoding directly.
     # Decode declared Korean encodings first; entity checks still use defusedxml.
     declaration = re.search(br"<\?xml[^>]*encoding=['\"]([^'\"]+)['\"]", data[:250], re.I)
+    if source.get('strip_xml_control_chars'):
+        if not declaration or declaration[1].lower() not in (b'utf-8', b'utf8'):
+            raise FetchError('XML 제어문자 보정은 UTF-8 피드에만 적용할 수 있음')
+        data, removed = re.subn(br'[\x00-\x08\x0b\x0c\x0e-\x1f]', b'', data)
+        if removed:
+            print(f"[피드 정규화] {source['name']} / XML 금지 제어문자 {removed}개 제거", flush=True)
     if declaration and declaration[1].lower() in (b'euc-kr', b'cp949', b'ks_c_5601-1987', b'windows-949'):
         decoded = data.decode('cp949')
         decoded = re.sub(r"(<\?xml[^>]*?)\s+encoding=['\"][^'\"]+['\"]", r'\1', decoded, count=1, flags=re.I)

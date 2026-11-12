@@ -363,7 +363,7 @@ class OpenAIClient:
     def request(self, instruction: str, data: dict, schema: dict, model: str,
                 attempts: int = 3, validator: Callable[[dict], None] | None = None,
                 max_output_tokens: int = 8192, reasoning_effort: str | None = None) -> dict:
-        effort = reasoning_effort or self.cfg.get('reasoning_effort', 'max')
+        effort = reasoning_effort or self.cfg.get('reasoning_effort', 'high')
         if effort not in ('none', 'low', 'medium', 'high', 'xhigh', 'max'):
             raise ValueError('지원하지 않는 OpenAI reasoning_effort')
         untrusted_data = json.dumps(data, ensure_ascii=False)
@@ -380,17 +380,30 @@ class OpenAIClient:
                 raise self.quota_error
             if self.remaining <= 0:
                 raise BudgetExceeded('설정된 이번 실행의 API 호출 상한에 도달했습니다')
+            request_info = (f'call={self.calls + 1} model={model} reasoning.effort={effort} '
+                            f'attempt={attempt + 1}/{attempts}')
             gap = max(self.last_call + self.cfg['api_interval_seconds'],
                       self.cooldown_until) - time.monotonic()
             if gap > 0:
+                print(f'[OpenAI 호출 간격/쿨타임 대기] {request_info} wait_seconds={gap:.1f}', flush=True)
                 time.sleep(gap)
             self.calls += 1
             self.last_call = time.monotonic()
-            print(f'[OpenAI 요청] model={model} reasoning.effort={effort}', flush=True)
+            print(f'[OpenAI 요청] {request_info} max_output_tokens={payload["max_output_tokens"]}', flush=True)
             try:
-                response = self.session.post(ENDPOINT, json=payload,
-                    headers={'Authorization': 'Bearer ' + self.key,
-                             'Content-Type': 'application/json'}, timeout=(10, 300))
+                api_started = time.monotonic()
+                try:
+                    response = self.session.post(ENDPOINT, json=payload,
+                        headers={'Authorization': 'Bearer ' + self.key,
+                                 'Content-Type': 'application/json'}, timeout=(10, 300))
+                except requests.RequestException as exc:
+                    api_seconds = time.monotonic() - api_started
+                    print(f'[OpenAI API 대기 실패] {request_info} api_seconds={api_seconds:.1f} '
+                          f'error={type(exc).__name__}', flush=True)
+                    raise
+                api_seconds = time.monotonic() - api_started
+                print(f'[OpenAI API 응답] {request_info} api_seconds={api_seconds:.1f} '
+                      f'status={response.status_code}', flush=True)
                 if response.status_code in TRANSIENT_HTTP_STATUSES:
                     if response.status_code == 429:
                         detail, retry_delay = safe_http_429_detail(response)
@@ -401,10 +414,15 @@ class OpenAIClient:
                         # A project rate limit applies to later models and tasks too.
                         delay = max(min(60, 30 * 2 ** attempt) + random.uniform(0, 3), retry_delay)
                         self.cooldown_until = max(self.cooldown_until, time.monotonic() + delay)
+                        print(f'[OpenAI 쿨타임 설정] {request_info} status=429 '
+                              f'cooldown_seconds={delay:.1f}', flush=True)
                     else:
                         error = OpenAIHTTPError(response.status_code)
                         if attempt < attempts - 1:
-                            time.sleep(min(45, 8 * 2 ** attempt) + random.uniform(0, 2))
+                            delay = min(45, 8 * 2 ** attempt) + random.uniform(0, 2)
+                            print(f'[OpenAI HTTP 재시도 대기] {request_info} status={response.status_code} '
+                                  f'wait_seconds={delay:.1f}', flush=True)
+                            time.sleep(delay)
                     continue
                 if response.status_code >= 400:
                     # Never log the key, full body, request headers or source content.
@@ -437,13 +455,16 @@ class OpenAIClient:
                 if exc.reason in ('RATE_LIMIT_EXCEEDED', 'TOO_MANY_REQUESTS'):
                     delay = min(60, 30 * 2 ** attempt) + random.uniform(0, 3)
                     self.cooldown_until = max(self.cooldown_until, time.monotonic() + delay)
+                    print(f'[OpenAI 쿨타임 설정] {request_info} cooldown_seconds={delay:.1f} {exc}',
+                          flush=True)
                 elif attempt < attempts - 1:
                     if exc.reason == 'MAX_TOKENS':
                         payload = {**payload,
                                    'max_output_tokens': min(65536, payload['max_output_tokens'] * 2)}
-                    time.sleep(5 * (attempt + 1))
-                if attempt < attempts - 1:
-                    print(f'[OpenAI 응답 재시도] {exc}', flush=True)
+                    delay = 5 * (attempt + 1)
+                    print(f'[OpenAI 응답 재시도 대기] {request_info} wait_seconds={delay:.1f} {exc}',
+                          flush=True)
+                    time.sleep(delay)
             except OpenAIResponseValidationError as exc:
                 error = exc
                 if attempt < attempts - 1:
@@ -454,13 +475,18 @@ class OpenAIClient:
                     payload = {**payload, 'input': instruction
                         + '\n\nTRUSTED_VALIDATION_FEEDBACK:\n' + SEMANTIC_RETRY_FEEDBACK[retry_code]
                         + '\n\nUNTRUSTED_DATA_JSON:\n' + untrusted_data}
-                    print(f'[OpenAI 응답 보정 재시도] code={retry_code} attempt={attempt + 2}/{attempts}',
+                    delay = 5 * (attempt + 1)
+                    print(f'[OpenAI 응답 보정 재시도] {request_info} code={retry_code} '
+                          f'next_attempt={attempt + 2}/{attempts} wait_seconds={delay:.1f}',
                           flush=True)
-                    time.sleep(5 * (attempt + 1))
+                    time.sleep(delay)
             except (requests.RequestException, ValueError, ValidationError) as exc:
                 error = OpenAIError(f'OpenAI 응답/연결 검증 실패: {type(exc).__name__}')
                 if attempt < attempts - 1:
-                    time.sleep(5 * (attempt + 1))
+                    delay = 5 * (attempt + 1)
+                    print(f'[OpenAI 응답/연결 재시도 대기] {request_info} error={type(exc).__name__} '
+                          f'wait_seconds={delay:.1f}', flush=True)
+                    time.sleep(delay)
         raise error or OpenAIError('OpenAI 요청 실패')
 
     def summarize(self, items: list[dict]) -> dict[str, dict]:

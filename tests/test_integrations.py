@@ -38,6 +38,7 @@ def test_responses_contract(monkeypatch):
     assert client.request('test', {}, schema, client.summary_model) == {'ok': True}
     args, kwargs = client.session.post.call_args
     assert args == (ENDPOINT,)
+    assert kwargs['timeout'] == (10, 300)
     assert kwargs['json']['store'] is False
     assert kwargs['json']['stream'] is False
     assert kwargs['json']['text']['format'] == {

@@ -15,7 +15,7 @@
   // Cloudflare Cron is UTC. :07 dispatches; :27 and :47 recover a missing or failed run.
   "triggers": {
     "crons": [
-      "7 20 * * *", "7 3 * * *", "7 9 * * *",
+      "7 3,9,20 * * *",
       "27 3,9,20 * * *", "47 3,9,20 * * *"
     ]
   }

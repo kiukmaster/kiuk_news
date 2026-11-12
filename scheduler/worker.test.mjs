@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import worker, { CRON_SLOTS, SchedulerError, dispatchScheduled, planPublication } from './worker.mjs';
+import worker, { SchedulerError, dispatchScheduled, planPublication } from './worker.mjs';
 
 const ENV = {
   GITHUB_TOKEN: 'test-secret-do-not-print',
@@ -20,6 +20,10 @@ const matchingRun = (scheduled, fields = {}) => ({
 });
 
 for (const [cron, iso, expected] of [
+  ['7 3,9,20 * * *', '2026-09-30T20:07:00Z', '2026-10-01T06:00:00+09:00'],
+  ['7 3,9,20 * * *', '2026-10-01T03:07:00Z', '2026-10-01T13:00:00+09:00'],
+  ['7 3,9,20 * * *', '2026-10-01T09:07:00Z', '2026-10-01T19:00:00+09:00'],
+  ['7 3,9,20 * * *', '2026-12-31T20:07:00Z', '2027-01-01T06:00:00+09:00'],
   ['7 20 * * *', '2026-09-30T20:07:00Z', '2026-10-01T06:00:00+09:00'],
   ['7 3 * * *', '2026-10-01T03:07:00Z', '2026-10-01T13:00:00+09:00'],
   ['7 9 * * *', '2026-10-01T09:07:00Z', '2026-10-01T19:00:00+09:00'],
@@ -297,7 +301,8 @@ test('missing secret and invalid repository are rejected without HTTP requests',
 test('unknown cron, invalid epoch, and mismatched schedule timestamps fail closed', () => {
   for (const invalid of [event('bad cron'), { ...event(), scheduledTime: NaN },
     { ...event(), scheduledTime: 9e20 },
-    event('7 3 * * *', '2026-10-01T09:07:00Z')]) {
+    event('7 3 * * *', '2026-10-01T09:07:00Z'),
+    event('7 3,9,20 * * *', '2026-10-01T04:07:00Z')]) {
     assert.throws(() => planPublication(invalid), SchedulerError);
   }
 });
@@ -313,9 +318,9 @@ test('worker has only a scheduled handler and configuration has no public URLs',
   assert.match(content, /"workers_dev": false/);
   assert.match(content, /"preview_urls": false/);
   assert.ok(!content.includes(ENV.GITHUB_TOKEN));
-  for (const cron of [...Object.keys(CRON_SLOTS), '27 3,9,20 * * *',
+  for (const cron of ['7 3,9,20 * * *', '27 3,9,20 * * *',
     '47 3,9,20 * * *']) assert.ok(content.includes(`"${cron}"`));
-  assert.equal((content.match(/\"(?:7|27|47) [^\"]+\"/g) || []).length, 5);
+  assert.equal((content.match(/\"(?:7|27|47) [^\"]+\"/g) || []).length, 3);
 });
 
 test('scheduled handler logs only sanitized failure messages', async () => {

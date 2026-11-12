@@ -10,6 +10,8 @@ const WORKFLOW_FILE = 'update-news.yml';
 const UTC_HOUR_SLOTS = Object.freeze({ 20: '06:00', 3: '13:00', 9: '19:00' });
 
 const CRON_PLANS = Object.freeze({
+  '7 3,9,20 * * *': { leadMinutes: 53, recovery: false },
+  // Accept legacy events while the combined trigger propagates.
   '7 20 * * *': { slot: '06:00', leadMinutes: 53, recovery: false },
   '7 3 * * *': { slot: '13:00', leadMinutes: 53, recovery: false },
   '7 9 * * *': { slot: '19:00', leadMinutes: 53, recovery: false },

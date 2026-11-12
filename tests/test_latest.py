@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from digest.common import KST
-from digest.gemini import BudgetExceeded, GeminiResponseValidationError
+from digest.openai_client import BudgetExceeded, OpenAIResponseValidationError
 from digest.latest import latest_eligible, select_latest_candidates
 
 NOW = datetime(2026, 10, 9, 13, 0, tzinfo=KST)
@@ -76,10 +76,10 @@ def test_only_twenty_newest_are_considered_not_older_high_importance_rows():
     assert [row['id'] for row in data['candidates']] == [str(hour) for hour in range(23, 3, -1)]
     assert '점수나 순위는 사용하지 말라' in instruction
     assert all('scores' not in row for row in data['candidates'])
-    assert model == 'gemini-3.1-flash-lite'
+    assert model == 'gpt-6.1-sol'
     assert options['attempts'] == 2
     assert options['max_output_tokens'] == 8192
-    assert options['thinking_level'] == 'low'
+    assert options['reasoning_effort'] == 'high'
 
 
 def test_equal_publication_dates_sort_by_id_stably_and_model_order_is_not_public_order():
@@ -145,7 +145,7 @@ def test_semantic_duplicate_uses_newest_representative_and_copies_model_output()
 ])
 def test_complete_strict_id_and_duplicate_validation(picks, code):
     client = Client({'picks': picks, 'shortfall_reason_ko': ''})
-    with pytest.raises(GeminiResponseValidationError) as exc:
+    with pytest.raises(OpenAIResponseValidationError) as exc:
         select_latest_candidates(client, [article('new'),
             article('old', '2026-10-09T11:00:00+09:00'),
             article('third', '2026-10-09T10:00:00+09:00')], NOW)
@@ -154,7 +154,7 @@ def test_complete_strict_id_and_duplicate_validation(picks, code):
 
 @pytest.mark.parametrize('reason', ['', 'No relevant articles', '가' * 501])
 def test_empty_model_selection_requires_bounded_korean_reason(reason):
-    with pytest.raises(GeminiResponseValidationError) as exc:
+    with pytest.raises(OpenAIResponseValidationError) as exc:
         select_latest_candidates(Client({'picks': [], 'shortfall_reason_ko': reason}),
                                  [article('new')], NOW)
     assert exc.value.retry_code == 'KOREAN_REASON'
@@ -194,7 +194,7 @@ def test_invalid_feed_limits_are_rejected(limit):
 def test_over_limit_model_output_is_rejected_without_silently_dropping_rows():
     selected = {'picks': [{'id': 'a', 'related_ids': []}, {'id': 'b', 'related_ids': []}],
                 'shortfall_reason_ko': ''}
-    with pytest.raises(GeminiResponseValidationError) as exc:
+    with pytest.raises(OpenAIResponseValidationError) as exc:
         select_latest_candidates(Client(selected), [article('a'), article('b')], NOW, limit=1)
     assert exc.value.retry_code == 'COUNT'
 

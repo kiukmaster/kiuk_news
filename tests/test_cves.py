@@ -14,7 +14,7 @@ from digest.cves import (NvdClient, NvdError, ENDPOINT, collect_cves, cvss_metri
                         translate_cves, utc_parameter)
 from digest.pipeline import empty_state, new_day, run_pipeline, load_state, prune
 from digest.render import render_site, render_context
-from digest.gemini import Gemini, GeminiError, GeminiResponseValidationError
+from digest.openai_client import OpenAIClient, OpenAIError, OpenAIResponseValidationError
 
 NOW = datetime(2026, 9, 22, 13, 0, tzinfo=KST)
 
@@ -60,7 +60,7 @@ class FakeSummary:
         self.calls += 1
         self.inputs.append(deepcopy(data))
         if self.broken:
-            raise GeminiError('검증용 실패')
+            raise OpenAIError('검증용 실패')
         if 'candidates' in data:
             limit = 20
             result = {'picks': [{'id': row['id'],
@@ -268,12 +268,12 @@ def test_summary_id_invention_rejected_atomically():
 
 
 def test_duplicate_cve_response_retried_before_checkpoint(monkeypatch):
-    monkeypatch.setenv('GEMINI_API_KEY', 'offline-test-secret')
-    monkeypatch.setattr('digest.gemini.time.sleep', lambda _: None)
+    monkeypatch.setenv('OPENAI_API_KEY', 'offline-test-secret')
+    monkeypatch.setattr('digest.openai_client.time.sleep', lambda _: None)
     cfg = load_config()
     cfg.update(max_api_calls_per_run=3, api_interval_seconds=0,
                cve_summary_batch_size=2, cve_summary_max_calls_per_run=3)
-    client = Gemini(cfg)
+    client = OpenAIClient(cfg)
     state, day = empty_state(), new_day('2026-09-22')
     for index in (1, 2):
         row = normalize_cve(raw(index), NOW)
@@ -284,8 +284,8 @@ def test_duplicate_cve_response_retried_before_checkpoint(monkeypatch):
         result = {'cves': [{'id': ident, 'summary_ko': '테스트 서버의 서비스 거부 취약점 설명입니다.'}
                            for ident in ids]}
         return Mock(status_code=200, json=Mock(return_value={
-            'status': 'completed', 'steps': [{'type': 'model_output', 'content': [
-                {'type': 'text', 'text': json.dumps(result)}]}]}))
+            'status': 'completed', 'output': [{'type': 'message', 'content': [
+                {'type': 'output_text', 'text': json.dumps(result)}]}]}))
 
     # Both IDs are allowed and the count is correct: JSON Schema alone cannot
     # detect this duplicate/missing-ID combination from the production incident.
@@ -296,14 +296,14 @@ def test_duplicate_cve_response_retried_before_checkpoint(monkeypatch):
     assert client.calls == 2 and client.session.post.call_count == 2
     assert checkpoint.call_count == 1
     assert all(row['summary_ko'] for row in day['cves'].values())
-    schema = client.session.post.call_args.kwargs['json']['response_format']['schema']
+    schema = client.session.post.call_args.kwargs['json']['text']['format']['schema']
     assert schema['properties']['cves']['minItems'] == 2
     assert schema['properties']['cves']['maxItems'] == 2
     assert set(schema['properties']['cves']['items']['properties']['id']['enum']) == {first, second}
 
 
 def pipeline_run(state, path, rows, now=NOW):
-    return run_pipeline(state, path, now, load_config(), web=object(), gemini=FakeSummary(),
+    return run_pipeline(state, path, now, load_config(), web=object(), ai=FakeSummary(),
                         source_loader=lambda *args:([], []),
                         github_loader=lambda *args:([], {'name':'GitHub', 'status':'ok','message':'test','count':0}),
                         cve_loader=lambda *args:(deepcopy(rows),status()))
@@ -476,7 +476,7 @@ def test_invalid_selection_is_atomic(bad_picks):
     merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 22)], status(), NOW, new_day)
     apply_cve_selection(day, [pick(3)], NOW, 'curator')
     previous = deepcopy(day['cves'])
-    with pytest.raises(GeminiResponseValidationError):
+    with pytest.raises(OpenAIResponseValidationError):
         apply_cve_selection(day, bad_picks, NOW, 'curator')
     assert day['cves'] == previous
 

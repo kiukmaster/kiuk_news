@@ -37,7 +37,7 @@
     <h2>아직 생성된 보고서가 없습니다</h2>
     <p>첫 수집이 완료되면 날짜별 보고서가 표시됩니다.<br>샘플 뉴스는 포함하지 않았습니다.</p>
     <div class="empty-schedule"><span>06:00</span><span>13:00</span><span>19:00 <small>KST</small></span></div>
-    <details class="setup-hint"><summary>처음 설정 중이신가요?</summary><p>저장소에 GEMINI_API_KEY를 등록하고 Pages의 배포 소스를 GitHub Actions로 지정한 뒤, Actions에서 <strong>Update news &amp; deploy</strong>를 수동 실행하세요. 자세한 절차는 프로젝트의 SETUP.md에 있습니다.</p></details>
+    <details class="setup-hint"><summary>처음 설정 중이신가요?</summary><p>저장소에 OPENAI_API_KEY를 등록하고 Pages의 배포 소스를 GitHub Actions로 지정한 뒤, Actions에서 <strong>Update news &amp; deploy</strong>를 수동 실행하세요. 자세한 절차는 프로젝트의 SETUP.md에 있습니다.</p></details>
   </section>
   {% endif %}
   <div class="notice retention-note"><svg class="icon"><use href="#i-clock"/></svg><p>한국시간 오늘을 포함해 {{ keep_days }}일 보관합니다. 만료된 보고서는 다음 갱신 시 사이트에서 제거됩니다.</p></div>

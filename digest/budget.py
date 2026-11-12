@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .gemini import HOT_CHUNK_SIZE
+from .openai_client import HOT_CHUNK_SIZE
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ def plan_api_budget(remaining_calls: int, current_candidates: int,
     """Bound HOT candidates by summaries that can finish within this run's budget.
 
     Every possible news call may successfully summarize a full batch. Each HOT
-    round reserves three attempts, including the alternate model. Calls left
+    round reserves three attempts on the configured HOT model. Calls left
     over at a HOT group boundary stay reserved so the caller cannot start one
     extra news batch that would invalidate the candidate bound.
 

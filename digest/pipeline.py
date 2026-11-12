@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .common import (ROOT, KST, CRON_SLOTS, CATEGORIES, read_json, write_json, retention_cutoff,
                      text_key, parse_date)
-from .gemini import Gemini, GeminiError, GeminiAuthenticationError, PROMPT_VERSION
+from .openai_client import OpenAIClient, OpenAIError, OpenAIAuthenticationError, PROMPT_VERSION
 from .budget import hot_round_calls, plan_api_budget
 from .network import PublicWeb, FetchError
 from .sources import collect_sources, collect_github, prepare_article, in_news_window, news_window_start
@@ -128,7 +128,7 @@ def repo_cache_key(item: dict, model: str) -> str:
 
 
 def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict:
-    # No full original body or raw Gemini response is published/saved here.
+    # No full original body or raw OpenAI response is published/saved here.
     keys = ('id', 'url', 'source', 'source_id', 'region', 'kind', 'published_at', 'evidence_kind',
             'repo_name', 'stars_today', 'total_stars', 'programming_language', 'observed_at')
     output = {k: item.get(k) for k in keys}
@@ -145,7 +145,7 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
 
 
 def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedule: str = '',
-                 web=None, gemini=None, source_loader=None, github_loader=None, cve_loader=None,
+                 web=None, ai=None, source_loader=None, github_loader=None, cve_loader=None,
                  publication_at: datetime | None = None) -> dict:
     now = now.astimezone(KST)
     repair_slot_dates(state)
@@ -164,7 +164,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     previous_article_ids = set(day['articles']) | set(day.get('latest_articles', {}))
     day['news_window'] = {'start': news_window_start(now).isoformat(), 'end': now.isoformat()}
     limit = min(20, max(1, int(cfg.get('category_daily_limit', 20))))
-    curation_model = cfg.get('curation_model', 'gemini-3.1-flash-lite')
+    curation_model = cfg.get('curation_model', 'gpt-6.1-sol')
     pool = day.setdefault('news_candidates', {})
     # Yesterday's publications remain eligible today, including summaries
     # already cached in seen. This is a publication window, not an arrival day.
@@ -192,7 +192,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     cve_status = None
     cve_summary = {'translated': 0, 'pending': 0, 'error': ''}
     cve_enabled = cfg.get('cve_enabled', False)
-    client = gemini or Gemini(cfg)
+    client = ai or OpenAIClient(cfg)
     fetcher = web or PublicWeb(cfg['user_agent'], cfg['http_timeout_seconds'], cfg['per_host_delay_seconds'])
     sources = read_json(ROOT / 'config/sources.json', [])
     by_source = {x['id']: x for x in sources}
@@ -269,9 +269,9 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     try:
         print(f'[뉴스 선별] 후보 {len(pool)}건 · 분야별 하루 최대 {limit}건 · {curation_model}', flush=True)
         selected = curate_news(day, state['pending'], client, now, curation_model, limit)
-    except GeminiAuthenticationError:
+    except OpenAIAuthenticationError:
         raise
-    except GeminiError as exc:
+    except OpenAIError as exc:
         previous = day.get('news_curation', {})
         preserve = previous.get('status') in ('fresh', 'stale') and capped_articles(day['articles'], limit)
         if not preserve:
@@ -306,9 +306,9 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                 'shortfall_reason_ko': latest['shortfall_reason_ko']}
             print(f'[최신 선정] 후보 {latest["candidate_count"]}건 · '
                   f'최신 {latest["considered_count"]}건 확인 · 대표 {len(latest_selected)}건', flush=True)
-        except GeminiAuthenticationError:
+        except OpenAIAuthenticationError:
             raise
-        except GeminiError as exc:
+        except OpenAIError as exc:
             previous = day.get('latest_curation', {})
             day['latest_articles'] = {ident: row for ident, row in day.get('latest_articles', {}).items()
                                       if latest_eligible(row, now)}
@@ -340,9 +340,9 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
                                   'limit': limit, 'candidate_count': len(cve_pool),
                                   'selected_count': len(day['cves']),
                                   'shortfall_reason_ko': cve_selection['shortfall_reason_ko']}
-        except GeminiAuthenticationError:
+        except OpenAIAuthenticationError:
             raise
-        except GeminiError as exc:
+        except OpenAIError as exc:
             previous = day.get('cve_curation', {})
             preserve = previous.get('status') in ('fresh', 'stale') and len(day['cves']) <= limit
             if not preserve:
@@ -377,12 +377,12 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     if day['news_curation']['status'] == 'unavailable' and pool:
         # A green deployment with an empty report hid an API schema rejection.
         # Preserve candidates for retry and keep the last deployed report.
-        raise GeminiError('뉴스 선별을 완료하지 못해 게시를 중단합니다. ' +
+        raise OpenAIError('뉴스 선별을 완료하지 못해 게시를 중단합니다. ' +
                           next(message for message in day['warnings'] if message.startswith('뉴스 선별 보류:')))
 
     def apply_batch(batch):
         nonlocal new_count
-        print(f'[뉴스 요약] {len(batch)}건 · Gemini 요청 누적 {client.calls}회', flush=True)
+        print(f'[뉴스 요약] {len(batch)}건 · OpenAI 요청 누적 {client.calls}회', flush=True)
         summaries = client.summarize(batch)
         for item in batch:
             summary = summaries[item['id']]
@@ -461,18 +461,18 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             try:
                 apply_batch(batch)
                 batch = []
-            except GeminiAuthenticationError:
+            except OpenAIAuthenticationError:
                 raise
-            except GeminiError as exc:
+            except OpenAIError as exc:
                 day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
                 batch = []
                 break
     if batch and client.remaining >= reserved_calls + 3:
         try:
             apply_batch(batch)
-        except GeminiAuthenticationError:
+        except OpenAIAuthenticationError:
             raise
-        except GeminiError as exc:
+        except OpenAIError as exc:
             day['warnings'].append(str(exc) + ' · 미완료 기사는 다음 실행에서 재시도합니다.')
     # Remove same-title pending copies only AFTER their first summary succeeded.
     completed_titles = {v.get('title_key') for v in state['seen'].values()}
@@ -492,10 +492,10 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             day['hot_shortfall'] = hot['shortfall_reason_ko']
             day['hot_status'] = 'fresh'
             day['hot_at'] = now.isoformat()
-        except GeminiAuthenticationError:
+        except OpenAIAuthenticationError:
             raise
-        except GeminiError as exc:
-            # Never disguise a local ranking as a Gemini selection.
+        except OpenAIError as exc:
+            # Never disguise a local ranking as a OpenAI selection.
             day['hot_status'] = 'stale' if day['hot'] else 'unavailable'
             day['warnings'].append('HOT 재선정 실패: ' + str(exc))
     if cve_enabled:

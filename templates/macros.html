@@ -17,7 +17,7 @@
   <div class="card-content">
     <div class="issue-meta">
       <div class="badges">
-        {% if hot %}<span class="badge hot-badge">{{ '%02d'|format(a.rank) }} · Gemini Pick</span>{% endif %}
+        {% if hot %}<span class="badge hot-badge">{{ '%02d'|format(a.rank) }} · AI Pick</span>{% endif %}
         {% if latest %}<span class="badge">최신 발행</span>{% endif %}
         {% if a.region == 'KR' %}<span class="badge domestic">국내</span>{% endif %}
         {% if a.kind == 'event' %}<span class="badge event-badge">대회·행사</span>{% endif %}
@@ -33,7 +33,7 @@
     <p class="issue-summary">{{ a.summary_ko }}</p>
     {% if hot %}<p class="pick-reason"><span>선정 이유</span>{{ a.reason_ko }}</p>{% endif %}
     {% if not hot and not latest and a.curation %}
-    <p class="pick-reason"><span>Gemini 선정 이유 · 분야 {{ a.curation.rank }}위</span>{{ a.curation.reason_ko }}</p>
+    <p class="pick-reason"><span>AI 선정 이유 · 분야 {{ a.curation.rank }}위</span>{{ a.curation.reason_ko }}</p>
     {% if a.curation.scores %}<p class="small-text">사회적 파급력 {{ a.curation.scores.social_impact }}/5 · 화제성 {{ a.curation.scores.attention }}/5 · 이슈성 {{ a.curation.scores.issue_relevance }}/5</p>{% endif %}
     {% endif %}
     {% if a.kind == 'github' %}<div class="repo-stats">

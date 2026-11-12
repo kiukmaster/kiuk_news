@@ -3,18 +3,18 @@ from copy import deepcopy
 from datetime import timedelta
 
 from digest.common import load_config
-from digest.gemini import GeminiError, GeminiAuthenticationError
+from digest.openai_client import OpenAIError, OpenAIAuthenticationError
 from digest.network import FetchError
 from digest.pipeline import empty_state, run_pipeline
-from tests.test_core import FakeGemini, NOW, article
+from tests.test_core import FakeAI, NOW, article
 import pytest
 
 
 def collect(state, directory, items, now=NOW, client=None):
     cfg = load_config()
     cfg.update(fetch_article_body=False, cve_enabled=False, latest_enabled=True)
-    client = client or FakeGemini()
-    report = run_pipeline(state, directory, now, cfg, web=object(), gemini=client,
+    client = client or FakeAI()
+    report = run_pipeline(state, directory, now, cfg, web=object(), ai=client,
         source_loader=lambda *args: (deepcopy(items), [{'name': 'Offline', 'status': 'ok'}]),
         github_loader=lambda *args: ([], {'name': 'Offline GitHub', 'status': 'ok'}))
     return client, report
@@ -53,10 +53,10 @@ def test_latest_failure_preserves_only_valid_previous_latest_cards(tmp_path):
     collect(state, tmp_path, [article(1)])
     previous = deepcopy(state['days'][NOW.date().isoformat()]['latest_articles'])
 
-    class FailingLatest(FakeGemini):
+    class FailingLatest(FakeAI):
         def request(self, instruction, data, schema, model, **kwargs):
             if set(schema['properties']['picks']['items']['properties']) == {'id', 'related_ids'}:
-                raise GeminiError('Offline latest validation failure')
+                raise OpenAIError('Offline latest validation failure')
             return super().request(instruction, data, schema, model, **kwargs)
 
     collect(state, tmp_path, [article(2, NOW.replace(hour=13))], NOW.replace(hour=13), FailingLatest())
@@ -67,15 +67,15 @@ def test_latest_failure_preserves_only_valid_previous_latest_cards(tmp_path):
 
 
 def test_latest_authentication_failure_stops_without_followup_api_calls(tmp_path):
-    class AuthenticationFailure(FakeGemini):
+    class AuthenticationFailure(FakeAI):
         def request(self, instruction, data, schema, model, **kwargs):
             if set(schema['properties']['picks']['items']['properties']) == {'id', 'related_ids'}:
                 self.calls += 1
-                raise GeminiAuthenticationError()
+                raise OpenAIAuthenticationError()
             return super().request(instruction, data, schema, model, **kwargs)
 
     client = AuthenticationFailure()
-    with pytest.raises(GeminiAuthenticationError):
+    with pytest.raises(OpenAIAuthenticationError):
         collect(empty_state(), tmp_path, [article(1)], client=client)
     assert client.calls == 2 and not client.summarized
 
@@ -107,7 +107,7 @@ def test_body_only_publication_enters_latest_in_same_batch_without_second_fetch(
     monkeypatch.setattr('digest.pipeline.prepare_article', prepare)
     cfg = load_config(); cfg.update(cve_enabled=False, latest_enabled=True, fetch_article_body=True)
     state = empty_state()
-    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=FakeGemini(),
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=FakeAI(),
         source_loader=lambda *args: (important + [undated], [{'status': 'ok'}]),
         github_loader=lambda *args: ([], {'status': 'ok'}))
     day = state['days'][NOW.date().isoformat()]
@@ -129,7 +129,7 @@ def test_failed_metadata_probe_does_not_download_same_body_twice(tmp_path, monke
     monkeypatch.setattr('digest.pipeline.prepare_article', prepare)
     cfg = load_config(); cfg.update(cve_enabled=False, fetch_article_body=True)
     state = empty_state()
-    run_pipeline(state, tmp_path, NOW, cfg, web=object(), gemini=FakeGemini(),
+    run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=FakeAI(),
         source_loader=lambda *args: ([undated], [{'status': 'ok'}]),
         github_loader=lambda *args: ([], {'status': 'ok'}))
     assert fetched == [undated['id']]

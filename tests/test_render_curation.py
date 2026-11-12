@@ -1,10 +1,12 @@
 """Offline public rendering contracts for saved AI curation results."""
+import shutil
 from copy import deepcopy
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 import pytest
 
+from digest import render as renderer
 from digest.common import CATEGORIES, KST, load_config, read_json
 from digest.cves import normalize_cve
 from digest.pipeline import empty_state, new_day
@@ -57,6 +59,41 @@ def render(day, tmp_path):
     state['days'][day['date']] = day
     render_site(state, tmp_path, NOW, load_config())
     return BeautifulSoup((tmp_path / 'reports' / (day['date'] + '.html')).read_text(encoding='utf-8'), 'html.parser')
+
+
+def test_asset_urls_change_with_content_and_keep_page_prefixes(tmp_path, monkeypatch):
+    fixture_root = tmp_path / 'source'
+    for directory in ('assets', 'templates'):
+        shutil.copytree(renderer.ROOT / directory, fixture_root / directory)
+    monkeypatch.setattr(renderer, 'ROOT', fixture_root)
+    output = tmp_path / 'public'
+    day = new_day(NOW.date().isoformat())
+    assets = ('style.css', 'app.js')
+
+    def asset_urls():
+        render(day, output)
+        urls = {}
+        for page, prefix in [('index.html', './'), ('404.html', './'),
+                             ('reports/' + day['date'] + '.html', '../')]:
+            soup = BeautifulSoup((output / page).read_text(encoding='utf-8'), 'html.parser')
+            urls[page] = (soup.select_one('link[rel="stylesheet"]')['href'],
+                          soup.select_one('script[src]')['src'])
+            for name, url in zip(assets, urls[page]):
+                assert url.startswith(prefix + 'assets/' + name + '?v=')
+                assert url.split('?v=', 1)[1]
+        return urls
+
+    before = asset_urls()
+    assert asset_urls() == before
+    for index, name in enumerate(assets):
+        asset = fixture_root / 'assets' / name
+        asset.write_bytes(asset.read_bytes() + b'\n/* asset cache regression */\n')
+        after = asset_urls()
+        for page in before:
+            assert after[page][index] != before[page][index]
+            assert after[page][1 - index] == before[page][1 - index]
+        assert (output / 'assets' / name).read_bytes() == asset.read_bytes()
+        before = after
 
 
 def test_saved_ranks_override_dates_stars_and_cvss_without_changing_state():

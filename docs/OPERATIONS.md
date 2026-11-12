@@ -100,7 +100,7 @@ HOT 호출 예산은 이미 요약한 기사와 남은 호출 횟수로 이번 �
 
 `OPENAI_API_KEY`는 환경변수에서 읽고 OpenAI Responses API의 `Authorization: Bearer` 헤더에만 넣습니다. 클라이언트 JS, 페이지 JSON, Git 상태에는 넣지 않습니다. 수집용 HTTP 세션에는 API 키를 전달하지 않습니다. 전체 인증 헤더나 모델 원시 응답을 로그로 출력하지 않습니다.
 
-요청 로그에는 최종 `model`과 `reasoning.effort`만 표시해 환경변수에 남은 모델 설정을 확인할 수 있게 합니다. 요청 본문, 프롬프트, 응답 원문과 키를 출력하지 않습니다. 저장소 Variables의 `OPENAI_MODEL`과 `OPENAI_HOT_MODEL`도 `gpt-6-luna`로 맞춰야 설정 파일과 같은 모델을 사용합니다.
+요청 로그에는 최종 `model`, `reasoning.effort`, 호출 번호와 시도 번호를 표시합니다. `api_seconds`는 실제 API 응답 대기 시간이며, 호출 간격과 재시도 대기는 `wait_seconds`로 구분합니다. HTTP 상태와 `ReadTimeout` 같은 예외 종류로 지연 지점을 확인할 수 있습니다. 요청 본문, 프롬프트, 응답 원문과 키를 출력하지 않습니다. 저장소 Variables의 `OPENAI_MODEL`과 `OPENAI_HOT_MODEL`도 `gpt-6-luna`로 맞춰야 설정 파일과 같은 모델을 사용합니다.
 
 기사 본문 속 명령을 따르지 않도록 시스템 지시와 외부 데이터 영역을 분리합니다. 모델에는 외부 도구를 제공하지 않습니다. 결과 JSON 스키마와 기사 ID, 길이, 한국어 요약을 검증하고 Jinja HTML 자동 이스케이프를 사용합니다. 모델이 HTML이나 JavaScript를 반환하더라도 코드로 실행하지 않습니다.
 

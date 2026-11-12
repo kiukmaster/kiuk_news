@@ -53,7 +53,7 @@ def test_three_batches_share_daily_quota_and_promote_new_issues(tmp_path):
     run(state, tmp_path, [], NOW.replace(hour=19))
     assert len(day['articles']) == 40
     assert all(pick['id'] in day['articles'] for pick in day['hot'])
-    assert day['news_curation']['model'] == 'gpt-6-luna'
+    assert day['news_curation']['model'] == 'gpt-6.1-sol'
 
 
 def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):

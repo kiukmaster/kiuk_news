@@ -284,6 +284,7 @@ def main():
                     assert page.url.endswith('#sec-latest')
                     page.wait_for_timeout(80)
                     assert page.locator('#sec-latest').bounding_box()['y'] >= 60
+                    assert page.locator('.nav-tab[href="#sec-latest"]').get_attribute('aria-current') == 'location'
                 if args.in_memory:
                     page.locator('#sec-security').evaluate('e => e.scrollIntoView()')
                 else:

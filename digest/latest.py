@@ -8,7 +8,7 @@ from jsonschema import ValidationError, validate
 from .common import KST, canonical_url, parse_date, text_key
 from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 
-LATEST_MODEL = 'gpt-6-luna'
+LATEST_MODEL = 'gpt-6.1-sol'
 LATEST_ATTEMPTS = 2
 
 

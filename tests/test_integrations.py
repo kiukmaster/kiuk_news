@@ -63,7 +63,7 @@ def test_responses_all_roles_use_high_reasoning_with_explicit_output_bound(monke
     payload = client.session.post.call_args.kwargs['json']
     assert payload['max_output_tokens'] == 32768
     assert payload['reasoning'] == {'effort': 'high'}
-    assert payload['model'] == {'summary_model': 'gpt-6-luna', 'hot_model': 'gpt-6-luna'}[model_role]
+    assert payload['model'] == {'summary_model': 'gpt-6.1-sol', 'hot_model': 'gpt-6.1-sol'}[model_role]
     assert 'generation_config' not in payload and 'temperature' not in payload
 
 
@@ -91,9 +91,9 @@ def test_api_wait_logging_separates_timeout_backoff_and_success(monkeypatch, cap
     assert client.request('private-instruction', {'body': 'private-article-body'},
                           {'type': 'object'}, client.summary_model, attempts=2) == {'ok': True}
     output = capsys.readouterr().out
-    assert '[OpenAI API 대기 실패] call=1 model=gpt-6-luna reasoning.effort=high attempt=1/2 api_seconds=300.0 error=ReadTimeout' in output
-    assert '[OpenAI 응답/연결 재시도 대기] call=1 model=gpt-6-luna reasoning.effort=high attempt=1/2 error=ReadTimeout wait_seconds=5.0' in output
-    assert '[OpenAI API 응답] call=2 model=gpt-6-luna reasoning.effort=high attempt=2/2 api_seconds=2.0 status=200' in output
+    assert '[OpenAI API 대기 실패] call=1 model=gpt-6.1-sol reasoning.effort=high attempt=1/2 api_seconds=300.0 error=ReadTimeout' in output
+    assert '[OpenAI 응답/연결 재시도 대기] call=1 model=gpt-6.1-sol reasoning.effort=high attempt=1/2 error=ReadTimeout wait_seconds=5.0' in output
+    assert '[OpenAI API 응답] call=2 model=gpt-6.1-sol reasoning.effort=high attempt=2/2 api_seconds=2.0 status=200' in output
     assert sleeps == [5] and client.calls == 2
     assert client.key not in output and 'private-' not in output
     assert '"ok"' not in output

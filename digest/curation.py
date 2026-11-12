@@ -17,7 +17,7 @@ from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 # stay above the maximum 200 news representatives so every round shrinks.
 CURATION_CHUNK_SIZE = 400
 CURATION_ATTEMPTS = 2
-CURATION_MODEL = 'gpt-6-luna'
+CURATION_MODEL = 'gpt-6.1-sol'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
 NEWS_TOPICS = ('ai', 'security', 'tech')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')

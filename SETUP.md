@@ -27,7 +27,7 @@ API 설정은 2026년 11월 12일 확인한 OpenAI 공식 문서와 이 프로�
 
 1. [OpenAI API Keys](https://platform.openai.com/api-keys)에 접속하고 로그인합니다.
 2. 사용할 프로젝트를 선택하고 API 키를 생성합니다. 용도를 알아볼 수 있도록 이름을 `ai-security-digest`로 지정해도 됩니다.
-3. 해당 프로젝트에서 `gpt-6-luna`와 Responses API를 사용할 수 있는지 확인합니다.
+3. 해당 프로젝트에서 `gpt-6.1-sol`와 Responses API를 사용할 수 있는지 확인합니다.
 4. 생성한 키를 복사해 아래 GitHub Secret에 등록합니다. 키 원문은 채팅이나 프로젝트 파일에 남기지 않습니다.
 
 키 생성 권한 오류가 나면 프로젝트 소유자나 조직 관리자에게 문의하세요. 이미 쓰고 있는 다른 서비스의 키 설정을 임의로 바꾸지 말고 이 프로젝트용 키를 별도로 만드는 편이 관리하기 쉽습니다.
@@ -149,9 +149,9 @@ env:
 
 | 역할 | 모델 |
 |---|---|
-| 번역, 요약, 분류 | `gpt-6-luna` |
-| HOT 선정 | `gpt-6-luna` |
-| 뉴스, 최신, CVE 선별 | `gpt-6-luna` |
+| 번역, 요약, 분류 | `gpt-6.1-sol` |
+| HOT 선정 | `gpt-6.1-sol` |
+| 뉴스, 최신, CVE 선별 | `gpt-6.1-sol` |
 
 모든 신규 요청은 `config/settings.json`의 `reasoning_effort: high`를 사용합니다. `high`는 응답 시간과 사용 토큰을 늘릴 수 있으며 실제 지연과 비용은 실행 결과에서 확인해야 합니다.
 
@@ -159,12 +159,12 @@ env:
 
 | Name | Value 예시 |
 |---|---|
-| `OPENAI_MODEL` | `gpt-6-luna` |
-| `OPENAI_HOT_MODEL` | `gpt-6-luna` |
+| `OPENAI_MODEL` | `gpt-6.1-sol` |
+| `OPENAI_HOT_MODEL` | `gpt-6.1-sol` |
 
-모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Responses API와 엄격한 구조화 JSON 출력**을 지원하는 `gpt-6-luna`를 사용합니다. 선별 모델도 `config/settings.json`의 `curation_model`을 `gpt-6-luna`로 유지합니다. 요약, 선별, HOT의 추론 강도는 같은 `reasoning_effort` 설정을 따릅니다.
+모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Responses API와 엄격한 구조화 JSON 출력**을 지원하는 `gpt-6.1-sol`를 사용합니다. 선별 모델도 `config/settings.json`의 `curation_model`을 `gpt-6.1-sol`로 유지합니다. 요약, 선별, HOT의 추론 강도는 같은 `reasoning_effort` 설정을 따릅니다.
 
-참고: [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [구조화된 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Responses API](https://developers.openai.com/api/docs/guides/migrate-to-responses).
+참고: [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [구조화된 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Responses API](https://developers.openai.com/api/docs/guides/migrate-to-responses).
 
 ## 6. Actions 권한 확인하기
 

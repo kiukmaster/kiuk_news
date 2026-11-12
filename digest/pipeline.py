@@ -166,7 +166,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     previous_article_ids = set(day['articles']) | set(day.get('latest_articles', {}))
     day['news_window'] = {'start': news_window_start(now).isoformat(), 'end': now.isoformat()}
     limit = min(40, max(1, int(cfg.get('category_daily_limit', 40))))
-    curation_model = cfg.get('curation_model', 'gpt-6-luna')
+    curation_model = cfg.get('curation_model', 'gpt-6.1-sol')
     pool = day.setdefault('news_candidates', {})
     # Yesterday's publications remain eligible today, including summaries
     # already cached in seen. This is a publication window, not an arrival day.

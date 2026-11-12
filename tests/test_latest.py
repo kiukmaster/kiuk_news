@@ -76,7 +76,7 @@ def test_only_forty_newest_are_considered_not_older_high_importance_rows():
     assert [row['id'] for row in data['candidates']] == [str(index) for index in range(40)]
     assert '점수나 순위는 사용하지 말라' in instruction
     assert all('scores' not in row for row in data['candidates'])
-    assert model == 'gpt-6-luna'
+    assert model == 'gpt-6.1-sol'
     assert options['attempts'] == 2
     assert options['max_output_tokens'] == 8192
     assert 'reasoning_effort' not in options

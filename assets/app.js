@@ -100,6 +100,7 @@
   const search = document.getElementById('issue-search');
   const issueCards = [...document.querySelectorAll('[data-issue-card]')];
   const searchable = issueCards.map(card => ({ card, text: card.textContent.toLocaleLowerCase('ko-KR') }));
+  const detailsBeforeSearch = new Map();
   const cveMore = document.querySelector('[data-cve-more]');
   let cveLimit = 20;
   function filterIssues() {
@@ -111,12 +112,21 @@
       if (isCve && matches) cveCount += 1;
       // Search always covers ALL CVEs, including cards not yet expanded.
       card.hidden = !matches || (isCve && !query && cveCount > cveLimit);
+      card.querySelectorAll('details').forEach(details => {
+        if (query) {
+          if (!detailsBeforeSearch.has(details)) detailsBeforeSearch.set(details, details.open);
+          details.open = detailsBeforeSearch.get(details) || (!card.hidden && details.textContent.toLocaleLowerCase('ko-KR').includes(query));
+        } else if (detailsBeforeSearch.has(details)) {
+          details.open = detailsBeforeSearch.get(details);
+          detailsBeforeSearch.delete(details);
+        }
+      });
       count += Number(!card.hidden);
     }
     if (cveMore) {
       const remaining = Math.max(0, cveCount - cveLimit);
       cveMore.hidden = !!query || remaining === 0;
-      cveMore.textContent = `다음 CVE ${Math.min(20, remaining)}건 보기 · 남은 ${remaining}건`;
+      cveMore.textContent = `다음 CVE ${Math.min(20, remaining)}건 보기 / 남은 ${remaining}건`;
     }
     document.querySelectorAll('[data-section]').forEach(section => {
       const hasVisible = [...section.querySelectorAll('[data-issue-card]')].some(card => !card.hidden);

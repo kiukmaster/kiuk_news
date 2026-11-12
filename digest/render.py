@@ -35,13 +35,16 @@ def render_context(day: dict, today: str) -> dict:
         section.sort(key=curation_order)
     # Historical reports use their own collection time when rebuilt later.
     latest_meta = day.get('latest_curation') or {}
+    latest_limit = latest_meta.get('limit', 20)
+    if type(latest_limit) is not int or not 1 <= latest_limit <= 40:
+        latest_limit = 20
     as_of = parse_date(latest_meta.get('at') or day.get('updated_at'))
     if as_of is None:
         as_of = datetime.fromisoformat(day['date']).replace(hour=23, minute=59, second=59, tzinfo=KST)
     latest_source = day.get('latest_articles', day['articles'])
     out['latest_cards'] = sorted(
         [row for row in latest_source.values() if latest_eligible(row, as_of)],
-        key=lambda row: (-parse_date(row['published_at']).timestamp(), row['id']))[:20]
+        key=lambda row: (-parse_date(row['published_at']).timestamp(), row['id']))[:latest_limit]
     out['latest_count'] = len(out['latest_cards'])
     out['latest_curation'] = latest_meta
     out['latest_as_of'] = as_of.isoformat()

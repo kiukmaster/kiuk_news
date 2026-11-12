@@ -40,20 +40,20 @@ class WrongFixedCategoryAI(FakeAI):
 
 def test_three_batches_share_daily_quota_and_promote_new_issues(tmp_path):
     state = empty_state()
-    original = [article(index) for index in range(40)]
+    original = [article(index) for index in range(80)]
     client = run(state, tmp_path, original)
-    assert len(client.summarized) == 20
-    assert len(state['days'][NOW.date().isoformat()]['articles']) == 20
+    assert len(client.summarized) == 40
+    assert len(state['days'][NOW.date().isoformat()]['articles']) == 40
     assert not state['pending']  # Unselected candidates are not summary failures.
     later = article(99, NOW.replace(hour=13))
     client = run(state, tmp_path, [later], NOW.replace(hour=13), client=LatestFirstAI())
     day = state['days'][NOW.date().isoformat()]
-    assert len(day['articles']) == 20 and later['id'] in day['articles']
-    assert len(client.summarized) <= 20
+    assert len(day['articles']) == 40 and later['id'] in day['articles']
+    assert len(client.summarized) <= 40
     run(state, tmp_path, [], NOW.replace(hour=19))
-    assert len(day['articles']) == 20
+    assert len(day['articles']) == 40
     assert all(pick['id'] in day['articles'] for pick in day['hot'])
-    assert day['news_curation']['model'] == 'gpt-6.1-sol'
+    assert day['news_curation']['model'] == 'gpt-6-luna'
 
 
 def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
@@ -61,7 +61,7 @@ def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
     items = []
     for category, kind in [('ai', 'article'), ('security', 'article'), ('tech', 'paper'),
                            ('event', 'event'), ('github', 'github')]:
-        for index in range(25):
+        for index in range(45):
             row = article(len(items))
             row.update(category_hint=category, kind=kind, observed_at=NOW.isoformat())
             items.append(row)
@@ -75,18 +75,18 @@ def test_fetch_and_summary_only_selected_representatives(tmp_path, monkeypatch):
     cfg.update(cve_enabled=False, latest_enabled=False)
     client = FakeAI()
     run_pipeline(state, tmp_path, NOW, cfg, web=object(), ai=client,
-                 source_loader=lambda *args: (items[:-25], []),
-                 github_loader=lambda *args: (items[-25:], {'status': 'ok'}))
+                 source_loader=lambda *args: (items[:-45], []),
+                 github_loader=lambda *args: (items[-45:], {'status': 'ok'}))
     day = state['days'][NOW.date().isoformat()]
     assert Counter(row['category'] for row in day['articles'].values()) == dict.fromkeys(
-        ['ai', 'security', 'tech', 'event', 'github'], 20)
-    assert len(fetched) == 80 and len(client.summarized) == 100
+        ['ai', 'security', 'tech', 'event', 'github'], 40)
+    assert len(fetched) == 160 and len(client.summarized) == 200
     assert not state['pending']
     assert client.calls <= cfg['max_api_calls_per_run']
 
 
 def test_fixed_kind_category_correction_publishes_fresh_scheduled_report(tmp_path, monkeypatch):
-    """100 raw model picks become the first 20 papers and 20 GitHub items."""
+    """100 raw model picks become the first 40 papers and 40 GitHub items."""
     state = empty_state()
     papers = [article(index) for index in range(50)]
     for row in papers:
@@ -105,17 +105,17 @@ def test_fixed_kind_category_correction_publishes_fresh_scheduled_report(tmp_pat
                           source_loader=lambda *args: (papers, [{'status': 'ok'}]),
                           github_loader=lambda *args: (repos, {'status': 'ok'}))
     day = state['days'][NOW.date().isoformat()]
-    expected = {row['id'] for row in papers[:20] + repos[:20]}
+    expected = {row['id'] for row in papers[:40] + repos[:40]}
     assert set(day['articles']) == expected
     assert Counter(row['category'] for row in day['articles'].values()) == {
-        'tech': 20, 'github': 20}
+        'tech': 40, 'github': 40}
     assert all(row['curation']['category'] == row['category'] for row in day['articles'].values())
     assert set(client.summarized) == expected
     assert day['news_curation']['status'] == 'fresh'
     assert day['hot_status'] == 'fresh' and len(day['hot']) == 10
     assert all(pick['id'] in expected for pick in day['hot'])
     assert day['slots']['06:00']['status'] == 'ok'
-    assert report['new_count'] == 40 and not report['warnings']
+    assert report['new_count'] == 80 and not report['warnings']
 
 
 def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp_path, monkeypatch):
@@ -150,17 +150,17 @@ def test_reselection_repairs_cached_card_categories_and_keeps_hot_references(tmp
     assert all(pick['id'] in day['articles'] for pick in day['hot'])
 
 
-def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_path):
+def test_invalid_model_id_after_first_forty_still_blocks_empty_publication(tmp_path):
     class InvalidLateId(WrongFixedCategoryAI):
         def request(self, instruction, data, schema, model, validator=None, **kwargs):
             result = super().request(instruction, data, schema, model, validator=None,
                                      **kwargs)
-            result['picks'][20]['id'] = 'not-an-input-id'
+            result['picks'][40]['id'] = 'not-an-input-id'
             if validator:
                 validator(result)
             return result
 
-    papers = [article(index) for index in range(25)]
+    papers = [article(index) for index in range(45)]
     for row in papers:
         row.update(kind='paper', category_hint='tech')
     state = empty_state()
@@ -173,7 +173,7 @@ def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_
 
 def test_reselection_failure_preserves_previous_capped_result(tmp_path):
     state = empty_state()
-    run(state, tmp_path, [article(index) for index in range(25)])
+    run(state, tmp_path, [article(index) for index in range(45)])
     day = state['days'][NOW.date().isoformat()]
     day['news_curation']['model'] = 'previous-provider'
     previous = deepcopy(day['articles'])
@@ -194,7 +194,7 @@ def test_reselection_failure_preserves_previous_capped_result(tmp_path):
 
 def test_promoted_exclusions_keep_pending_when_summary_fails(tmp_path):
     state = empty_state()
-    run(state, tmp_path, [article(index) for index in range(25)])
+    run(state, tmp_path, [article(index) for index in range(45)])
     excluded = {ident for ident, record in state['seen'].items() if record.get('excluded_by_curation')}
     assert len(excluded) == 5
     run(state, tmp_path, [], NOW.replace(hour=13), client=LatestFirstAI(fail_summary=True))
@@ -216,7 +216,7 @@ def test_expensive_legacy_pool_failure_is_retriable_and_never_exceeds_cap(tmp_pa
     run(state, tmp_path, [article(1)])
     day = state['days'][NOW.date().isoformat()]
     template = next(iter(day['articles'].values()))
-    for index in range(25):
+    for index in range(45):
         row = {**template, 'id': f'legacy-{index}', 'title_ko': f'독립적인 기존 보안 연구 테스트 {index}번'}
         day['articles'][row['id']] = row
     day.pop('news_curation', None)
@@ -228,5 +228,5 @@ def test_expensive_legacy_pool_failure_is_retriable_and_never_exceeds_cap(tmp_pa
     with pytest.raises(OpenAIError, match='게시를 중단'):
         run(state, tmp_path, [], client=FailingCuration())
     assert day['articles'] == {} and day['hot'] == []
-    assert len(day['news_candidates']) == 26
+    assert len(day['news_candidates']) == 46
     assert day['news_curation']['status'] == 'unavailable'

@@ -133,6 +133,8 @@ def public_article(item: dict, summary: dict, now: datetime, model: str) -> dict
             'repo_name', 'stars_today', 'total_stars', 'programming_language', 'observed_at')
     output = {k: item.get(k) for k in keys}
     output.update({k: summary[k] for k in ('category', 'language', 'title_ko', 'summary_ko')})
+    if 'background_ko' in summary:
+        output['background_ko'] = summary['background_ko']
     source_category = fixed_category(item)
     if source_category is not None:
         output['category'] = source_category
@@ -163,8 +165,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
     day['warnings'] = []
     previous_article_ids = set(day['articles']) | set(day.get('latest_articles', {}))
     day['news_window'] = {'start': news_window_start(now).isoformat(), 'end': now.isoformat()}
-    limit = min(20, max(1, int(cfg.get('category_daily_limit', 20))))
-    curation_model = cfg.get('curation_model', 'gpt-6.1-sol')
+    limit = min(40, max(1, int(cfg.get('category_daily_limit', 40))))
+    curation_model = cfg.get('curation_model', 'gpt-6-luna')
     pool = day.setdefault('news_candidates', {})
     # Yesterday's publications remain eligible today, including summaries
     # already cached in seen. This is a publication window, not an arrival day.
@@ -284,7 +286,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
 
     latest_selected = {}
     if cfg.get('latest_enabled', True):
-        latest_limit = min(20, max(1, int(cfg.get('latest_daily_limit', 20))))
+        latest_limit = min(40, max(1, int(cfg.get('latest_daily_limit', 40))))
         try:
             latest = select_latest_candidates(client, list(pool.values()), now,
                                                limit=latest_limit, model=curation_model)
@@ -507,7 +509,7 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             day['warnings'].append('CVE 요약 보류: ' + cve_summary['error'])
         if cve_summary['pending']:
             day['warnings'].append(f"선정 CVE {cve_summary['pending']}건은 한국어 요약 대기입니다. 점수와 원문 설명은 표시합니다.")
-    failed_sources = sum(x['status'] != 'ok' for x in day['sources'])
+    failed_sources = sum(x['status'] not in ('ok', 'disabled') for x in day['sources'])
     if failed_sources:
         day['warnings'].append(f'{failed_sources}개 수집원이 응답하지 않거나 수집을 제한했습니다. 수집 상태를 확인하세요.')
     day['pending_count'] = len(state['pending'])

@@ -52,7 +52,7 @@ class FakeAI:
         for row in data['candidates']:
             category = {'github': 'github', 'event': 'event', 'paper': 'tech'}.get(
                 row.get('kind'), row.get('category_hint') or 'ai')
-            if counts.get(category, 0) >= 20:
+            if counts.get(category, 0) >= 40:
                 continue
             counts[category] = counts.get(category, 0) + 1
             picks.append({'id': row['id'], 'category': category if category in ('ai', 'security', 'tech') else 'tech',
@@ -69,7 +69,8 @@ class FakeAI:
             raise OpenAIError('테스트용 요약 실패')
         self.summarized.extend(x['id'] for x in items)
         return {x['id']: {'id': x['id'], 'relevant': True, 'language': 'ko', 'category': x['category_hint'],
-                'title_ko': x['title_original'], 'summary_ko': '레이아웃과 누적 처리를 확인하는 테스트용 요약입니다. 실제 기사가 아닙니다.'}
+                'title_ko': x['title_original'], 'summary_ko': '레이아웃과 누적 처리를 확인하는 테스트용 요약입니다. 실제 기사가 아닙니다.',
+                'background_ko': ''}
                 for x in items}
 
     def select_hot(self, items):
@@ -227,7 +228,7 @@ def test_event_card_has_own_section(tmp_path):
     output = tmp_path / 'site'
     render_site(state, output, NOW, load_config())
     html = BeautifulSoup((output / 'reports' / (day['date'] + '.html')).read_text(encoding='utf-8'), 'html.parser')
-    assert html.select_one('#sec-event .issue-card .event-badge').get_text(strip=True) == '대회·행사'
+    assert html.select_one('#sec-event .issue-card .event-badge').get_text(strip=True) == '대회/행사'
     assert not html.select('#sec-tech .issue-card')
 
 def test_manual_not_fake_scheduled_completion(tmp_path):

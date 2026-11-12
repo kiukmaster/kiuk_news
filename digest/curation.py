@@ -14,10 +14,10 @@ from jsonschema import ValidationError, validate
 from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 
 # Leave room for the structured selection and the model's thinking. This must
-# stay above the maximum 100 news representatives so every round shrinks.
-CURATION_CHUNK_SIZE = 200
+# stay above the maximum 200 news representatives so every round shrinks.
+CURATION_CHUNK_SIZE = 400
 CURATION_ATTEMPTS = 2
-CURATION_MODEL = 'gpt-6.1-sol'
+CURATION_MODEL = 'gpt-6-luna'
 NEWS_CATEGORIES = ('ai', 'security', 'tech', 'event', 'github')
 NEWS_TOPICS = ('ai', 'security', 'tech')
 SCORE_KEYS = ('social_impact', 'attention', 'issue_relevance')
@@ -31,11 +31,11 @@ def fixed_category(candidate: dict) -> str | None:
 def _check_options(kind: str, limit: int) -> None:
     if kind not in ('news', 'cve'):
         raise ValueError('Curation kind must be news or cve')
-    if type(limit) is not int or not 1 <= limit <= 20:
-        raise ValueError('Daily curation limit must be between 1 and 20')
+    if type(limit) is not int or not 1 <= limit <= 40:
+        raise ValueError('Daily curation limit must be between 1 and 40')
 
 
-def curation_max_calls(candidate_count: int, kind: str = 'news', limit: int = 20) -> int:
+def curation_max_calls(candidate_count: int, kind: str = 'news', limit: int = 40) -> int:
     """Physical call upper bound, including both attempts in every round."""
     _check_options(kind, limit)
     if type(candidate_count) is not int or candidate_count < 0:
@@ -45,7 +45,10 @@ def curation_max_calls(candidate_count: int, kind: str = 'news', limit: int = 20
     while count > CURATION_CHUNK_SIZE:
         full, tail = divmod(count, CURATION_CHUNK_SIZE)
         rounds += full + bool(tail)
-        count = full * capacity + min(tail, capacity)
+        next_count = full * capacity + min(tail, capacity)
+        if next_count >= count:
+            raise ValueError('Curation rounds must reduce the candidate count')
+        count = next_count
     return (rounds + bool(count)) * CURATION_ATTEMPTS
 
 
@@ -248,7 +251,7 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
             '출력 category에 event 또는 github를 반환하지 말라. '
             'fixed_category는 코드가 적용할 최종 보고서 분야이며 출력 category가 아니다. '
             'kind=paper는 최종 tech, kind=github는 최종 github, kind=event는 최종 event로 코드가 복원한다. '
-            '이 고정 분야를 기준으로 20건 상한을 판단하며 AI 논문도 최종 tech 상한에 포함한다. '
+            f'이 고정 분야를 기준으로 {limit}건 상한을 판단하며 AI 논문도 최종 tech 상한에 포함한다. '
             '모든 출력 category는 후보별 allowed_categories와 응답 스키마의 세 주제만 사용하라. '
             '대학생·청년이 참여 가능한 국내 AI·보안·SW·데이터 해커톤·대회·행사 모집을 포함하라. '
             'as_of는 한국시간 평가 기준 시각이다. 그 시각과 공고 근거로 접수 마감이 확인된 행사는 제외하라. '
@@ -269,7 +272,7 @@ def _instruction(kind: str, limit: int, preliminary: bool) -> str:
 
 
 def curate_candidates(client, candidates: list[dict], kind: str = 'news',
-                      model: str = CURATION_MODEL, limit: int = 20, as_of: str = '') -> dict:
+                      model: str = CURATION_MODEL, limit: int = 40, as_of: str = '') -> dict:
     """Return a validated daily ranking and transitive semantic duplicate IDs.
 
     Reserve the whole tournament before its first call. All requests share the
@@ -295,7 +298,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
             _schema(kind, limit, topic_only=True), model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _normalize_selection(result, group, kind, limit),
-            max_output_tokens=32768, reasoning_effort='high')
+            max_output_tokens=32768)
         # Defensively validate lightweight clients too, then transform a copy.
         normalized = _normalize_selection(result, group, kind, limit)
         by_id = {candidate['id']: candidate for candidate in group}
@@ -325,6 +328,8 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
             for pick in result['picks']:
                 grouped[pick['id']] = pick['related_ids']
                 next_round.append(originals[pick['id']])
+        if len(next_round) >= len(finalists):
+            raise OpenAIResponseValidationError('중간 선별 후보 수가 줄지 않았습니다')
         finalists = next_round
         if not finalists:
             return {'picks': [], 'shortfall_reason_ko': ' '.join(dict.fromkeys(empty_reasons))[:500]}

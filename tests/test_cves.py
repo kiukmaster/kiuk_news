@@ -62,14 +62,15 @@ class FakeSummary:
         if self.broken:
             raise OpenAIError('검증용 실패')
         if 'candidates' in data:
-            limit = 20
+            limit = 40
             result = {'picks': [{'id': row['id'],
                                 'scores': {'social_impact': 3, 'attention': 3, 'issue_relevance': 3},
                                 'reason_ko': '테스트용 선정 이유입니다.', 'related_ids': []}
                                for row in data['candidates'][:limit]],
                       'shortfall_reason_ko': ''}
         else:
-            result = {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.'}
+            result = {'cves': [{'id': row['id'], 'summary_ko': '실제 취약점이 아닌 테스트용 한국어 설명입니다.',
+                               'background_ko': ''}
                                for row in data['cves']]}
         if validator:
             validator(result)
@@ -281,7 +282,8 @@ def test_duplicate_cve_response_retried_before_checkpoint(monkeypatch):
     first, second = list(day['cves'])
 
     def reply(ids):
-        result = {'cves': [{'id': ident, 'summary_ko': '테스트 서버의 서비스 거부 취약점 설명입니다.'}
+        result = {'cves': [{'id': ident, 'summary_ko': '테스트 서버의 서비스 거부 취약점 설명입니다.',
+                           'background_ko': ''}
                            for ident in ids]}
         return Mock(status_code=200, json=Mock(return_value={
             'status': 'completed', 'output': [{'type': 'message', 'content': [
@@ -426,18 +428,18 @@ def test_raw_pool_is_separate_and_selected_card_is_canonical():
     assert day['cve_candidates'][card['id']]['cvss']['score'] == 7.5
 
 
-def test_large_duplicate_group_keeps_all_canonical_links_with_twenty_representatives():
+def test_large_duplicate_group_keeps_all_canonical_links_with_forty_representatives():
     state, day = empty_state(), new_day('2026-09-22')
-    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 172)],
+    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 192)],
                status(), NOW, new_day)
-    picks = [pick(1, range(2, 152)), *[pick(i) for i in range(152, 171)]]
+    picks = [pick(1, range(2, 152)), *[pick(i) for i in range(152, 191)]]
     apply_cve_selection(day, picks, NOW, 'curator')
     card = day['cves'][pick(1)['id']]
-    assert len(day['cves']) == 20
+    assert len(day['cves']) == 40
     assert len(card['related_ids']) == len(card['related_cves']) == 150
     assert card['related_ids'] == pick(1, range(2, 152))['related_ids']
     assert all(row['url'].endswith(row['id']) for row in card['related_cves'])
-    assert len(day['cve_candidates']) == 171
+    assert len(day['cve_candidates']) == 191
 
 
 def test_legacy_migration_and_reselection_reuse_original_summary():
@@ -473,19 +475,23 @@ def test_selected_description_change_invalidates_summary_but_score_change_does_n
     state, day = empty_state(), new_day('2026-09-22')
     original = normalize_cve(raw(), NOW)
     original['summary_ko'] = '캐시된 한국어 요약입니다.'
+    original['background_ko'] = '검증되지 않은 입력 처리 때문에 발생했습니다.'
     merge_cves(state, day, [original], status(), NOW, new_day)
     apply_cve_selection(day, [pick(1)], NOW, 'curator')
     merge_cves(state, day, [normalize_cve(raw(score=9.5), NOW)], status(), NOW, new_day)
     assert day['cves'][original['id']]['summary_ko'] == original['summary_ko']
+    assert day['cves'][original['id']]['background_ko'] == original['background_ko']
     assert day['cves'][original['id']]['curation']['stale'] is True
     changed = raw(); changed['descriptions'][0]['value'] += ' New evidence.'
     merge_cves(state, day, [normalize_cve(changed, NOW)], status(), NOW, new_day)
     assert day['cves'][original['id']]['summary_ko'] == ''
     assert day['cve_candidates'][original['id']]['summary_ko'] == ''
+    assert not day['cves'][original['id']].get('background_ko')
+    assert not day['cve_candidates'][original['id']].get('background_ko')
 
 
 @pytest.mark.parametrize('bad_picks', [
-    [pick(i) for i in range(1, 22)],
+    [pick(i) for i in range(1, 42)],
     [pick(99)], [pick(1), pick(1)], [pick(1, [2, 2])],
     [pick(1, [2]), pick(2)], [pick(1), pick(2, [1])],
     [{**pick(1), 'scores': {'social_impact': True, 'attention': 3, 'issue_relevance': 4}}],
@@ -494,7 +500,7 @@ def test_selected_description_change_invalidates_summary_but_score_change_does_n
 ])
 def test_invalid_selection_is_atomic(bad_picks):
     state, day = empty_state(), new_day('2026-09-22')
-    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 22)], status(), NOW, new_day)
+    merge_cves(state, day, [normalize_cve(raw(i), NOW) for i in range(1, 42)], status(), NOW, new_day)
     apply_cve_selection(day, [pick(3)], NOW, 'curator')
     previous = deepcopy(day['cves'])
     with pytest.raises(OpenAIResponseValidationError):

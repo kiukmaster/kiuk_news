@@ -49,7 +49,8 @@
     "category": "tech",
     "url": "https://news.hada.io/rss/news",
     "type": "rss",
-    "enabled": true,
+    "enabled": false,
+    "disabled_reason": "공식 RSS의 FeedBurner robots 확인 실패와 홈페이지 자동 접근 제한",
     "hosts": [
       "news.hada.io"
     ],
@@ -86,7 +87,8 @@
     "event": true,
     "url": "https://www.dacon.io/",
     "type": "html",
-    "enabled": true,
+    "enabled": false,
+    "disabled_reason": "WAF가 자동 접근을 차단하여 대회 목록을 제공하지 않음",
     "hosts": [
       "dacon.io"
     ],
@@ -187,14 +189,16 @@
     "region": "GLOBAL",
     "language": "en",
     "category": "security",
-    "url": "https://feeds.feedburner.com/TheHackersNews",
-    "type": "rss",
+    "url": "https://thehackernews.com/",
+    "type": "html",
     "enabled": true,
     "hosts": [
       "feeds.feedburner.com",
       "feedproxy.google.com",
       "thehackernews.com"
     ],
+    "link_selector": "a[href*=\"thehackernews.com/20\"][href$=\".html\"], a[href^=\"/20\"][href$=\".html\"]",
+    "title_selector": "h2, h3, .home-title",
     "body_selector": ".articlebody",
     "max_items": 40,
     "fallbacks": [
@@ -203,10 +207,8 @@
         "type": "news_sitemap"
       },
       {
-        "url": "https://thehackernews.com/",
-        "type": "html",
-        "link_selector": "a[href*=\"thehackernews.com/20\"][href$=\".html\"], a[href^=\"/20\"][href$=\".html\"]",
-        "title_selector": "h2, h3, .home-title"
+        "url": "https://feeds.feedburner.com/TheHackersNews",
+        "type": "rss"
       }
     ]
   },
@@ -251,6 +253,146 @@
       "krebsonsecurity.com"
     ],
     "body_selector": ".entry-content"
+  },
+  {
+    "id": "ahnlab-asec",
+    "name": "AhnLab ASEC",
+    "region": "KR",
+    "language": "ko",
+    "category": "security",
+    "url": "https://asec.ahnlab.com/ko/feed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "asec.ahnlab.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "estsecurity",
+    "name": "이스트시큐리티",
+    "region": "KR",
+    "language": "ko",
+    "category": "security",
+    "url": "https://blog.alyac.co.kr/rss",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "blog.alyac.co.kr"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "microsoft-security",
+    "name": "Microsoft Security",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://www.microsoft.com/en-us/security/blog/feed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "microsoft.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "cisco-talos",
+    "name": "Cisco Talos",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://blog.talosintelligence.com/rss/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "blog.talosintelligence.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "unit42",
+    "name": "Palo Alto Unit 42",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://unit42.paloaltonetworks.com/feed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "unit42.paloaltonetworks.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "eset-welivesecurity",
+    "name": "ESET WeLiveSecurity",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://www.welivesecurity.com/en/rss/feed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "welivesecurity.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "wordfence",
+    "name": "Wordfence",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://www.wordfence.com/blog/feed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "wordfence.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "rapid7",
+    "name": "Rapid7",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://www.rapid7.com/rss.xml",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "rapid7.com"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "sans-isc",
+    "name": "SANS Internet Storm Center",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://isc.sans.edu/rssfeed.xml",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "isc.sans.edu"
+    ],
+    "fetch_body": false
+  },
+  {
+    "id": "cert-cc",
+    "name": "CERT/CC",
+    "region": "GLOBAL",
+    "language": "en",
+    "category": "security",
+    "url": "https://kb.cert.org/vuls/atomfeed/",
+    "type": "rss",
+    "enabled": true,
+    "hosts": [
+      "kb.cert.org"
+    ],
+    "fetch_body": false
   },
   {
     "id": "arxiv-ai",

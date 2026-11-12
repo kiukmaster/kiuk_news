@@ -206,6 +206,9 @@ def collect_sources(web: PublicWeb, sources: list[dict], now: datetime, cfg: dic
     collected, statuses = [], []
     for source in sources:
         if not source.get('enabled', True):
+            message = '수집 제외: ' + source.get('disabled_reason', '설정에서 비활성화됨')
+            statuses.append({'name': source['name'], 'status': 'disabled', 'count': 0, 'message': message})
+            print(f"[수집 제외] {source['name']} / {message}", flush=True)
             continue
         try:
             entries, route_type, note, attempts = source_entries(web, source)

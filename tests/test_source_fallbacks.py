@@ -3,7 +3,7 @@ import json
 import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 from urllib.robotparser import RobotFileParser
 
 import pytest
@@ -40,9 +40,9 @@ def test_boan_new_selector_and_canonical_link():
     with pytest.raises(FetchError): parse_html_listing(data, {**source,'link_selector':"a[href*='view.asp?idx=']"})
 
 
-def test_thn_feed_failure_then_sitemap():
+def test_thn_html_failure_then_sitemap():
     web = Mock()
-    web.get.side_effect = [FetchError('robots.txt 확인 실패: FeedBurner HTTP 403'),
+    web.get.side_effect = [FetchError('HTTP 403'),
                           (SITEMAP, 'text/xml', 'https://thehackernews.com/news-sitemap.xml')]
     rows, statuses = collect_sources(web, [SOURCES['hackernews']], NOW, load_config())
     assert len(rows) == 1 and statuses[0]['status'] == 'ok'
@@ -51,12 +51,12 @@ def test_thn_feed_failure_then_sitemap():
     assert rows[0]['published_at'] == '2026-09-22T10:00:00+09:00'
 
 
-def test_thn_html_third_route_relative_links():
+def test_thn_html_primary_route_relative_links():
     html = b'<a href="/2026/09/example.html"><h2>Security test long article title</h2>Read more</a>'
-    web = Mock(get=Mock(side_effect=[FetchError('robots failed'), FetchError('sitemap failed'),
-                           (html, 'text/html', 'https://thehackernews.com/')]))
+    web = Mock(get=Mock(return_value=(html, 'text/html', 'https://thehackernews.com/')))
     rows, route, _, errors = source_entries(web, SOURCES['hackernews'])
-    assert route == 'html' and len(errors) == 2
+    assert route == 'html' and errors == []
+    web.get.assert_called_once_with('https://thehackernews.com/', SOURCES['hackernews']['hosts'])
     assert rows[0]['title_original'] == 'Security test long article title'
     assert rows[0]['url'] == 'https://thehackernews.com/2026/09/example.html'
 
@@ -68,6 +68,37 @@ def test_all_routes_failed_is_not_success():
     assert web.get.call_count == 3
 
 
+def test_excluded_publishers_are_visible_without_network_requests():
+    web = Mock()
+    excluded = [SOURCES['geeknews'], SOURCES['dacon-events']]
+    rows, statuses = collect_sources(web, excluded, NOW, load_config())
+    assert rows == []
+    web.get.assert_not_called()
+    assert [row['status'] for row in statuses] == ['disabled', 'disabled']
+    for source, status in zip(excluded, statuses):
+        assert status['count'] == 0
+        assert source['disabled_reason'] in status['message']
+
+
+@pytest.mark.parametrize('status,headers,body,message', [
+    (202, {'x-amzn-waf-action': 'challenge'}, b'', 'WAF'),
+    (403, {'x-amzn-waf-action': 'captcha'}, b'<html>Verify</html>', 'WAF'),
+    (202, {}, b' ', '내용 없는 비동기 응답'),
+    (403, {}, b'Forbidden', 'HTTP 403'),
+])
+def test_network_rejects_challenge_and_empty_accepted_responses(monkeypatch, status, headers, body, message):
+    web = PublicWeb('TestBot', delay=0)
+    monkeypatch.setattr(web, 'validate', lambda url, hosts: url)
+    monkeypatch.setattr(web, '_policy', lambda *args: True)
+    response = MagicMock(status_code=status, headers=headers, is_redirect=False)
+    response.__enter__.return_value = response
+    response.iter_content.return_value = iter([body])
+    web.session.get = Mock(return_value=response)
+    with pytest.raises(FetchError, match=message) as caught:
+        web.get('https://example.com/feed', ['example.com'])
+    assert caught.value.status_code == status
+
+
 def test_no_sitemap_external_entity_expansion():
     bad = b'<!DOCTYPE a [<!ENTITY ext SYSTEM "file:///etc/passwd">]><urlset><url>&ext;</url></urlset>'
     with pytest.raises(DefusedXmlException): parse_news_sitemap(bad, SOURCES['hackernews'])
@@ -75,7 +106,7 @@ def test_no_sitemap_external_entity_expansion():
 
 def test_offdomain_sitemap_entry_filtered():
     data = SITEMAP.replace(b'thehackernews.com/2026/', b'evil.invalid/2026/')
-    web = Mock(get=Mock(side_effect=[FetchError('feed down'), (data,'text/xml','https://thehackernews.com/news-sitemap.xml')]))
+    web = Mock(get=Mock(side_effect=[FetchError('listing down'), (data,'text/xml','https://thehackernews.com/news-sitemap.xml')]))
     rows, _ = collect_sources(web, [SOURCES['hackernews']], NOW, load_config())
     assert rows == []
 

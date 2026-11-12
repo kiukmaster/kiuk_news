@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from copy import deepcopy
 from datetime import datetime
+from hashlib import sha256
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -86,6 +87,8 @@ def render_site(state: dict, output: Path, now: datetime, cfg: dict) -> None:
         shutil.rmtree(reports_dir)
     reports_dir.mkdir()
     shutil.copytree(ROOT / 'assets', output / 'assets', dirs_exist_ok=True)
+    asset_versions = {name: sha256((output / 'assets' / name).read_bytes()).hexdigest()[:12]
+                      for name in ('style.css', 'app.js')}
     env = Environment(loader=FileSystemLoader(ROOT / 'templates'),
                       autoescape=select_autoescape(['html', 'xml']), trim_blocks=True, lstrip_blocks=True)
     env.filters['kst'] = format_time
@@ -95,7 +98,8 @@ def render_site(state: dict, output: Path, now: datetime, cfg: dict) -> None:
     today_url = 'reports/' + today_day['date'] + '.html' if today_day else None
     common = {'site_name': cfg['site_name'], 'categories': CATEGORIES, 'slots': SLOTS,
               'days': days, 'generated_at': now.isoformat(), 'keep_days': cfg['keep_days'],
-              'last_run': state.get('last_run', {}), 'latest_url': latest, 'today_url': today_url}
+              'last_run': state.get('last_run', {}), 'latest_url': latest, 'today_url': today_url,
+              'asset_versions': asset_versions}
     for day in days:
         html = env.get_template('report.html').render(**common, day=day, page_type='report',
                 prefix='../', page_title=f'{day["date_label"]} 데일리 리포트')

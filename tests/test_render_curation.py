@@ -73,7 +73,7 @@ def test_asset_urls_change_with_content_and_keep_page_prefixes(tmp_path, monkeyp
     def asset_urls():
         render(day, output)
         urls = {}
-        for page, prefix in [('index.html', './'), ('404.html', './'),
+        for page, prefix in [('index.html', './'),
                              ('reports/' + day['date'] + '.html', '../')]:
             soup = BeautifulSoup((output / page).read_text(encoding='utf-8'), 'html.parser')
             urls[page] = (soup.select_one('link[rel="stylesheet"]')['href'],
@@ -81,6 +81,8 @@ def test_asset_urls_change_with_content_and_keep_page_prefixes(tmp_path, monkeyp
             for name, url in zip(assets, urls[page]):
                 assert url.startswith(prefix + 'assets/' + name + '?v=')
                 assert url.split('?v=', 1)[1]
+        not_found = BeautifulSoup((output / '404.html').read_text(encoding='utf-8'), 'html.parser')
+        assert not not_found.select('link[rel="stylesheet"], script[src]')
         return urls
 
     before = asset_urls()

@@ -123,7 +123,11 @@ def test_category_retry_adds_trusted_correction_before_unchanged_source_data(mon
     assert result == {'id': 'paper-id', 'category': 'tech'}
     assert client.calls == client.session.post.call_count == 2 and client.tokens == 24
     output = capsys.readouterr().out
-    assert output.strip() == '[OpenAI 응답 보정 재시도] code=CATEGORY attempt=2/2'
+    assert output.strip().splitlines() == [
+        '[OpenAI 요청] model=gpt-6-luna reasoning.effort=max',
+        '[OpenAI 응답 보정 재시도] code=CATEGORY attempt=2/2',
+        '[OpenAI 요청] model=gpt-6-luna reasoning.effort=max',
+    ]
 
 
 @pytest.mark.parametrize('retry_code', [None, 'unknown', 'SYNTHETIC-secret-code', ['IDS'], {'code': 'IDS'}])

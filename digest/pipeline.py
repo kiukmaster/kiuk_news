@@ -278,7 +278,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             day['articles'] = {}
             day['hot'] = []
         day['news_curation'] = {**previous, 'status': 'stale' if preserve else 'unavailable',
-                                'model': curation_model, 'limit': limit, 'candidate_count': len(pool)}
+                                'model': previous.get('model', '') if preserve else curation_model,
+                                'limit': limit, 'candidate_count': len(pool)}
         day['warnings'].append('뉴스 선별 보류: ' + str(exc))
 
     latest_selected = {}
@@ -348,7 +349,8 @@ def run_pipeline(state: dict, directory: Path, now: datetime, cfg: dict, schedul
             if not preserve:
                 day['cves'] = {}
             day['cve_curation'] = {**previous, 'status': 'stale' if preserve else 'unavailable',
-                                  'model': curation_model, 'limit': limit, 'candidate_count': len(cve_pool),
+                                  'model': previous.get('model', '') if preserve else curation_model,
+                                  'limit': limit, 'candidate_count': len(cve_pool),
                                   'selected_count': len(day['cves'])}
             day['warnings'].append('CVE 선별 보류: ' + str(exc))
 

@@ -174,7 +174,10 @@ def test_invalid_model_id_after_first_twenty_still_blocks_empty_publication(tmp_
 def test_reselection_failure_preserves_previous_capped_result(tmp_path):
     state = empty_state()
     run(state, tmp_path, [article(index) for index in range(25)])
-    previous = deepcopy(state['days'][NOW.date().isoformat()]['articles'])
+    day = state['days'][NOW.date().isoformat()]
+    day['news_curation']['model'] = 'previous-provider'
+    previous = deepcopy(day['articles'])
+    successful_at = day['news_curation']['at']
 
     class FailingCuration(FakeAI):
         def request(self, *args, **kwargs):
@@ -184,6 +187,8 @@ def test_reselection_failure_preserves_previous_capped_result(tmp_path):
     day = state['days'][NOW.date().isoformat()]
     assert day['articles'] == previous
     assert day['news_curation']['status'] == 'stale'
+    assert day['news_curation']['model'] == 'previous-provider'
+    assert day['news_curation']['at'] == successful_at
     assert state['pending'] and all(pick['id'] in previous for pick in day['hot'])
 
 

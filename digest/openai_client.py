@@ -388,7 +388,7 @@ class OpenAIClient:
             try:
                 response = self.session.post(ENDPOINT, json=payload,
                     headers={'Authorization': 'Bearer ' + self.key,
-                             'Content-Type': 'application/json'}, timeout=(10, 120))
+                             'Content-Type': 'application/json'}, timeout=(10, 300))
                 if response.status_code in TRANSIENT_HTTP_STATUSES:
                     if response.status_code == 429:
                         detail, retry_delay = safe_http_429_detail(response)

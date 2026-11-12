@@ -309,6 +309,27 @@ def pipeline_run(state, path, rows, now=NOW):
                         cve_loader=lambda *args:(deepcopy(rows),status()))
 
 
+def test_failed_cve_reselection_preserves_previous_provider_and_success_time(tmp_path):
+    state = empty_state()
+    rows = [normalize_cve(raw(), NOW)]
+    pipeline_run(state, tmp_path, rows)
+    day = state['days'][NOW.date().isoformat()]
+    day['cve_curation']['model'] = 'previous-provider'
+    previous = deepcopy(day['cves'])
+    successful_at = day['cve_curation']['at']
+
+    run_pipeline(state, tmp_path, NOW + timedelta(hours=1), load_config(),
+                 web=object(), ai=FakeSummary(broken=True),
+                 source_loader=lambda *args: ([], []),
+                 github_loader=lambda *args: ([], {'status': 'ok'}),
+                 cve_loader=lambda *args: (deepcopy(rows), status()))
+
+    assert day['cves'] == previous
+    assert day['cve_curation']['status'] == 'stale'
+    assert day['cve_curation']['model'] == 'previous-provider'
+    assert day['cve_curation']['at'] == successful_at
+
+
 def test_cve_only_report_three_runs_same_day(tmp_path):
     state = empty_state()
     for index in range(1,4):

@@ -102,7 +102,7 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
                for call in client.session.post.call_args_list)
     assert all(call.kwargs['json']['max_output_tokens'] == 32768
                for call in client.session.post.call_args_list)
-    assert all(call.kwargs['json']['reasoning']['effort'] == 'max'
+    assert all(call.kwargs['json']['reasoning']['effort'] == 'high'
                for call in client.session.post.call_args_list)
     assert candidates == original
 

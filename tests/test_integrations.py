@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from requests import ReadTimeout
 
 from digest.common import load_config
 from digest.openai_client import (OpenAIClient, OpenAIError, OpenAIHTTPError, OpenAIAuthenticationError,
@@ -45,7 +46,7 @@ def test_responses_contract(monkeypatch):
         'type': 'json_schema', 'name': 'news_result', 'strict': True,
         'schema': {**schema, 'additionalProperties': False}}
     assert 'additionalProperties' not in schema
-    assert kwargs['json']['reasoning'] == {'effort': 'max'}
+    assert kwargs['json']['reasoning'] == {'effort': 'high'}
     assert kwargs['json']['instructions']
     assert kwargs['headers']['Authorization'] == 'Bearer ' + client.key
     assert ENDPOINT == 'https://api.openai.com/v1/responses'
@@ -54,16 +55,48 @@ def test_responses_contract(monkeypatch):
 
 
 @pytest.mark.parametrize('model_role', ['summary_model', 'hot_model'])
-def test_responses_all_roles_use_max_reasoning_with_explicit_output_bound(monkeypatch, model_role):
+def test_responses_all_roles_use_high_reasoning_with_explicit_output_bound(monkeypatch, model_role):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({'ok': True}))
     client.request('test', {}, {'type': 'object'}, getattr(client, model_role),
                    max_output_tokens=32768)
     payload = client.session.post.call_args.kwargs['json']
     assert payload['max_output_tokens'] == 32768
-    assert payload['reasoning'] == {'effort': 'max'}
+    assert payload['reasoning'] == {'effort': 'high'}
     assert payload['model'] == {'summary_model': 'gpt-6-luna', 'hot_model': 'gpt-6-luna'}[model_role]
     assert 'generation_config' not in payload and 'temperature' not in payload
+
+
+def test_api_wait_logging_separates_timeout_backoff_and_success(monkeypatch, capsys):
+    client = make_client(monkeypatch)
+    now, sleeps = [100.0], []
+    monkeypatch.setattr('digest.openai_client.time.monotonic', lambda: now[0])
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr('digest.openai_client.time.sleep', sleep)
+    replies = iter([(300.0, ReadTimeout('private-provider-error ' + client.key)),
+                    (2.0, api_response({'ok': True}))])
+
+    def post(*args, **kwargs):
+        seconds, reply = next(replies)
+        now[0] += seconds
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    client.session.post = Mock(side_effect=post)
+    assert client.request('private-instruction', {'body': 'private-article-body'},
+                          {'type': 'object'}, client.summary_model, attempts=2) == {'ok': True}
+    output = capsys.readouterr().out
+    assert '[OpenAI API 대기 실패] call=1 model=gpt-6-luna reasoning.effort=high attempt=1/2 api_seconds=300.0 error=ReadTimeout' in output
+    assert '[OpenAI 응답/연결 재시도 대기] call=1 model=gpt-6-luna reasoning.effort=high attempt=1/2 error=ReadTimeout wait_seconds=5.0' in output
+    assert '[OpenAI API 응답] call=2 model=gpt-6-luna reasoning.effort=high attempt=2/2 api_seconds=2.0 status=200' in output
+    assert sleeps == [5] and client.calls == 2
+    assert client.key not in output and 'private-' not in output
+    assert '"ok"' not in output
 
 
 @pytest.mark.parametrize('code', ['rate_limit_exceeded', 'insufficient_quota', 'billing_hard_limit_reached'])

@@ -104,6 +104,22 @@ def test_no_sitemap_external_entity_expansion():
     with pytest.raises(DefusedXmlException): parse_news_sitemap(bad, SOURCES['hackernews'])
 
 
+def test_rapid7_control_character_repair_preserves_feed_and_entity_protection():
+    source = SOURCES['rapid7']
+    data = (b'<?xml version="1.0" encoding="UTF-8"?><rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
+            b'<title>Security report</title><link>https://www.rapid7.com/blog/test/</link>'
+            b'<description>Valid security context\x08 with a forbidden control\x0b.</description>'
+            b'<pubDate>Tue, 22 Sep 2026 01:00:00 GMT</pubDate>'
+            b'<media:content url="https://www.rapid7.com/image.png"/></item></channel></rss>')
+    row = parse_feed(data, source)[0]
+    assert row['excerpt'] == 'Valid security context with a forbidden control.'
+    assert row['published_at'] == '2026-09-22T10:00:00+09:00'
+    hostile = data.replace(b'<rss ', b'<!DOCTYPE rss [<!ENTITY ext SYSTEM "file:///etc/passwd">]><rss ')
+    hostile = hostile.replace(b'Security report', b'&ext;')
+    with pytest.raises(DefusedXmlException):
+        parse_feed(hostile, source)
+
+
 def test_offdomain_sitemap_entry_filtered():
     data = SITEMAP.replace(b'thehackernews.com/2026/', b'evil.invalid/2026/')
     web = Mock(get=Mock(side_effect=[FetchError('listing down'), (data,'text/xml','https://thehackernews.com/news-sitemap.xml')]))

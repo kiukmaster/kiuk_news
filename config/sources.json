@@ -361,6 +361,7 @@
     "url": "https://www.rapid7.com/rss.xml",
     "type": "rss",
     "enabled": true,
+    "strip_xml_control_chars": true,
     "hosts": [
       "rapid7.com"
     ],

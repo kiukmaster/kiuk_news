@@ -9,7 +9,7 @@
   "summary_model": "gpt-6-luna",
   "hot_model": "gpt-6-luna",
   "curation_model": "gpt-6-luna",
-  "reasoning_effort": "max",
+  "reasoning_effort": "high",
   "category_daily_limit": 40,
   "batch_size": 6,
   "max_new_articles_per_run": 0,

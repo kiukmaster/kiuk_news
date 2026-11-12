@@ -21,22 +21,22 @@ def collect(state, directory, items, now=NOW, client=None):
 
 
 def test_latest_includes_fresh_articles_excluded_by_importance_and_reuses_cache(tmp_path):
-    important = [article(index, NOW - timedelta(hours=8)) for index in range(25)]
-    fresh = [article(100 + index, NOW - timedelta(minutes=index)) for index in range(25)]
+    important = [article(index, NOW - timedelta(hours=8)) for index in range(45)]
+    fresh = [article(100 + index, NOW - timedelta(minutes=index)) for index in range(45)]
     state = empty_state()
     client, report = collect(state, tmp_path, important + fresh)
     day = state['days'][NOW.date().isoformat()]
-    assert set(day['articles']) == {row['id'] for row in important[:20]}
-    assert set(day['latest_articles']) == {row['id'] for row in fresh[:20]}
-    assert report['new_count'] == 40 and report['latest_count'] == 20
-    assert len(client.summarized) == len(set(client.summarized)) == 40
+    assert set(day['articles']) == {row['id'] for row in important[:40]}
+    assert set(day['latest_articles']) == {row['id'] for row in fresh[:40]}
+    assert report['new_count'] == 80 and report['latest_count'] == 40
+    assert len(client.summarized) == len(set(client.summarized)) == 80
     assert not state['pending'] and not day['warnings']
     assert all(pick['id'] in day['articles'] for pick in day['hot'])
     assert not set(day['latest_articles']) & {pick['id'] for pick in day['hot']}
     assert client.calls <= 80
     client, report = collect(state, tmp_path, [], NOW.replace(hour=13))
     assert client.summarized == [] and report['new_count'] == 0
-    assert len(day['articles']) == len(day['latest_articles']) == 20
+    assert len(day['articles']) == len(day['latest_articles']) == 40
 
 
 def test_shared_latest_and_importance_articles_are_summarized_once(tmp_path):
@@ -93,7 +93,7 @@ def test_newer_same_title_replaces_older_seen_copy_in_latest(tmp_path):
 
 
 def test_body_only_publication_enters_latest_in_same_batch_without_second_fetch(tmp_path, monkeypatch):
-    important = [article(index, NOW - timedelta(hours=3)) for index in range(25)]
+    important = [article(index, NOW - timedelta(hours=3)) for index in range(45)]
     undated = article(100); undated['published_at'] = None
     fetched = []
     full_body = 'FULL_BODY_MEMORY_ONLY_' * 300

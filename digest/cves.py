@@ -32,8 +32,8 @@ def summary_schema(expected_ids: set[str]) -> dict:
         'type': 'array', 'minItems': len(expected_ids), 'maxItems': len(expected_ids),
         'items': {'type': 'object', 'properties': {
             'id': {'type': 'string', 'enum': sorted(expected_ids)},
-            'summary_ko': {'type': 'string'}},
-            'required': ['id', 'summary_ko']}}}, 'required': ['cves']}
+            'summary_ko': {'type': 'string'}, 'background_ko': {'type': 'string'}},
+            'required': ['id', 'summary_ko', 'background_ko']}}}, 'required': ['cves']}
 
 
 def validate_summaries(response: dict, expected_ids: set[str]) -> None:
@@ -47,6 +47,9 @@ def validate_summaries(response: dict, expected_ids: set[str]) -> None:
             text = answer['summary_ko'].strip()
             if not text or len(text) > 500 or not re.search(r'[가-힣]', text):
                 raise OpenAIResponseValidationError('CVE 한국어 요약 형식 불일치')
+            background = answer['background_ko'].strip()
+            if len(background) > 160 or (background and not re.search(r'[가-힣]', background)):
+                raise OpenAIResponseValidationError('CVE 한국어 발생 배경 형식 불일치')
     except (KeyError, TypeError, AttributeError):
         raise OpenAIResponseValidationError('CVE 요약 응답 형식 불일치') from None
 
@@ -365,6 +368,8 @@ def merge_cves(state: dict, today: dict, rows: list[dict], status: dict,
         if old.get('description_hash') == row['description_hash']:
             for field in ('summary_ko', 'summary_model'):
                 canonical[field] = old.get(field, '')
+            if 'background_ko' in old:
+                canonical['background_ko'] = old['background_ko']
         pool[row['id']] = canonical
         if daykey != current_day:
             state['days'][daykey] = target
@@ -437,10 +442,10 @@ def refresh_selected_cves(day: dict) -> None:
 
 
 def apply_cve_selection(day: dict, picks: list[dict], now: datetime, model: str) -> None:
-    """Commit a fully validated maximum of twenty OpenAI-selected representatives."""
+    """Commit a fully validated maximum of forty OpenAI-selected representatives."""
     pool = candidate_pool(day)
-    if not isinstance(picks, list) or len(picks) > 20:
-        raise OpenAIResponseValidationError('CVE 대표 선정은 최대 20건입니다')
+    if not isinstance(picks, list) or len(picks) > 40:
+        raise OpenAIResponseValidationError('CVE 대표 선정은 최대 40건입니다')
     selected, used = {}, set()
     try:
         for rank, pick in enumerate(picks, 1):
@@ -499,7 +504,9 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
             response = client.request(
                 '각 CVE 설명을 한국어 1~2문장, 240자 이내로 요약하라. 대상 제품·취약점·영향은 '
                 '제공된 설명에 있는 사실만 쓰고, 없는 버전·패치·공격 발생·CVSS 점수는 만들지 마라. '
-                '공격 실행 절차나 페이로드를 추가하지 마라. 입력마다 id와 summary_ko를 반환하라. '
+                '공격 실행 절차나 페이로드를 추가하지 마라. background_ko에는 설명에 명시된 '
+                '취약점 발생 원인만 한국어 한 문장 160자 이내로 적고 원인이 없으면 빈 문자열을 써라. '
+                '원인을 추측하지 마라. 입력마다 id, summary_ko, background_ko를 반환하라. '
                 'CVE ID를 그대로 복사하고 어떤 항목도 생략하지 마라.',
                 {'cves': [{'id': row['id'], 'description': row['description'][:3000]} for row in batch]},
                 summary_schema(expected_ids), client.summary_model,
@@ -508,11 +515,14 @@ def translate_cves(state: dict, today: dict, now: datetime, cfg: dict, client, c
             validate_summaries(response, expected_ids)
             answers = response['cves']
             summaries = {a['id']: a['summary_ko'].strip() for a in answers}
+            backgrounds = {a['id']: a['background_ko'].strip() for a in answers}
             for row in batch:
                 row['summary_ko'], row['summary_model'] = summaries[row['id']], client.summary_model
+                row['background_ko'] = backgrounds[row['id']]
                 canonical = today.get('cve_candidates', {}).get(row['id'])
                 if canonical and canonical.get('description_hash') == row.get('description_hash'):
                     canonical['summary_ko'], canonical['summary_model'] = row['summary_ko'], row['summary_model']
+                    canonical['background_ko'] = row['background_ko']
                 translated += 1
             checkpoint()
         except OpenAIAuthenticationError:

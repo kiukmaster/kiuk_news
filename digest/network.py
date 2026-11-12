@@ -78,6 +78,10 @@ class PublicWeb:
                 url = target
                 continue
             with response:
+                if response.headers.get('x-amzn-waf-action', '').lower() in ('challenge', 'captcha'):
+                    error = FetchError(f'WAF 자동 접근 확인 요구: HTTP {response.status_code}')
+                    error.status_code = response.status_code
+                    raise error
                 if response.status_code >= 400:
                     error = FetchError(f'HTTP {response.status_code}')
                     error.status_code = response.status_code
@@ -89,7 +93,12 @@ class PublicWeb:
                     if count > max_bytes or time.monotonic() - started > 45:
                         raise FetchError('응답 크기 또는 수신 시간 제한 초과')
                     parts.append(block)
-                return b''.join(parts), response.headers.get('Content-Type', ''), url
+                body = b''.join(parts)
+                if response.status_code == 202 and not body.strip():
+                    error = FetchError('HTTP 202: 내용 없는 비동기 응답')
+                    error.status_code = response.status_code
+                    raise error
+                return body, response.headers.get('Content-Type', ''), url
         raise FetchError('리디렉션 횟수 초과')
 
     def _policy(self, url: str, allowed_hosts: list[str]):

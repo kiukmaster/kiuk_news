@@ -8,7 +8,7 @@ from jsonschema import ValidationError, validate
 from .common import KST, canonical_url, parse_date, text_key
 from .openai_client import BudgetExceeded, OpenAIResponseValidationError
 
-LATEST_MODEL = 'gpt-6.1-sol'
+LATEST_MODEL = 'gpt-6-luna'
 LATEST_ATTEMPTS = 2
 
 
@@ -96,15 +96,15 @@ def _compact(candidate: dict) -> dict:
 
 
 def select_latest_candidates(client, candidates: list[dict], now: datetime,
-                             limit: int = 20, model: str = LATEST_MODEL) -> dict:
-    """Screen the latest twenty eligible inputs, then keep actual date order.
+                             limit: int = 40, model: str = LATEST_MODEL) -> dict:
+    """Screen the newest eligible inputs up to the limit, then keep date order.
 
     OpenAI checks relevance, expired events and semantic duplicates; it never
     promotes an older article for importance. A failed model call raises rather
     than returning a partially validated selection.
     """
-    if type(limit) is not int or not 1 <= limit <= 20:
-        raise ValueError('Latest feed limit must be between 1 and 20')
+    if type(limit) is not int or not 1 <= limit <= 40:
+        raise ValueError('Latest feed limit must be between 1 and 40')
     local_now = _local_now(now)
     eligible = [row for row in candidates if latest_eligible(row, local_now)]
     if any(not isinstance(row.get('id'), str) or not row['id'].strip() for row in eligible):
@@ -156,7 +156,7 @@ def select_latest_candidates(client, candidates: list[dict], now: datetime,
         {'as_of': local_now.isoformat(), 'candidates': [_compact(row) for row in considered]},
         _schema(), model, attempts=LATEST_ATTEMPTS,
         validator=lambda result: _validate_selection(result, considered, limit),
-        max_output_tokens=8192, reasoning_effort='high')
+        max_output_tokens=8192)
     _validate_selection(result, considered, limit)
     by_id = {row['id']: row for row in considered}
     picks = [{'id': pick['id'], 'related_ids': list(pick['related_ids'])}

@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 KST = ZoneInfo('Asia/Seoul')
 ROOT = Path(__file__).resolve().parents[1]
-CATEGORIES = {'ai': 'AI', 'security': '보안', 'tech': '신기술·논문', 'event': '대회·행사', 'github': 'GitHub 인기'}
+CATEGORIES = {'ai': 'AI', 'security': '보안', 'tech': '신기술/논문', 'event': '대회/행사', 'github': 'GitHub 인기'}
 SLOTS = ('06:00', '13:00', '19:00')
 # Each cron prepares 53 minutes before publication. Retain UTC aliases for old
 # queued runs; the workflow now declares Asia/Seoul and uses the KST aliases.

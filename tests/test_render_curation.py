@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
+import pytest
 
 from digest.common import CATEGORIES, KST, load_config, read_json
 from digest.cves import normalize_cve
@@ -18,8 +19,8 @@ def curation(rank, reason='제공된 근거에 따른 파급력과 화제성, �
             'scores': {'social_impact': 4, 'attention': 2, 'issue_relevance': 5}}
 
 
-def metadata(selected_count, status='fresh'):
-    return {'status': status, 'at': NOW.isoformat(), 'limit': 20,
+def metadata(selected_count, status='fresh', limit=20):
+    return {'status': status, 'at': NOW.isoformat(), 'limit': limit,
             'model': 'offline-test-model', 'candidate_count': selected_count + 50,
             'selected_count': selected_count}
 
@@ -101,7 +102,7 @@ def test_curated_report_explains_policy_escapes_reasons_and_links_related_cves(t
     page = render(day, tmp_path)
     text = page.get_text(' ', strip=True)
     assert '분야마다 하루 최대 20건' in text
-    assert '사회적 파급력·화제성·이슈성' in text
+    assert '사회적 파급력, 화제성, 이슈성' in text
     assert 'AI의 중요도 평가와 별개' in text
     assert '함께 묶인 관련 CVE 2건' in text
     assert '사회적 파급력 4/5' in text
@@ -159,25 +160,26 @@ def test_public_counts_use_selected_cards_and_exclude_related_cve_links(tmp_path
     assert 'CVE 20건' in (tmp_path / 'index.html').read_text(encoding='utf-8')
 
 
-def test_independent_latest_preserves_order_unique_counts_and_html_ids(tmp_path):
+@pytest.mark.parametrize('limit', [20, 40])
+def test_independent_latest_preserves_order_unique_counts_and_html_ids(tmp_path, limit):
     day = new_day(NOW.date().isoformat())
     common = article('common', rank=1, published=NOW - timedelta(hours=2))
     day['articles'][common['id']] = common
     day['hot'] = [{'id': common['id'], 'reason_ko': '오프라인 HOT 선정'}]
-    latest = [article(f'fresh-{index}', rank=20 - index,
-                      published=NOW - timedelta(minutes=index)) for index in range(25)]
+    latest = [article(f'fresh-{index}', rank=45 - index,
+                      published=NOW - timedelta(minutes=index)) for index in range(45)]
     day['latest_articles'] = {row['id']: row for row in latest + [common]}
-    day['latest_curation'] = metadata(20)
+    day['latest_curation'] = metadata(limit, limit=limit)
     page = render(day, tmp_path)
     cards = page.select('#sec-latest [data-issue-card]')
-    assert [card['id'] for card in cards] == [f'latest-fresh-{index}' for index in range(20)]
+    assert [card['id'] for card in cards] == [f'latest-fresh-{index}' for index in range(limit)]
     assert not page.select('#sec-latest .pick-reason')
     assert len(page.select('#sec-ai [data-issue-card]')) == 1
     ids = [node['id'] for node in page.select('[id]')]
     assert len(ids) == len(set(ids))
     report = read_json(tmp_path / 'reports.json', {})['reports'][0]
-    assert report['count'] == 21 and report['section_count'] == 1
-    assert report['latest_count'] == report['counts']['latest'] == 20
+    assert report['count'] == limit + 1 and report['section_count'] == 1
+    assert report['latest_count'] == report['counts']['latest'] == limit
 
 
 def test_historical_latest_uses_original_collection_time_and_excludes_undated(tmp_path):

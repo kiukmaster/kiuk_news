@@ -29,8 +29,9 @@ SUMMARY_SCHEMA = {
             'id': {'type': 'string'}, 'relevant': {'type': 'boolean'},
             'category': {'type': 'string', 'enum': ['ai', 'security', 'tech', 'event', 'github']},
             'language': {'type': 'string'}, 'title_ko': {'type': 'string'},
-            'summary_ko': {'type': 'string'}},
-        'required': ['id', 'relevant', 'category', 'language', 'title_ko', 'summary_ko']}}},
+            'summary_ko': {'type': 'string'}, 'background_ko': {'type': 'string'}},
+        'required': ['id', 'relevant', 'category', 'language', 'title_ko', 'summary_ko',
+                     'background_ko']}}},
     'required': ['articles']}
 
 SEMANTIC_RETRY_FEEDBACK = {
@@ -362,7 +363,7 @@ class OpenAIClient:
     def request(self, instruction: str, data: dict, schema: dict, model: str,
                 attempts: int = 3, validator: Callable[[dict], None] | None = None,
                 max_output_tokens: int = 8192, reasoning_effort: str | None = None) -> dict:
-        effort = reasoning_effort or self.cfg.get('reasoning_effort', 'high')
+        effort = reasoning_effort or self.cfg.get('reasoning_effort', 'max')
         if effort not in ('none', 'low', 'medium', 'high', 'xhigh', 'max'):
             raise ValueError('지원하지 않는 OpenAI reasoning_effort')
         untrusted_data = json.dumps(data, ensure_ascii=False)
@@ -385,6 +386,7 @@ class OpenAIClient:
                 time.sleep(gap)
             self.calls += 1
             self.last_call = time.monotonic()
+            print(f'[OpenAI 요청] model={model} reasoning.effort={effort}', flush=True)
             try:
                 response = self.session.post(ENDPOINT, json=payload,
                     headers={'Authorization': 'Bearer ' + self.key,
@@ -468,6 +470,9 @@ class OpenAIClient:
         result = self.request(
             '입력마다 정확히 한 결과를 반환하라. AI, 보안, 컴퓨팅 신기술, 연구와 관련 없으면 relevant=false. '
             '관련 있으면 제목 100자 이내, 요약 2~3문장 120~300자. 근거가 짧으면 짧게 써라. '
+            'background_ko에는 사건의 발생 원인이나 연구, 출시의 배경을 원문에 명시된 근거로만 '
+            '한국어 한 문장 160자 이내로 적어라. 선정 이유와 구분하고, 원인이 확인되지 않거나 '
+            '관련 없는 항목이면 빈 문자열을 반환하라. 제목만 보고 인과관계를 추측하지 마라. '
             '국내 해커톤, 경진대회, 공모전, 행사 모집 공고(kind=event)는 AI, 보안, SW, 데이터, 컴퓨팅 관련이고 대학생 또는 청년이 지원 가능하면 relevant=true. '
             '접수 마감이 지났으면 relevant=false. 참가 자격, 신청 기간, 주최, 장소는 근거가 있을 때만 요약하라. '
             'language는 실제 원문 언어 코드(ko/en 등). 논문은 tech, 저장소는 github, 행사 공고는 event, '
@@ -480,6 +485,10 @@ class OpenAIClient:
         if len(ids) != len(set(ids)) or set(ids) != expected:
             raise OpenAIError('요약 결과의 기사 ID 누락, 중복, 변조')
         for row in rows:
+            background = row['background_ko'].strip()
+            if len(background) > 160 or (background and not re.search(r'[가-힣]', background)):
+                raise OpenAIError('한국어 발생 배경 형식 불일치')
+            row['background_ko'] = background
             if row['relevant']:
                 if not row['title_ko'].strip() or not row['summary_ko'].strip():
                     raise OpenAIError('제목 또는 요약 누락')

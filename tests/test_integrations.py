@@ -45,7 +45,7 @@ def test_responses_contract(monkeypatch):
         'type': 'json_schema', 'name': 'news_result', 'strict': True,
         'schema': {**schema, 'additionalProperties': False}}
     assert 'additionalProperties' not in schema
-    assert kwargs['json']['reasoning'] == {'effort': 'high'}
+    assert kwargs['json']['reasoning'] == {'effort': 'max'}
     assert kwargs['json']['instructions']
     assert kwargs['headers']['Authorization'] == 'Bearer ' + client.key
     assert ENDPOINT == 'https://api.openai.com/v1/responses'
@@ -54,15 +54,15 @@ def test_responses_contract(monkeypatch):
 
 
 @pytest.mark.parametrize('model_role', ['summary_model', 'hot_model'])
-def test_responses_both_models_use_high_reasoning_with_explicit_output_bound(monkeypatch, model_role):
+def test_responses_all_roles_use_max_reasoning_with_explicit_output_bound(monkeypatch, model_role):
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=api_response({'ok': True}))
     client.request('test', {}, {'type': 'object'}, getattr(client, model_role),
                    max_output_tokens=32768)
     payload = client.session.post.call_args.kwargs['json']
     assert payload['max_output_tokens'] == 32768
-    assert payload['reasoning'] == {'effort': 'high'}
-    assert payload['model'] == {'summary_model': 'gpt-6-luna', 'hot_model': 'gpt-6.1-sol'}[model_role]
+    assert payload['reasoning'] == {'effort': 'max'}
+    assert payload['model'] == {'summary_model': 'gpt-6-luna', 'hot_model': 'gpt-6-luna'}[model_role]
     assert 'generation_config' not in payload and 'temperature' not in payload
 
 
@@ -270,7 +270,7 @@ def test_bad_summary_ids(monkeypatch):
 def test_english_summary_is_rejected(monkeypatch):
     client = make_client(monkeypatch)
     client.request = Mock(return_value={'articles': [{'id': '1', 'relevant': True,
-        'title_ko': 'Title', 'summary_ko': 'Not a Korean summary.'}]})
+        'title_ko': 'Title', 'summary_ko': 'Not a Korean summary.', 'background_ko': ''}]})
     with pytest.raises(OpenAIError, match='한국어'):
         client.summarize([{'id': '1'}])
 

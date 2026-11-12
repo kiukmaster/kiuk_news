@@ -1,6 +1,6 @@
 """The independent latest feed follows verified publication clocks, not scores."""
 import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -64,22 +64,22 @@ def test_observation_time_does_not_create_a_publication_date():
     assert latest_eligible(article('naive-now'), NOW.replace(tzinfo=None))
 
 
-def test_only_twenty_newest_are_considered_not_older_high_importance_rows():
-    rows = [article(str(hour), f'2026-10-08T{hour:02}:00:00+09:00',
-                    scores={'social_impact': 5 if hour < 4 else 0}) for hour in range(24)]
+def test_only_forty_newest_are_considered_not_older_high_importance_rows():
+    rows = [article(str(index), (NOW - timedelta(minutes=index)).isoformat(),
+                    scores={'social_impact': 5 if index >= 40 else 0}) for index in range(45)]
     client = Client()
     result = select_latest_candidates(client, rows, NOW)
-    assert result['candidate_count'] == 24
-    assert result['considered_count'] == 20
-    assert [pick['id'] for pick in result['picks']] == [str(hour) for hour in range(23, 3, -1)]
+    assert result['candidate_count'] == 45
+    assert result['considered_count'] == 40
+    assert [pick['id'] for pick in result['picks']] == [str(index) for index in range(40)]
     instruction, data, _, model, options = client.calls[0]
-    assert [row['id'] for row in data['candidates']] == [str(hour) for hour in range(23, 3, -1)]
+    assert [row['id'] for row in data['candidates']] == [str(index) for index in range(40)]
     assert '점수나 순위는 사용하지 말라' in instruction
     assert all('scores' not in row for row in data['candidates'])
-    assert model == 'gpt-6.1-sol'
+    assert model == 'gpt-6-luna'
     assert options['attempts'] == 2
     assert options['max_output_tokens'] == 8192
-    assert options['reasoning_effort'] == 'high'
+    assert 'reasoning_effort' not in options
 
 
 def test_equal_publication_dates_sort_by_id_stably_and_model_order_is_not_public_order():
@@ -185,7 +185,7 @@ def test_reserves_both_physical_attempts_before_first_call():
     assert client.calls == []
 
 
-@pytest.mark.parametrize('limit', [0, 21, True, 1.0])
+@pytest.mark.parametrize('limit', [0, 41, True, 1.0])
 def test_invalid_feed_limits_are_rejected(limit):
     with pytest.raises(ValueError):
         select_latest_candidates(Client(), [], NOW, limit=limit)

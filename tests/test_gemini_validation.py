@@ -123,7 +123,11 @@ def test_category_retry_adds_trusted_correction_before_unchanged_source_data(mon
     assert result == {'id': 'paper-id', 'category': 'tech'}
     assert client.calls == client.session.post.call_count == 2 and client.tokens == 24
     output = capsys.readouterr().out
-    assert output.strip() == '[OpenAI 응답 보정 재시도] code=CATEGORY attempt=2/2'
+    assert output.strip().splitlines() == [
+        '[OpenAI 요청] model=gpt-6-luna reasoning.effort=max',
+        '[OpenAI 응답 보정 재시도] code=CATEGORY attempt=2/2',
+        '[OpenAI 요청] model=gpt-6-luna reasoning.effort=max',
+    ]
 
 
 @pytest.mark.parametrize('retry_code', [None, 'unknown', 'SYNTHETIC-secret-code', ['IDS'], {'code': 'IDS'}])
@@ -275,7 +279,7 @@ def test_token_limit_retry_never_parses_partial_json_and_expands_output_cap(monk
         return next(replies)
 
     client.session.post = Mock(side_effect=post)
-    result = client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
+    result = client.request('test', {}, {'type': 'object'}, 'gpt-6-luna',
                             attempts=2, validator=validator)
     assert result == {'id': 'source-id'}
     assert limits == [8192, 16384]
@@ -288,7 +292,7 @@ def test_incomplete_retries_only_within_reserved_physical_budget(monkeypatch):
     client = make_client(monkeypatch, budget=1)
     client.session.post = Mock(return_value=unfinished())
     with pytest.raises(BudgetExceeded):
-        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol', attempts=2)
+        client.request('test', {}, {'type': 'object'}, 'gpt-6-luna', attempts=2)
     assert client.calls == client.session.post.call_count == 1
     assert client.tokens == 12
 
@@ -297,7 +301,7 @@ def test_repeated_token_exhaustion_stops_at_attempt_bound_and_model_cap(monkeypa
     client = make_client(monkeypatch)
     client.session.post = Mock(return_value=unfinished())
     with pytest.raises(OpenAIIncompleteError) as error:
-        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
+        client.request('test', {}, {'type': 'object'}, 'gpt-6-luna',
                        attempts=2, max_output_tokens=65536)
     assert error.value.status == 'incomplete'
     assert error.value.reason == 'MAX_TOKENS' and error.value.retryable
@@ -318,7 +322,7 @@ def test_nonretryable_failures_stop_without_parsing_output(monkeypatch, status, 
     validator = Mock()
     client.session.post = Mock(return_value=unfinished(status, code))
     with pytest.raises(OpenAIIncompleteError) as error:
-        client.request('test', {}, {'type': 'object'}, 'gpt-6.1-sol',
+        client.request('test', {}, {'type': 'object'}, 'gpt-6-luna',
                        attempts=2, validator=validator)
     assert not error.value.retryable
     assert client.calls == 1

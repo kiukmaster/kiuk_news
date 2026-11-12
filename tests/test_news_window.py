@@ -83,11 +83,11 @@ def test_yesterday_curation_exclusion_remains_a_current_candidate(tmp_path):
 
     state = empty_state()
     yesterday = NOW - timedelta(days=1)
-    candidates = [article(index, yesterday) for index in range(25)]
+    candidates = [article(index, yesterday) for index in range(45)]
     run(state, tmp_path, candidates, yesterday)
     excluded = candidates[-1]['id']
     assert state['seen'][excluded]['excluded_by_curation']
     client = run(state, tmp_path, [], NOW, client=ReverseCuration())
     day = state['days'][NOW.date().isoformat()]
-    assert len(day['news_candidates']) == 25
+    assert len(day['news_candidates']) == 45
     assert excluded in day['articles'] and excluded in client.summarized

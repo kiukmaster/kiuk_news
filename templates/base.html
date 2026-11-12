@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#111317">
-  <meta name="description" content="한국과 해외의 AI·보안·신기술 소식을 한국어로 모은 일간 브리핑. 매일 세 차례 같은 보고서를 갱신합니다.">
+  <meta name="description" content="한국과 해외의 AI/보안/신기술 소식을 한국어로 모은 일간 브리핑. 매일 세 차례 같은 보고서를 갱신합니다.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
-  <title>{{ page_title }} · {{ site_name }}</title>
+  <title>{{ page_title }} / {{ site_name }}</title>
   <link rel="icon" href="{{ prefix }}assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="{{ prefix }}assets/style.css">
   <script src="{{ prefix }}assets/app.js" defer></script>
@@ -21,8 +21,8 @@
     <a class="icon-button back-button" href="{{ prefix }}index.html" aria-label="보고서 목록으로 돌아가기"><svg class="icon"><use href="#i-back"/></svg></a>
     {% endif %}
     <div class="header-brand">
-      {% if page_type == 'report' %}<span class="eyebrow">SECURITY DOSSIER</span><p class="header-title">데일리 리포트</p>
-      {% else %}<h1 class="header-title">데일리 브리핑 목록</h1><p class="header-caption">최근 {{ keep_days }}일의 AI · 보안 · 신기술</p>{% endif %}
+      {% if page_type == 'report' %}<a class="header-title date-link" href="{{ prefix }}index.html">{{ day.date_label }} <span class="weekday">{{ day.weekday }}</span></a><p class="header-caption">갱신 {{ day.updated_at|kst('%H:%M') }} KST</p>
+      {% else %}<h1 class="header-title">데일리 브리핑</h1><p class="header-caption">최근 {{ keep_days }}일의 AI와 보안 소식</p>{% endif %}
     </div>
     {% if page_type == 'report' %}
     <div class="header-actions" data-js-only hidden>

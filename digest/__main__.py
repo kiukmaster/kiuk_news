@@ -46,7 +46,7 @@ def main():
     if args.check_api:
         client = OpenAIClient(cfg)
         schema = {'type': 'object', 'properties': {'ok': {'type': 'boolean'}}, 'required': ['ok']}
-        for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gpt-6.1-sol'), client.hot_model)):
+        for model in dict.fromkeys((client.summary_model, cfg.get('curation_model', 'gpt-6-luna'), client.hot_model)):
             client.request('연결 시험입니다. {"ok":true}만 반환하세요.', {}, schema, model)
             print(f'{model}: 연결 확인')
         # Test the production selection schemas with tiny synthetic inputs too.
@@ -57,13 +57,13 @@ def main():
             ('cve', {'id': 'CVE-2026-00001', 'description': 'Synthetic API connectivity test only.'}),
         ):
             curate_candidates(client, [candidate], kind=kind,
-                              model=cfg.get('curation_model', 'gpt-6.1-sol'), as_of=now.isoformat())
+                              model=cfg.get('curation_model', 'gpt-6-luna'), as_of=now.isoformat())
             print(f'{kind}: 실제 선별 요청 형식 확인')
         select_latest_candidates(client, [{'id': 'diagnostic-latest', 'kind': 'article',
             'url': 'https://example.invalid/diagnostic', 'published_at': now.isoformat(),
             'title_original': '실제 뉴스가 아닌 API 연결 검사 자료',
             'excerpt': '실제 뉴스가 아닌 가상의 연결 검사 자료입니다.'}], now,
-            model=cfg.get('curation_model', 'gpt-6.1-sol'))
+            model=cfg.get('curation_model', 'gpt-6-luna'))
         print('latest: 실제 최신 선별 요청 형식 확인')
         return 0
     if args.check_curation:
@@ -85,8 +85,8 @@ def main():
             before = client.calls
             try:
                 result = curate_candidates(client, candidates, kind=kind,
-                    model=cfg.get('curation_model', 'gpt-6.1-sol'),
-                    limit=cfg.get('category_daily_limit', 20), as_of=now.isoformat())
+                    model=cfg.get('curation_model', 'gpt-6-luna'),
+                    limit=cfg.get('category_daily_limit', 40), as_of=now.isoformat())
                 counts = Counter(pick.get('category', 'cve') for pick in result['picks'])
                 print(f'{date} {kind}: 후보 {len(candidates)}건 · 선정 {len(result["picks"])}건 · '
                       f'분야별 {dict(counts)} · 요청 {client.calls - before}회')
@@ -99,7 +99,7 @@ def main():
         before = client.calls
         try:
             result = select_latest_candidates(client, list(day.get('news_candidates', {}).values()), now,
-                model=cfg.get('curation_model', 'gpt-6.1-sol'), limit=cfg.get('latest_daily_limit', 20))
+                model=cfg.get('curation_model', 'gpt-6-luna'), limit=cfg.get('latest_daily_limit', 40))
             print(f'{date} latest: 적격 {result["candidate_count"]}건 · '
                   f'최신 {result["considered_count"]}건 확인 · 선정 {len(result["picks"])}건 · '
                   f'요청 {client.calls - before}회')
@@ -118,13 +118,15 @@ def main():
         print(json.dumps(report, ensure_ascii=False, indent=2))
         summary_path = os.getenv('GITHUB_STEP_SUMMARY')
         if summary_path:
+            news_limit = (report.get('news_curation') or {}).get('limit', cfg.get('category_daily_limit', 40))
+            latest_limit = (report.get('latest_curation') or {}).get('limit', cfg.get('latest_daily_limit', 40))
             text = (f'## 수집 결과\n\nKST {report["at"]}\n\n'
                     f'신규 {report["new_count"]}건 · 보류 {report["pending_count"]}건 · '
                     f'OpenAI 요청 {report["api_calls"]}회 · API 보고 토큰 {report["api_tokens"]}\n\n'
                     f'당일 NVD 공개 CVE {report.get("cve_count", 0)}건 · CVE 번역 대기 '
                     f'{report.get("cve_summary", {}).get("pending", 0)}건(오늘 선정분)\n\n'
-                    f'OpenAI 선별 {report.get("curation_model", "")} · 카테고리별 하루 최대 20건\n\n')
-            text += f'최신 기사 {report.get("latest_count", 0)}건 · 발행시각순 최대 20건\n\n'
+                    f'OpenAI 선별 {report.get("curation_model", "")} / 카테고리별 하루 최대 {news_limit}건\n\n')
+            text += f'최신 기사 {report.get("latest_count", 0)}건 / 발행시각순 최대 {latest_limit}건\n\n'
             text += '\n'.join('- ' + message for message in report['warnings'])
             Path(summary_path).write_text(text + '\n', encoding='utf-8')
     if args.build_only and (args.state_dir / 'state.json').exists():

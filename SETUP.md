@@ -27,7 +27,7 @@ API 설정은 2026년 11월 12일 확인한 OpenAI 공식 문서와 이 프로�
 
 1. [OpenAI API Keys](https://platform.openai.com/api-keys)에 접속하고 로그인합니다.
 2. 사용할 프로젝트를 선택하고 API 키를 생성합니다. 용도를 알아볼 수 있도록 이름을 `ai-security-digest`로 지정해도 됩니다.
-3. 해당 프로젝트에서 `gpt-6-luna`, `gpt-6.1-sol`과 Responses API를 사용할 수 있는지 확인합니다.
+3. 해당 프로젝트에서 `gpt-6-luna`와 Responses API를 사용할 수 있는지 확인합니다.
 4. 생성한 키를 복사해 아래 GitHub Secret에 등록합니다. 키 원문은 채팅이나 프로젝트 파일에 남기지 않습니다.
 
 키 생성 권한 오류가 나면 프로젝트 소유자나 조직 관리자에게 문의하세요. 이미 쓰고 있는 다른 서비스의 키 설정을 임의로 바꾸지 말고 이 프로젝트용 키를 별도로 만드는 편이 관리하기 쉽습니다.
@@ -150,21 +150,21 @@ env:
 | 역할 | 모델 |
 |---|---|
 | 번역, 요약, 분류 | `gpt-6-luna` |
-| HOT 선정 | `gpt-6.1-sol` |
-| 뉴스, 최신, CVE 선별 | `gpt-6.1-sol` |
+| HOT 선정 | `gpt-6-luna` |
+| 뉴스, 최신, CVE 선별 | `gpt-6-luna` |
 
-두 모델 모두 `config/settings.json`의 `reasoning_effort: high`를 사용합니다. 추론 강도가 높으면 응답 시간과 사용 토큰이 늘 수 있습니다.
+모든 신규 요청은 `config/settings.json`의 `reasoning_effort: max`를 사용합니다. `max`는 응답 시간과 사용 토큰을 늘릴 수 있으며 실제 지연과 비용은 실행 결과에서 확인해야 합니다.
 
-사용 프로젝트에서 해당 모델이 제공되지 않거나 다른 모델로 운영하려면 **Settings → Secrets and variables → Actions → Variables → New repository variable**에서 설정합니다.
+기존 저장소 Variables에 모델이 지정되어 있으면 아래 값으로 맞추거나 해당 변수를 제거해 프로젝트 기본값을 사용합니다. 설정 위치는 **Settings → Secrets and variables → Actions → Variables**입니다.
 
 | Name | Value 예시 |
 |---|---|
 | `OPENAI_MODEL` | `gpt-6-luna` |
-| `OPENAI_HOT_MODEL` | `gpt-6.1-sol` |
+| `OPENAI_HOT_MODEL` | `gpt-6-luna` |
 
-모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Responses API와 엄격한 구조화 JSON 출력**을 사용하므로 해당 기능과 `high` 추론을 지원하는 모델을 선택합니다. 선별 모델은 `config/settings.json`의 `curation_model`에서 설정합니다.
+모델 이름은 API에서 사용하는 정확한 ID여야 합니다. 웹 서비스 화면의 표시 이름을 임의로 넣으면 안 됩니다. 이 구현은 **Responses API와 엄격한 구조화 JSON 출력**을 지원하는 `gpt-6-luna`를 사용합니다. 선별 모델도 `config/settings.json`의 `curation_model`을 `gpt-6-luna`로 유지합니다. 요약, 선별, HOT의 추론 강도는 같은 `reasoning_effort` 설정을 따릅니다.
 
-참고: [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [구조화된 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Responses API](https://developers.openai.com/api/docs/guides/migrate-to-responses).
+참고: [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [구조화된 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Responses API](https://developers.openai.com/api/docs/guides/migrate-to-responses).
 
 ## 6. Actions 권한 확인하기
 
@@ -239,10 +239,12 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 
 | 확인 항목 | 정상 동작 |
 |---|---|
-| 카드 | 실제 수집된 제목·한국어 요약·출처·원문 링크 |
+| 카드 | 실제 수집한 제목, 한국어 요약, 발생 배경, 출처, 원문 링크 |
 | HOT | OpenAI가 고른 이슈와 선정 이유 |
 | 갱신 | 실제 실행한 예약 슬롯 또는 수동 실행 횟수 |
-| 수집 상태 | 성공한 수집원과 실패·보류 사유 |
+| 수집 상태 | 성공한 수집원과 실패, 보류, 수집 제외 사유 |
+
+새 요약의 발생 배경은 원문에 근거가 있을 때만 표시합니다. 원인이 밝혀지지 않은 기사는 추측하지 않습니다. 배경 필드가 없는 기존 요약은 그대로 재사용하며 이를 채우기 위해 전부 다시 요청하지 않습니다. 검색, 저장, 공유와 상세 정보는 새 디자인에서도 유지합니다.
 | 인기 | `stars today` 수치와 관측 시각 |
 | 목록 | 동일한 날짜가 한 번만 표시 |
 
@@ -258,7 +260,7 @@ https://YOUR_GITHUB_ID.github.io/ai-security-digest/
 | 13:00 | 12:07 | `7 12 * * *` |
 | 19:00 | 18:07 | `7 18 * * *` |
 
-각 실행은 같은 KST 날짜의 `reports/YYYY-MM-DD.html`을 갱신합니다. 오전 기사를 지우고 오후 기사로만 교체하는 방식이 아니라, 이미 요약한 기사에 새 기사를 추가하고 HOT을 다시 선정합니다.
+각 실행은 같은 KST 날짜의 `reports/YYYY-MM-DD.html`을 갱신합니다. 기존 후보와 새 후보를 함께 재평가해 각 분야 최대 40건을 선정하므로 새 이슈가 기존 선정을 대체할 수 있습니다. 이미 완료된 요약은 재사용하고 HOT을 다시 선정합니다.
 
 수집·요약·HTML 생성은 목표 시각보다 53분 전에 시작하며, 예약 실행의 Pages 배포는 목표 시각까지 대기합니다. 수동 실행은 바로 배포합니다. **정확한 게시 시각은 보장하지 않습니다.** GitHub 부하에 따라 지연되거나 누락될 수 있으며, 예약은 기본 브랜치에서 실행됩니다. 공개 저장소는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화될 수 있으므로 장기간 운영 시 확인해야 합니다.
 
@@ -311,7 +313,7 @@ Content-Type: application/json
 
 ### 사이트 추가·제외
 
-`config/sources.json`을 수정합니다. 필요 없는 수집원은 `enabled`를 `false`로 바꿉니다. 새 주소를 넣을 때는 RSS/HTML 형식, 본문 선택자와 허용 도메인 `hosts`를 함께 확인해야 합니다.
+`config/sources.json`을 수정합니다. 제외할 수집원은 `enabled`를 `false`로 바꾸고 `disabled_reason`에 이유를 적습니다. 해당 출처는 요청하지 않으며 수집원별 상태에 제외 사유를 표시합니다. 새 주소를 넣을 때는 RSS/HTML 형식, 발행일, 충분한 요약 근거와 허용 도메인 `hosts`를 함께 확인해야 합니다. 본문 요청을 사용하는 경우 본문 선택자와 해당 경로의 접근 정책도 확인합니다.
 
 RSS·본문 요청은 robots.txt와 사이트 제한을 따릅니다. 로그인, 유료벽, CAPTCHA를 우회하지 않습니다. 접근이 거절된 사이트를 계속 강제 요청하지 말고 공식 피드나 사용 허가된 다른 수집원을 사용하세요.
 
@@ -319,7 +321,9 @@ RSS·본문 요청은 robots.txt와 사이트 제한을 따릅니다. 로그인,
 
 `config/settings.json`의 `max_api_calls_per_run`은 기본 80회입니다. 재시도와 HOT도 포함하며, 한도를 넘긴 기사는 보류합니다. 기본 `batch_size`는 6입니다.
 
-예를 들어 **새로 요약할 기사 60개**가 모두 한 번에 성공하면 요약 약 10회와 HOT 1회가 필요합니다. 실제 횟수는 캐시, 관련성 판정, 실패·재시도, 수집원 상황에 따라 달라집니다. 입력 길이가 다르므로 요청 수만으로 청구액을 계산할 수 없습니다.
+`category_daily_limit`과 `latest_daily_limit`은 기본 40입니다. 일반 각 분야, 최신과 CVE는 하루 최대 40건이며 HOT은 최대 10건입니다. 적격 후보가 부족하면 상한까지 억지로 채우지 않습니다. 뉴스와 CVE 선별 후보는 최대 400건씩 나눠 심사하며 모든 중간 라운드에서 후보 수가 줄어야 합니다. 이 묶음 크기는 게시 상한이나 기사 요약의 `batch_size`와 다릅니다.
+
+예를 들어 **새로 요약할 기사 60개**가 모두 한 번에 성공하면 기사 요약만 약 10회가 필요합니다. 뉴스, 최신과 CVE 선별, HOT 선정과 CVE 요약은 별도 요청입니다. 실제 횟수는 캐시, 관련성 판정, 재시도와 수집원 상황에 따라 달라집니다. 입력 길이와 `max` 추론량이 다르므로 요청 수만으로 청구액을 계산할 수 없습니다.
 
 429가 자주 나면 프로젝트 할당량을 먼저 확인하고 호출 간격을 늘리거나 불필요한 수집원을 줄이세요. 오류가 난다고 곧바로 재실행을 반복하지 마세요. 보류 항목은 다시 시도되지만 시간 범위를 넘기면 제외됩니다.
 
@@ -377,7 +381,7 @@ Remove-Item Env:OPENAI_API_KEY
 Remove-Variable secureKey
 ```
 
-`--check-api`는 두 모델 연결과 작은 가상 후보의 실제 선별 형식을 확인하므로 API 사용량이 발생합니다. `--check-sources`는 OpenAI를 호출하지 않지만 수집원 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집·요약·HTML 생성을 수행합니다.
+`--check-api`는 설정된 Luna 모델 연결과 작은 가상 후보의 실제 선별 형식을 확인하므로 API 사용량이 발생합니다. `--check-sources`는 OpenAI를 호출하지 않지만 활성 수집원에 네트워크 요청을 보냅니다. 인자 없는 실행은 실제 수집, 요약과 HTML 생성을 수행합니다.
 
 ### Linux / macOS의 Bash
 

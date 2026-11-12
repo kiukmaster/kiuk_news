@@ -170,7 +170,7 @@ svg.empty-icon { width: 34px; height: 34px; color: var(--primary); stroke-width:
 .notice-block summary { min-height: 40px; padding: 10px 0; cursor: pointer; }
 .notice-block ul { padding-left: 19px; }
 .notice-block li { margin-bottom: 7px; overflow-wrap: anywhere; }
-.issue-section { margin-bottom: 40px; scroll-margin-top: calc(var(--header-h) + var(--safe-top) + 72px); }
+.issue-section { margin-bottom: 40px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
 .section-heading h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 18px; font-weight: 650; letter-spacing: -.02em; min-width: 0; }
 .section-heading h2 > svg { width: 19px; height: 19px; color: var(--muted); }

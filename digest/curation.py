@@ -151,8 +151,10 @@ def _validate_raw_selection(result: dict, candidates: list[dict], kind: str, lim
             raise OpenAIResponseValidationError('선정 부족 사유가 유효하지 않습니다', retry_code='KOREAN_REASON')
         by_id = {candidate['id']: candidate for candidate in candidates}
         ids = [pick['id'] for pick in picks]
-        if len(ids) != len(set(ids)) or not set(ids).issubset(by_id):
-            raise OpenAIResponseValidationError('선정 결과의 ID 누락·중복·변조', retry_code='IDS')
+        if not set(ids).issubset(by_id):
+            raise OpenAIResponseValidationError('현재 후보에 없는 대표 기사 또는 CVE ID입니다', retry_code='IDS')
+        if len(ids) != len(set(ids)):
+            raise OpenAIResponseValidationError('같은 대표 ID가 두 번 선정되었습니다', retry_code='DUPLICATES')
         represented = set(ids)
         for pick in picks:
             if not _korean_reason(pick['reason_ko'], 200):
@@ -294,8 +296,15 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
     def select_round(group: list[dict], preliminary: bool) -> dict:
         data = {'as_of': as_of, 'candidates': [_compact_candidate(candidate, kind)
                                for candidate in group]}
+        schema = _schema(kind, limit, topic_only=True)
+        if kind == 'news':
+            # One shared allowlist covers both representatives and related stories.
+            schema['$defs'] = {'candidate_id': {'type': 'string', 'enum': [row['id'] for row in group]}}
+            fields = schema['properties']['picks']['items']['properties']
+            fields['id'] = {'$ref': '#/$defs/candidate_id'}
+            fields['related_ids']['items'] = {'$ref': '#/$defs/candidate_id'}
         result = client.request(_instruction(kind, limit, preliminary), data,
-            _schema(kind, limit, topic_only=True), model,
+            schema, model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _normalize_selection(result, group, kind, limit),
             max_output_tokens=32768)

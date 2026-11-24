@@ -82,6 +82,10 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
     def choose(*args, **kwargs):
         rows = payload_candidates(kwargs)
         assert_provider_topics(kwargs)
+        schema = kwargs['json']['text']['format']['schema']
+        fields = schema['properties']['picks']['items']['properties']
+        assert fields['id'] == fields['related_ids']['items'] == {'$ref': '#/$defs/candidate_id'}
+        assert schema['$defs']['candidate_id']['enum'] == [row['id'] for row in rows]
         assert len(rows) <= CURATION_CHUNK_SIZE
         seen.update(row['id'] for row in rows)
         counts, picks = Counter(), []

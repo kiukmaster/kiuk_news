@@ -1,0 +1,5 @@
+name: Verify Actions Node security
+description: Require the patched Node 24 runtime used by JavaScript Actions
+runs:
+  using: node24
+  main: index.js

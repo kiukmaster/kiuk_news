@@ -442,7 +442,10 @@ class OpenAIClient:
                                                          retry_code='GENERIC') from None
                 try:
                     validate(result, schema)
-                except ValidationError:
+                except ValidationError as exc:
+                    if exc.validator == 'enum' and ('id' in exc.absolute_path or 'related_ids' in exc.absolute_path):
+                        raise OpenAIResponseValidationError('이번 요청의 후보 목록에 없는 ID입니다',
+                                                            retry_code='IDS') from None
                     raise OpenAIResponseValidationError('OpenAI 결과 스키마 검증 실패',
                                                          retry_code='GENERIC') from None
                 if validator is not None:

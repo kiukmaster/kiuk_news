@@ -21,7 +21,7 @@ from digest.common import now_kst, load_config, SLOTS
 from digest.pipeline import empty_state, new_day
 from digest.render import render_site
 from digest.cves import normalize_cve
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 SIZES = [(320,800),(344,882),(360,900),(390,844),(412,915),(600,700),
          (690,829),(768,900),(840,980),(900,700),(1024,768),(1440,1000)]
@@ -133,6 +133,96 @@ class QuietHandler(SimpleHTTPRequestHandler):
         pass
 
 
+def expand_cves(page, expected_count):
+    first_new = page.locator('[data-cve-card]').nth(page.locator('[data-cve-card]:visible').count())
+    assert first_new.is_hidden()
+    page.locator('[data-cve-more]').click()
+    expect(page.locator('[data-cve-card]:visible')).to_have_count(expected_count)
+    expect(first_new).to_be_focused()
+    expect(first_new).to_have_attribute('tabindex', '-1')
+
+
+def check_shared_bookmarks(context, archive, load, now):
+    dates = [(now - timedelta(days=offset)).date().isoformat() for offset in (1, 2)]
+    visible = archive.locator('[data-report-card]:visible')
+    archive.locator('[data-archive-filter="saved"]').click()
+    expect(visible).to_have_count(0)
+    with context.new_page() as first, context.new_page() as second:
+        load(f'reports/{dates[0]}.html', target=first)
+        load(f'reports/{dates[1]}.html', target=second)
+        first_button = first.locator('[data-bookmark]')
+        second_button = second.locator('[data-bookmark]')
+        # The second tab saves before it has handled the first tab's update.
+        second.evaluate("""window.addEventListener('storage', event => event.stopImmediatePropagation(),
+            {capture: true, once: true})""")
+        first_button.click()
+        expect(visible).to_have_count(1)
+        second_button.click()
+        expect(visible).to_have_count(2)
+        for date in dates:
+            expect(archive.locator(f'[data-date="{date}"] [data-saved-icon]')).to_be_visible()
+        key = second.evaluate("Object.keys(localStorage).find(key => key.startsWith('daily-digest:bookmarks:'))")
+        assert sorted(second.evaluate('key => JSON.parse(localStorage.getItem(key))', key)) == sorted(dates)
+
+        second.evaluate('localStorage.clear()')
+        expect(visible).to_have_count(0)
+        expect(archive.locator('#filter-empty')).to_be_visible()
+        expect(first_button).to_have_attribute('aria-pressed', 'false')
+        # A document does not receive its own storage event. Restore its cached view.
+        expect(second_button).to_have_attribute('aria-pressed', 'true')
+        second.evaluate("window.dispatchEvent(new PageTransitionEvent('pageshow', {persisted: true}))")
+        expect(second_button).to_have_attribute('aria-pressed', 'false')
+
+        second.evaluate("key => localStorage.setItem(key, '{')", key)
+        second_button.click()
+        expect(second_button).to_have_attribute('aria-pressed', 'true')
+        assert second.evaluate('key => JSON.parse(localStorage.getItem(key))', key) == [dates[1]]
+        second_button.click()
+        expect(visible).to_have_count(0)
+    archive.locator('[data-archive-filter="all"]').click()
+
+
+def check_kst_rollover(browser, load, now, errors):
+    # Keep the browser on UTC so using its local midnight would fail the check.
+    with browser.new_context(locale='ko-KR', timezone_id='UTC') as context:
+        page = context.new_page()
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.clock.install(time=now.replace(hour=23, minute=55, second=0, microsecond=0))
+        load('index.html', target=page)
+        count = page.locator('[data-report-count]')
+        cards = page.locator('[data-report-card]:visible')
+        badge = page.locator('[data-today-badge]:visible')
+        today = page.locator('[data-nav-today][data-nav-date]')
+        hot = page.locator('.bottom-bar [data-nav-date]:not([data-nav-today])')
+        expect(count).to_have_text('5개')
+        expect(cards).to_have_count(5)
+        expect(badge).to_have_count(1)
+        expect(page.locator(f'[data-date="{now.date().isoformat()}"] [data-today-badge]')).to_be_visible()
+        expect(today).to_have_attribute('href')
+        expect(hot).to_have_attribute('href')
+
+        page.clock.fast_forward('05:02')
+        expect(count).to_have_text('4개')
+        expect(cards).to_have_count(4)
+        expect(badge).to_have_count(0)
+        expect(today).not_to_have_attribute('href')
+        expect(today).to_have_attribute('aria-disabled', 'true')
+        expect(today).to_have_text('오늘 수집 대기')
+        expect(hot).to_have_attribute('href')
+
+        page.clock.set_system_time(now + timedelta(days=6))
+        page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+        expect(count).to_have_text('0개')
+        expect(cards).to_have_count(0)
+        expect(page.locator('#filter-empty')).to_be_visible()
+        expect(hot).not_to_have_attribute('href')
+        expect(hot).to_have_attribute('aria-disabled', 'true')
+        expect(hot).to_have_text('HOT 수집 대기')
+        load(f'reports/{now.date().isoformat()}.html', target=page)
+        expect(page.locator('#expired-report')).to_be_visible()
+        expect(page.locator('#report-content')).to_be_hidden()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--screenshots', type=Path)
@@ -146,7 +236,14 @@ def main():
     with tempfile.TemporaryDirectory() as temp:
         temp = Path(temp)
         output = temp / 'project-prefix'
-        render_site(fixture_state(now), output, now, load_config())
+        cfg = load_config()
+        render_site(fixture_state(now), output, now, cfg)
+        render_site(empty_state(), output / 'empty-archive', now, cfg)
+        today = now.date().isoformat()
+        empty_day = empty_state()
+        empty_day['days'][today] = new_day(today)
+        empty_day['days'][today]['updated_at'] = now.isoformat()
+        render_site(empty_day, output / 'empty-day', now, cfg)
         manifest = json.loads((output / 'reports.json').read_text(encoding='utf-8'))
         today_report = next(row for row in manifest['reports'] if row['date'] == now.date().isoformat())
         assert today_report['section_count'] == 200
@@ -162,10 +259,11 @@ def main():
                 executable = shutil.which('chromium') or shutil.which('chromium-browser')
                 browser = p.chromium.launch(headless=True, executable_path=executable)
                 context = browser.new_context(locale='ko-KR', timezone_id='Asia/Seoul', reduced_motion='reduce')
+                context.on('page', lambda opened: opened.on('pageerror', lambda error: errors.append(str(error))))
                 page = context.new_page()
+                page.clock.set_fixed_time(now)
                 page.set_default_timeout(5000)
                 page.set_default_navigation_timeout(5000)
-                page.on('pageerror', lambda error: errors.append(str(error)))
                 def load(path, js=True, target=None):
                     target = target or page
                     if not args.in_memory:
@@ -227,13 +325,30 @@ def main():
                             }"""), 'Duplicate HTML IDs'
                             assert page.locator('#cve-grid').evaluate('e => getComputedStyle(e).gridTemplateColumns.split(" ").length') == expected
 
-                        if screenshots and width in (390,768):
+                        if screenshots and width in (390,768,1440):
                             page.screenshot(path=str(screenshots / f'{kind}-{width}.png'), full_page=(kind=='archive'))
                         results.append({'page':kind,'width':width,'height':height,'columns':columns,'overflow':False})
+                for kind, path, marker in (
+                    ('empty-archive', 'empty-archive/index.html', '#no-reports'),
+                    ('empty-day-archive', 'empty-day/index.html', f'[data-report-card][data-date="{today}"]'),
+                    ('empty-report', f'empty-day/reports/{today}.html', '#sec-hot .section-empty'),
+                ):
+                    load(path)
+                    expect(page.locator(marker)).to_be_visible()
+                    expect(page.locator('[data-issue-card]')).to_have_count(0)
+                    for width, height in ((390, 844), (1440, 1000)):
+                        page.set_viewport_size({'width': width, 'height': height})
+                        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (kind, width)
+                        if screenshots:
+                            page.evaluate('window.scrollTo(0, 0)')
+                            page.screenshot(path=str(screenshots / f'{kind}-{width}.png'))
+                        results.append({'page': kind, 'width': width, 'height': height, 'overflow': False})
                 print('Functional checks', file=sys.stderr, flush=True)
                 page.set_viewport_size({'width':390,'height':844})
                 load('index.html')
                 assert page.locator('[data-report-card]').count() == 5
+                if not args.in_memory:
+                    check_shared_bookmarks(context, page, load, now)
                 if args.in_memory:
                     target = page.locator('[data-report-card]').first.get_attribute('href')
                     assert target.startswith('reports/')
@@ -256,6 +371,19 @@ def main():
                     page.locator('[data-report-card]:visible').click()
                 page.locator('#issue-search').fill('존재하지않는검색어123456789')
                 assert page.locator('[data-issue-card]:visible').count() == 0
+                if not args.in_memory:
+                    page.set_viewport_size({'width':1440,'height':1000})
+                    for section in ('sec-event', 'sec-github'):
+                        tab = page.locator(f'.nav-tab[href="#{section}"]')
+                        tab.click()
+                        assert page.url.endswith(f'#{section}')
+                        page.evaluate('() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))')
+                        expect(tab).to_have_attribute('aria-current', 'location')
+                        expect(page.locator('.nav-tab[aria-current="location"]')).to_have_count(1)
+                        page.locator(f'#{section} .search-empty').click()
+                        page.evaluate('() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))')
+                        expect(tab).to_have_attribute('aria-current', 'location')
+                    page.set_viewport_size({'width':390,'height':844})
                 page.locator('#issue-search').fill('')
                 assert page.locator('[data-issue-card]:visible').count() == 270
                 page.locator('#issue-search').fill('최신전용검증')
@@ -277,6 +405,8 @@ def main():
                         page.locator('#sec-cve').evaluate('e => e.scrollIntoView()')
                         page.screenshot(path=str(screenshots/f'cve-{width}.png'))
                 page.set_viewport_size({'width':390,'height':844})
+                expand_cves(page, 40)
+                assert page.locator('[data-cve-more]').is_hidden()
                 if args.in_memory:
                     page.locator('#sec-latest').evaluate('e => e.scrollIntoView()')
                 else:
@@ -297,8 +427,9 @@ def main():
                 assert page.evaluate('window.sharedUrl === location.href')
                 page.set_viewport_size({'width':768,'height':900})
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
-                load('404.html')
-                assert page.locator('a').first.get_attribute('href') in ('./','./index.html','index.html', '/project-prefix/', '/project-prefix/index.html')
+                load('404.html', js=False)
+                home_url = 'https://news.kiukmaster.com/'
+                expect(page.locator('main a')).to_have_attribute('href', home_url)
                 # Real HTTP mode also checks reading with JavaScript disabled.
                 # The in-memory adapter relies on scripting to inject the document.
                 if not args.in_memory:
@@ -310,6 +441,12 @@ def main():
                     assert no_js_page.locator('[data-cve-card]').count() == 40
                     for category in ('ai', 'security', 'tech', 'event', 'github'):
                         assert no_js_page.locator(f'#sec-{category} [data-issue-card]').count() == 40
+                    missing = base + 'unknown/archive/nested/missing.html'
+                    no_js_page.route(missing, lambda route: route.fulfill(
+                        status=404, content_type='text/html; charset=utf-8', path=output / '404.html'), times=1)
+                    response = no_js_page.goto(missing)
+                    assert response.status == 404 and no_js_page.url == missing
+                    expect(no_js_page.locator('main a')).to_have_attribute('href', home_url)
                     no_js.close()
                 # Older archives can retain more than 20 CVEs. Keep their
                 # pagination and hidden-card search usable without implying
@@ -317,16 +454,15 @@ def main():
                 legacy_date = (now - timedelta(days=4)).date().isoformat()
                 load(f'reports/{legacy_date}.html')
                 assert page.locator('[data-cve-card]:visible').count() == 20
-                page.locator('[data-cve-more]').click()
-                assert page.locator('[data-cve-card]:visible').count() == 40
+                expand_cves(page, 40)
                 page.locator('#issue-search').fill('CVE-2099-90044')
                 assert page.locator('[data-cve-card]:visible').count() == 1
                 assert page.locator('[data-cve-more]').is_hidden()
                 page.locator('#issue-search').fill('')
                 assert page.locator('[data-cve-card]:visible').count() == 40
-                page.locator('[data-cve-more]').click()
-                assert page.locator('[data-cve-card]:visible').count() == 45
+                expand_cves(page, 45)
                 assert page.locator('[data-cve-more]').is_hidden()
+                check_kst_rollover(browser, load, now, errors)
                 assert not errors, errors
                 browser.close()
         finally:
@@ -336,6 +472,8 @@ def main():
               'local_storage_mocked':args.in_memory,
               'viewport_page_checks':len(results),'functional_checks':'bookmark/search/share/resize and static navigation links' if args.in_memory else 'navigation/bookmark/search/anchors/share/resize/no-JS',
               'cve_checks':'daily 40 per category/CVE; 20-card pagination; related CVE search; 12 viewport checks; legacy pagination and hidden-card search; details', 'page_errors':errors, 'viewports':results}
+    report['cross_tab_bookmark_checks'] = not args.in_memory
+    report['kst_checks'] = 'UTC 브라우저에서 한국시간 자정 자동 갱신, 6일 뒤 보관 만료와 탐색 링크 확인'
     report['latest_checks'] = '40 publication-sorted cards; independent articles; unique totals and HTML IDs; section order, navigation, background search and no-JS'
     if screenshots:
         (screenshots/'results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

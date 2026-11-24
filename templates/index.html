@@ -3,7 +3,7 @@
 {% block content %}
 <main class="shell archive-main fold-cover-tight fold-inner-layout" id="main">
   <section class="archive-heading" aria-label="수집 안내">
-    <div class="section-title-line"><span class="section-dot"></span><h2>수집 리포트 <span class="muted">최근 {{ keep_days }}일</span></h2><span class="count-label">{{ days|length }}개</span></div>
+    <div class="section-title-line"><span class="section-dot"></span><h2>수집 리포트 <span class="muted">최근 {{ keep_days }}일</span></h2><span class="count-label" data-report-count>{{ days|length }}개</span></div>
     <p class="schedule-caption">매일 06:00 / 13:00 / 19:00 KST 갱신</p>
   </section>
   {% if last_run.warnings %}<div class="notice warning" role="status"><svg class="icon"><use href="#i-info"/></svg><div><strong>마지막 수집에서 일부 항목이 보류되었습니다.</strong><p>완료된 보고서는 그대로 유지됩니다. 보고서 하단의 수집 상태를 확인하세요.</p></div></div>{% endif %}
@@ -16,15 +16,15 @@
     {% for report in days %}
     <a class="report-card" href="reports/{{ report.date }}.html" data-report-card data-date="{{ report.date }}">
       <div class="report-card-header">
-        <div><div class="date-line"><h3>{{ report.date_label }} <span class="weekday">{{ report.weekday }}</span></h3>{% if report.is_today %}<span class="badge today-badge">오늘</span>{% endif %}<span class="saved-indicator" data-saved-icon hidden>저장됨</span></div><p class="report-subtitle">{{ report.count }}개 이슈 / 최신 {{ report.latest_count }}건 / CVE {{ report.cve_count }}건</p></div>
+        <div><div class="date-line"><h3>{{ report.date_label }} <span class="weekday">{{ report.weekday }}</span></h3><span class="badge today-badge" data-today-badge{% if not report.is_today %} hidden{% endif %}>오늘</span><span class="saved-indicator" data-saved-icon hidden>저장됨</span></div><p class="report-subtitle">{{ report.count }}개 이슈 / 최신 {{ report.latest_count }}건 / CVE {{ report.cve_count }}건</p></div>
         <svg class="icon arrow"><use href="#i-arrow"/></svg>
       </div>
-      {{ cycles(report, slots) }}
-      <div class="report-counts"><span class="badge hot-badge">HOT {{ report.hot_cards|length }}</span>{% for key, name in categories.items() %}<span class="badge">{{ 'GitHub' if key == 'github' else name }} {{ report.counts[key] }}</span>{% endfor %}<span class="badge">CVE {{ report.cve_count }}</span></div>
       <div class="key-headlines"><span class="eyebrow">주요 소식</span>
         {% if report.hot_cards %}<ul>{% for article in report.hot_cards[:3] %}<li>{{ article.title_ko }}</li>{% endfor %}</ul>
         {% else %}<p class="muted small-text">HOT 선정 대기 / 수집된 이슈를 확인하세요.</p>{% endif %}
       </div>
+      {{ cycles(report, slots) }}
+      <div class="report-counts"><span class="badge hot-badge">HOT {{ report.hot_cards|length }}</span>{% for key, name in categories.items() %}<span class="badge">{{ 'GitHub' if key == 'github' else name }} {{ report.counts[key] }}</span>{% endfor %}<span class="badge">CVE {{ report.cve_count }}</span></div>
       <div class="report-card-footer"><span>마지막 갱신 {{ report.updated_at|kst }} KST</span><span>보고서 읽기</span></div>
     </a>
     {% endfor %}

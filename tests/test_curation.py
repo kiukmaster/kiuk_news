@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 from jsonschema import ValidationError, validate
+from requests.exceptions import ReadTimeout
 
 from digest.common import load_config
 from digest.curation import (CURATION_CHUNK_SIZE, SCORE_KEYS, curate_candidates,
@@ -106,9 +107,25 @@ def test_every_candidate_is_screened_and_final_news_cap_is_per_category(monkeypa
                for call in client.session.post.call_args_list)
     assert all(call.kwargs['json']['max_output_tokens'] == 32768
                for call in client.session.post.call_args_list)
-    assert all(call.kwargs['json']['reasoning']['effort'] == 'high'
+    assert all(call.kwargs['json']['reasoning']['effort'] == 'medium'
+               and call.kwargs['timeout'] == (10, 1200)
                for call in client.session.post.call_args_list)
     assert candidates == original
+
+
+def test_news_read_timeout_retry_uses_same_budget_and_effort(monkeypatch):
+    client = make_client(monkeypatch, budget=2)
+    client.session.post = Mock(side_effect=[
+        ReadTimeout(), response(selection(pick('1', 'ai'))),
+    ])
+
+    result = curate_candidates(client, [{'id': '1'}])
+
+    assert [row['id'] for row in result['picks']] == ['1']
+    assert client.calls == 2
+    for call in client.session.post.call_args_list:
+        assert call.kwargs['timeout'] == (10, 1200)
+        assert call.kwargs['json']['reasoning']['effort'] == 'medium'
 
 
 @pytest.mark.parametrize('candidate_count,physical_limit', [(557, 6), (607, 6)])
@@ -183,6 +200,9 @@ def test_duplicate_members_are_preserved_when_representative_changes_between_rou
     final_data = payload_candidates(client.session.post.call_args_list[-1].kwargs)
     assert all('already_grouped_ids' not in row for row in final_data)
     assert client.calls == 3
+    assert all(call.kwargs['json']['reasoning']['effort'] == 'high'
+               and call.kwargs['timeout'] == (10, 300)
+               for call in client.session.post.call_args_list)
 
 
 def test_category_quota_preserves_gemini_order_without_requesting_another_ranking(monkeypatch):

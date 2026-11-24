@@ -146,8 +146,10 @@ jobs:
       - name: Collect, summarize, select HOT, generate HTML
         id: collect
         if: inputs.mode != 'rebuild' && inputs.mode != 'check-api'
-        # A manual catch-up may need to summarize an entire day's backlog.
-        timeout-minutes: ${{ inputs.mode == 'collect' && inputs.scheduled_slot == 'manual' && 80 || 35 }}
+        # Allow a 20-minute news selection request plus its retry without
+        # cutting them off at the former 35-minute step limit.
+        # A manual catch-up still gets extra time for a full day's backlog.
+        timeout-minutes: ${{ inputs.mode == 'collect' && inputs.scheduled_slot == 'manual' && 80 || 60 }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}

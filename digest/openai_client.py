@@ -362,7 +362,8 @@ class OpenAIClient:
 
     def request(self, instruction: str, data: dict, schema: dict, model: str,
                 attempts: int = 3, validator: Callable[[dict], None] | None = None,
-                max_output_tokens: int = 8192, reasoning_effort: str | None = None) -> dict:
+                max_output_tokens: int = 8192, reasoning_effort: str | None = None,
+                read_timeout_seconds: int = 300) -> dict:
         effort = reasoning_effort or self.cfg.get('reasoning_effort', 'high')
         if effort not in ('none', 'low', 'medium', 'high', 'xhigh', 'max'):
             raise ValueError('지원하지 않는 OpenAI reasoning_effort')
@@ -395,7 +396,7 @@ class OpenAIClient:
                 try:
                     response = self.session.post(ENDPOINT, json=payload,
                         headers={'Authorization': 'Bearer ' + self.key,
-                                 'Content-Type': 'application/json'}, timeout=(10, 300))
+                                 'Content-Type': 'application/json'}, timeout=(10, read_timeout_seconds))
                 except requests.RequestException as exc:
                     api_seconds = time.monotonic() - api_started
                     print(f'[OpenAI API 대기 실패] {request_info} api_seconds={api_seconds:.1f} '

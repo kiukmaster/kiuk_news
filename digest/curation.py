@@ -297,7 +297,9 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
         data = {'as_of': as_of, 'candidates': [_compact_candidate(candidate, kind)
                                for candidate in group]}
         schema = _schema(kind, limit, topic_only=True)
+        request_options = {}
         if kind == 'news':
+            request_options = {'reasoning_effort': 'medium', 'read_timeout_seconds': 20 * 60}
             # One shared allowlist covers both representatives and related stories.
             schema['$defs'] = {'candidate_id': {'type': 'string', 'enum': [row['id'] for row in group]}}
             fields = schema['properties']['picks']['items']['properties']
@@ -307,7 +309,7 @@ def curate_candidates(client, candidates: list[dict], kind: str = 'news',
             schema, model,
             attempts=CURATION_ATTEMPTS,
             validator=lambda result: _normalize_selection(result, group, kind, limit),
-            max_output_tokens=32768)
+            max_output_tokens=32768, **request_options)
         # Defensively validate lightweight clients too, then transform a copy.
         normalized = _normalize_selection(result, group, kind, limit)
         by_id = {candidate['id']: candidate for candidate in group}

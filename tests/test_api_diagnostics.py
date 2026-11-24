@@ -38,8 +38,11 @@ def test_api_preflight_checks_both_selection_schemas_without_state_or_site(monke
     selections = [call for call in calls if 'candidates' in call[0]]
     assert len(selections) == 3
     assert all(call[2] == 'gpt-6.1-sol' and call[3]['max_output_tokens'] == 32768
-               and 'reasoning_effort' not in call[3]
                for call in selections[:2])
+    assert selections[0][3]['reasoning_effort'] == 'medium'
+    assert selections[0][3]['read_timeout_seconds'] == 1200
+    assert 'reasoning_effort' not in selections[1][3]
+    assert 'read_timeout_seconds' not in selections[1][3]
     assert 'category' in selections[0][1]['properties']['picks']['items']['properties']
     assert 'category' not in selections[1][1]['properties']['picks']['items']['properties']
     assert set(selections[2][1]['properties']['picks']['items']['properties']) == {'id', 'related_ids'}

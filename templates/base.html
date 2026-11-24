@@ -36,10 +36,10 @@
 {% block content %}{% endblock %}
 <nav class="bottom-bar" aria-label="주요 메뉴">
   <div class="bottom-inner">
-    {% if today_url %}<a href="{{ prefix }}{{ today_url }}"{% if page_type == 'report' and day.is_today %} aria-current="page"{% endif %}><svg class="icon"><use href="#i-report"/></svg><span>오늘의 보고서</span></a>
+    {% if today_url %}<a href="{{ prefix }}{{ today_url }}" data-nav-today data-nav-date="{{ today_url[8:18] }}"{% if page_type == 'report' and day.is_today %} aria-current="page"{% endif %}><svg class="icon"><use href="#i-report"/></svg><span>오늘의 보고서</span></a>
     {% else %}<span class="disabled" aria-disabled="true"><svg class="icon"><use href="#i-report"/></svg><span>오늘 수집 대기</span></span>{% endif %}
     <a href="{{ prefix }}index.html"{% if page_type == 'archive' %} aria-current="page"{% endif %}><svg class="icon"><use href="#i-archive"/></svg><span>보고서 목록</span></a>
-    {% if latest_url %}<a href="{{ prefix }}{{ latest_url }}#sec-hot"><svg class="icon"><use href="#i-hot"/></svg><span>최근 HOT</span></a>
+    {% if latest_url %}<a href="{{ prefix }}{{ latest_url }}#sec-hot" data-nav-date="{{ latest_url[8:18] }}"><svg class="icon"><use href="#i-hot"/></svg><span>최근 HOT</span></a>
     {% else %}<span class="disabled" aria-disabled="true"><svg class="icon"><use href="#i-hot"/></svg><span>HOT 수집 대기</span></span>{% endif %}
   </div>
 </nav>

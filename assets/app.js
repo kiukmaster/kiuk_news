@@ -3,22 +3,32 @@
   'use strict';
   const body = document.body;
   const keepDays = Number(body.dataset.keepDays || 5);
-  const dateParts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).formatToParts(new Date());
-  const getPart = type => dateParts.find(p => p.type === type).value;
-  const today = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
-  const cutoff = new Date(`${today}T00:00:00Z`);
-  cutoff.setUTCDate(cutoff.getUTCDate() - keepDays + 1);
-  const cutoffDate = cutoff.toISOString().slice(0, 10);
+  let today, cutoffDate;
+  function refreshDates() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const part = type => parts.find(p => p.type === type).value;
+    today = `${part('year')}-${part('month')}-${part('day')}`;
+    const cutoff = new Date(`${today}T00:00:00Z`);
+    cutoff.setUTCDate(cutoff.getUTCDate() - keepDays + 1);
+    cutoffDate = cutoff.toISOString().slice(0, 10);
+  }
+  refreshDates();
   const scriptPath = Array.from(document.scripts).find(s => s.src.includes('/assets/app.js'))?.src;
   const basePath = scriptPath ? new URL('../', scriptPath).pathname : '/';
   const storageKey = `daily-digest:bookmarks:${basePath}`;
+  function readSaved() {
+    const raw = localStorage.getItem(storageKey) || '[]';
+    let value;
+    try { value = JSON.parse(raw); } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      value = [];
+    }
+    return new Set(Array.isArray(value) ? value.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= cutoffDate) : []);
+  }
   let saved = new Set();
-  try {
-    const value = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    if (Array.isArray(value)) saved = new Set(value.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= cutoffDate));
-  } catch (_) { /* Browser privacy mode can block storage. Content remains readable. */ }
+  try { saved = readSaved(); } catch (_) { /* Storage may be blocked; reading remains available. */ }
   const notify = message => {
     const toast = document.getElementById('toast');
     if (!toast) return;
@@ -29,13 +39,6 @@
   };
   document.querySelectorAll('[data-js-only]').forEach(el => { el.hidden = false; });
   const reportDate = body.dataset.reportDate;
-  const expired = reportDate && reportDate < cutoffDate;
-  if (expired) {
-    const content = document.getElementById('report-content');
-    if (content) content.hidden = true;
-    const notice = document.getElementById('expired-report');
-    if (notice) notice.hidden = false;
-  }
   const bookmark = document.querySelector('[data-bookmark]');
   const renderBookmark = () => {
     if (!bookmark) return;
@@ -45,10 +48,12 @@
   if (bookmark) {
     renderBookmark();
     bookmark.addEventListener('click', () => {
-      if (expired) return notify('보관 기간이 지난 보고서는 저장할 수 없습니다.');
-      const next = new Set(saved);
-      if (next.has(reportDate)) next.delete(reportDate); else next.add(reportDate);
+      refreshDates();
+      if (reportDate < cutoffDate) return notify('보관 기간이 지난 보고서는 저장할 수 없습니다.');
       try {
+        // Read again so another open report's saved dates are not overwritten.
+        const next = readSaved();
+        if (next.has(reportDate)) next.delete(reportDate); else next.add(reportDate);
         localStorage.setItem(storageKey, JSON.stringify([...next]));
         saved = next;
         renderBookmark();
@@ -73,7 +78,9 @@
     }
   });
   const archiveCards = [...document.querySelectorAll('[data-report-card]')];
+  let archiveFilter = 'all';
   function filterArchive(filter) {
+    archiveFilter = filter;
     let visible = 0;
     for (const card of archiveCards) {
       const date = card.dataset.date;
@@ -81,7 +88,11 @@
       visible += Number(!card.hidden);
       const marker = card.querySelector('[data-saved-icon]');
       if (marker) marker.hidden = !saved.has(date);
+      const todayBadge = card.querySelector('[data-today-badge]');
+      if (todayBadge) todayBadge.hidden = date !== today;
     }
+    const reportCount = document.querySelector('[data-report-count]');
+    if (reportCount) reportCount.textContent = `${archiveCards.filter(card => card.dataset.date >= cutoffDate).length}개`;
     const empty = document.getElementById('filter-empty');
     if (empty) {
       empty.hidden = visible > 0;
@@ -97,6 +108,38 @@
   }
   if (archiveCards.length) filterArchive('all');
   document.querySelectorAll('[data-archive-filter]').forEach(b => b.addEventListener('click', () => filterArchive(b.dataset.archiveFilter)));
+  function refreshPage() {
+    refreshDates();
+    clearTimeout(refreshPage.timer);
+    const midnight = Date.parse(`${today}T00:00:00+09:00`) + 86400000;
+    refreshPage.timer = setTimeout(refreshPage, Math.max(1000, midnight - Date.now()));
+    try { saved = readSaved(); } catch (_) { /* Do not claim storage changes succeeded. */ }
+    renderBookmark();
+    if (archiveCards.length) filterArchive(archiveFilter);
+    const expired = !!reportDate && reportDate < cutoffDate;
+    const content = document.getElementById('report-content');
+    if (content) content.hidden = expired;
+    const notice = document.getElementById('expired-report');
+    if (notice) notice.hidden = !expired;
+    document.querySelectorAll('[data-nav-date]').forEach(link => {
+      const isToday = link.hasAttribute('data-nav-today');
+      const unavailable = isToday ? link.dataset.navDate !== today : link.dataset.navDate < cutoffDate;
+      if (!unavailable) return;
+      link.removeAttribute('href');
+      link.removeAttribute('aria-current');
+      link.setAttribute('aria-disabled', 'true');
+      link.classList.add('disabled');
+      link.querySelector('span').textContent = isToday ? '오늘 수집 대기' : 'HOT 수집 대기';
+    });
+  }
+  window.addEventListener('pageshow', refreshPage);
+  window.addEventListener('storage', event => {
+    if (event.storageArea === localStorage && (event.key === storageKey || event.key === null)) refreshPage();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshPage();
+  });
+  refreshPage();
   const search = document.getElementById('issue-search');
   const issueCards = [...document.querySelectorAll('[data-issue-card]')];
   const searchable = issueCards.map(card => ({ card, text: card.textContent.toLocaleLowerCase('ko-KR') }));
@@ -140,9 +183,19 @@
     updateReading();
   }
   search?.addEventListener('input', filterIssues);
-  cveMore?.addEventListener('click', () => { cveLimit += 20; filterIssues(); });
+  cveMore?.addEventListener('click', () => {
+    const next = document.querySelector('[data-cve-card][hidden]');
+    cveLimit += 20;
+    filterIssues();
+    if (next && !next.hidden) {
+      next.setAttribute('tabindex', '-1');
+      next.focus({preventScroll: true});
+      next.scrollIntoView({block: 'start'});
+    }
+  });
   const tabs = [...document.querySelectorAll('.nav-tab')];
   const sections = [...document.querySelectorAll('[data-section]')];
+  let requestedSection = sections.find(section => `#${section.id}` === location.hash);
   const bar = document.getElementById('reading-progress');
   let scheduled = false;
   function updateReading() {
@@ -155,6 +208,12 @@
     const threshold = (document.querySelector('.topbar')?.getBoundingClientRect().height || 64) + 90;
     for (const section of sections) {
       if (section.getBoundingClientRect().top <= threshold) active = section.id;
+    }
+    const last = sections[sections.length - 1];
+    if (last && window.scrollY > 0 && Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1
+        && last.getBoundingClientRect().top < window.innerHeight) {
+      const target = requestedSection?.getBoundingClientRect();
+      active = target && target.top < window.innerHeight && target.bottom > threshold ? requestedSection.id : last.id;
     }
     for (const tab of tabs) {
       const isActive = tab.hash === `#${active}`;
@@ -177,6 +236,20 @@
   const requestReading = () => {
     if (!scheduled) { scheduled = true; requestAnimationFrame(updateReading); }
   };
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    requestedSection = sections.find(section => `#${section.id}` === tab.hash);
+    requestReading();
+  }));
+  window.addEventListener('hashchange', () => {
+    requestedSection = sections.find(section => `#${section.id}` === location.hash);
+    requestReading();
+  });
+  const clearRequestedSection = () => { requestedSection = null; requestReading(); };
+  window.addEventListener('wheel', clearRequestedSection, {passive: true});
+  window.addEventListener('touchmove', clearRequestedSection, {passive: true});
+  window.addEventListener('keydown', event => {
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) clearRequestedSection();
+  });
   window.addEventListener('scroll', requestReading, {passive: true});
   window.addEventListener('resize', requestReading, {passive: true});
   filterIssues();
